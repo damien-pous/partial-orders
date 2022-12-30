@@ -106,9 +106,9 @@ Set Implicit Arguments.
 (** * preliminary *)
 
 (** a class to get robust notations and rewriting on morphisms *)
-Class PreCat := precat {
+Structure PreCat := precat {
 #[canonical=no] ob: Type;
-  hom: ob -> ob -> Type;
+  hom:> ob -> ob -> Type;
 #[canonical=no] id: forall {X}, hom X X;
 #[canonical=no] comp: forall {X Y Z}, hom Y Z -> hom X Y -> hom X Z;
 }.
@@ -119,25 +119,25 @@ Definition types_id {X}: X -> X := fun x => x.
 Definition types_comp {X Y Z} (f: Y -> Z) (g: X -> Y): X -> Z := fun x => f (g x).
 Arguments types_id {_} _/. 
 Arguments types_comp {_ _ _} _ _ _/. 
-Canonical Structure TYPES := precat (fun A B => A -> B) (fun X x => x) (fun X Y Z f g x => f (g (x))).
+Canonical Structure TYPES := precat (fun A B => A -> B) (@types_id) (@types_comp).
 (* below: dangerous, but needed to have the lemma below typecheck 
    (why is the above canonical declaration not enough?) *)
-#[export] Existing Instance TYPES.
+(* #[export] Existing Instance TYPES. *)
 
 Definition const {X Y} y: X -> Y := fun _ => y. 
 Arguments const {_ _} _ _/.
 
 (** trivial properties of composition *)
-Lemma compA {X Y Z T} (f: Z->T) (g: Y->Z) (h: X->Y): f ° (g ° h) = (f ° g) ° h.
-Proof. by []. Qed.
-Lemma compIx {X Y} (f: X->Y): id ° f = f.
-Proof. by []. Qed. 
-Lemma compxI {X Y} (f: X->Y): f ° id = f.
-Proof. by []. Qed. 
-Lemma compCx {X Y Z} (f: X->Y) (z: Z): const z ° f = const z.
-Proof. by []. Qed. 
-Lemma compxC {X Y Z} (f: Y->Z) (y: Y): f ° @const X _ y = const (f y).
-Proof. by []. Qed. 
+(* Lemma compA {X Y Z T} (f: Z->T) (g: Y->Z) (h: X->Y): f ° (g ° h) = (f ° g) ° h. *)
+(* Proof. by []. Qed. *)
+(* Lemma compIx {X Y} (f: X->Y): id ° f = f. *)
+(* Proof. by []. Qed.  *)
+(* Lemma compxI {X Y} (f: X->Y): f ° id = f. *)
+(* Proof. by []. Qed.  *)
+(* Lemma compCx {X Y Z} (f: X->Y) (z: Z): const z ° f = const z. *)
+(* Proof. by []. Qed.  *)
+(* Lemma compxC {X Y Z} (f: Y->Z) (y: Y): f ° @const X _ y = const (f y). *)
+(* Proof. by []. Qed.  *)
 
 (** * setoids *)
 
@@ -540,7 +540,9 @@ Proof.
 Abort.
 
 (** constant function *)
-HB.instance Definition const_PartialOrder_morphism {X Y} y :=
+HB.instance Definition _ {X Y} y :=
+  PartialOrder_morphism_of_FUN.Build X Y (const y) (fun _ _ _ => reflexivity _). 
+HB.instance Definition _ {X Y} y :=
   PartialOrder_of_Setoid_morphism.Build X Y (const y) (fun _ _ _ => reflexivity _). 
 
 #[export] Instance const_leq {X} {Y: PartialOrder.type}:
@@ -694,10 +696,24 @@ Proof.
   by apply f, Tx.
 Qed.
 
+Lemma sup_closed_Proper P: sup_closed P -> Proper (eqv ==> eqv) P.
+Proof.
+  move=>H. suff E: Proper (eqv ==> leq) P.
+   by move=>x y xy; apply: antisym; apply E=>//; symmetry. 
+  move=>x y xy Px. apply (H (eq x)). by move=>?<-. 
+  move: (is_sup_single x). apply Proper_is_sup=>//. by symmetry.
+Qed.
+
 Definition downward_closed (P: X -> Prop) := Proper (leq ==> leq) P. 
 
 Definition directed (P: X -> Prop) :=
   forall x y, P x -> P y -> exists z, P z /\ x <= z /\ y <= z.
+
+Definition chain (P: X -> Prop) :=
+  forall x y, P x -> P y -> x <= y \/ y <= x.
+
+Lemma chain_directed P: chain P -> directed P.
+Proof. move=>H x y Px Py; by case:(H _ _ Px Py); eauto. Qed.
 
 End s.
 
@@ -768,12 +784,12 @@ Section s.
   Qed.
 End s.
 
-Lemma adjoint_id {X}: @adjunction X X id id.
+Lemma adjoint_id {X}: @adjunction X X types_id types_id.
 Proof. by []. Qed.
 
 Lemma adjoint_comp {X Y Z f g f' g'} {A: @adjunction X Y f g} {B: @adjunction Y Z f' g'}:
-  adjunction (fun x => f' (f x)) (fun z => g (g' z)).
-Proof. move=>x y. by rewrite 2!adj. Qed.
+  adjunction (types_comp f' f) (types_comp g g').
+Proof. move=>x y/=. by rewrite 2!adj. Qed.
 
 Lemma dual_adjunction `(A: adjunction): adjunction (g: dual Y -> dual X) (f: dual X -> dual Y).
 Proof. rewrite /adjunction/= => y x. symmetry. by apply adj. Qed.
@@ -781,144 +797,221 @@ Proof. rewrite /adjunction/= => y x. symmetry. by apply adj. Qed.
 Lemma right_adjoint_inf `(A: adjunction) P y: is_inf P y -> is_inf (image g P) (g y).
 Proof. apply (left_adjoint_sup (dual_adjunction A)). Qed. 
 
+(** * lattices *)
+
+Definition empty {X}: X -> Prop := fun _ => False. 
+Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y. 
+
+Unset Implicit Arguments.  
+HB.mixin Record Lattice_of_PartialOrder X of PartialOrder X := {
+    #[canonical=no] bot: X;
+    #[canonical=no] top: X;
+    #[canonical=no] cup: X -> X -> X;
+    #[canonical=no] cap: X -> X -> X;
+    #[canonical=no] bot_spec: is_sup empty bot;
+    #[canonical=no] top_spec: is_inf empty top;
+    #[canonical=no] cup_spec: forall x y, is_sup (pair x y) (cup x y);
+    #[canonical=no] cap_spec: forall x y, is_inf (pair x y) (cap x y)
+}.
+Set Implicit Arguments.  
+HB.structure Definition Lattice := { X of Lattice_of_PartialOrder X & }.
+
+Program Definition Prop_Lattice := Lattice_of_PartialOrder.Build Prop False True or and _ _ _ _.
+Next Obligation. cbv. firstorder. Qed.
+Next Obligation. cbv. firstorder. Qed.
+Next Obligation. cbv. firstorder subst; eauto. Qed.
+Next Obligation. cbv. firstorder subst; eauto; apply H; eauto. Qed.
+HB.instance Definition _ := Prop_Lattice.
+
+Program Definition dprod_Lattice {A} {X: A -> Lattice.type} :=
+  Lattice_of_PartialOrder.Build
+    (forall a, X a) (fun _ => bot) (fun _ => top)
+    (fun f g a => cup (f a) (g a))
+    (fun f g a => cap (f a) (g a)) _ _ _ _.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+HB.instance Definition _ {A} {X: A -> Lattice.type} := @dprod_Lattice A X.
+
+
+(** * dCPOs *)
+
+HB.mixin Record dCPO_of_PartialOrder X of PartialOrder X := {
+    #[canonical=no] dsup: forall D: X -> Prop, directed D -> X;
+    #[canonical=no] dsup_spec: forall D (DD: directed D), is_sup D (dsup D DD);
+}.
+HB.structure Definition dCPO := { X of dCPO_of_PartialOrder X & }.
+
+Lemma leq_dsup {X: dCPO.type} (P: X -> Prop) D: forall y, P y -> y <= dsup P D.
+Proof. apply leq_sup, dsup_spec. Qed.
+
+Program Definition dprod_dCPO {A} (X: A -> dCPO.type) :=
+  dCPO_of_PartialOrder.Build (forall a, X a) (fun F DF a => dsup (image (fun f => f a) F) _) _.
+Next Obligation.
+  move=>/=_ _ [g [G ->]] [h [H ->]].
+  case: (DF _ _ G H)=>/=[i [I [gi hi]]].
+  exists (i a). split. by exists i. split. apply gi. apply hi.
+Qed.
+Next Obligation.
+  move=>/=f. split=>H.
+  - move=>g G. rewrite -H=>a. apply leq_dsup. by exists g.
+  - move=>a. apply dsup_spec=>/=_ [g [G ->]]. by apply H. 
+Qed.
+HB.instance Definition _ {A} (X: A -> dCPO.type) := dprod_dCPO X.
+
+
+(** * CPOs *)
+
+HB.mixin Record CPO_of_PartialOrder X of PartialOrder X := {
+    #[canonical=no] csup: forall C: X -> Prop, chain C -> X;
+    #[canonical=no] csup_spec: forall C (CC: chain C), is_sup C (csup C CC);
+}.
+HB.structure Definition CPO := { X of CPO_of_PartialOrder X & }.
+
+Lemma leq_csup {X: CPO.type} (P: X -> Prop) C: forall y, P y -> y <= csup P C.
+Proof. apply leq_sup, csup_spec. Qed.
+
+Program Definition dprod_CPO {A} (X: A -> CPO.type) :=
+  CPO_of_PartialOrder.Build (forall a, X a) (fun F CF a => csup (image (fun f => f a) F) _) _.
+Next Obligation.
+  move=>/=_ _ [g [G ->]] [h [H ->]].
+  case: (CF _ _ G H)=>E;[left|right]; apply E.
+Qed.
+Next Obligation.
+  move=>/=f. split=>H.
+  - move=>g G. rewrite -H=>a. apply leq_csup. by exists g.
+  - move=>a. apply csup_spec=>/=_ [g [G ->]]. by apply H. 
+Qed.
+HB.instance Definition _ {A} (X: A -> CPO.type) := dprod_CPO X.
+
+
+(** * chain construction *)
+
+Module Chain.
 Section c.
  Context {X: PartialOrder.type}.
- Variable f: X -mon-> X.
+ Section d.
+ Variable f: X -> X.
 
- (** the set of all (transfinite) iterations of b 
-     although this set is (classically) a chain, we never need to know it *)
+ (** the set of all (transfinite) iterations of f *)
  Inductive C: X -> Prop :=
  | Cf: forall x, C x -> C (f x)
  | Csup: forall P, P <= C -> forall x, is_sup P x -> C x.
-
+ 
  (** a type for the elements of the chain *)
- Structure Chain := chain { elem:> X; #[canonical=no] Celem: C elem}.
+ Structure Chain := chn { elem:> X; #[canonical=no] Celem: C elem}.
  Definition elem' := elem: Chain -> Setoid.sort X.
  Arguments elem' _/. 
  Coercion elem': Chain >-> Setoid.sort. 
 
+ (** the chain inherits the partial order structure from X *)
+ HB.instance Definition Chain_Setoid := kern_Setoid _ elem.
+ HB.instance Definition Chain_PartialOrder := kern_PartialOrder _ elem.
+
  (** the chain is closed under [f] *)
- Canonical Structure chain_next (x: Chain) := {| elem := f x; Celem := Cf (Celem x) |}.
+ Canonical Structure next (x: Chain) := {| elem := f x; Celem := Cf (Celem x) |}.
 
- (** tower induction principle (just a rephrasing of induction on the Chain predicate) *)
- Proposition tower (P: X -> Prop):
-   sup_closed P ->
-   (forall x: Chain, P x -> P (f x)) ->
-   (forall x: Chain, P x).
- Proof.
-   intros Hsup Hf [x Cx]; cbn. induction Cx as [x Cx IH|Q _ QP Px IH].
-   - now apply (Hf (chain Cx)).
-   - eapply Hsup. exact QP. exact IH. 
- Qed.
+ (** the chain is closed under (existing) sups *)
+ Lemma Csup' (P: Chain -> Prop) (x: X): is_sup (fun x => exists Cx, P (@chn x Cx)) x -> C x.
+ Proof. move=>H. by apply: (Csup _ H)=>y [Cy _]. Qed.
 
- (** slightly stronger version where the predicate need only be C-sup closed 
-     (TOTHINK: remove?)
-  *)
- Proposition tower' (P: X -> Prop):
-   (forall Q, Q <= C -> Q <= P -> forall z: Chain, is_sup Q z -> P z) ->
-   (forall x: Chain, P x -> P (f x)) ->
-   (forall x: Chain, P x).
+ (** the chain is inductively generated *)
+ Proposition tower: forall (P: Chain -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
  Proof.
-   intros Hsup Hf [x Cx]; cbn. induction Cx as [x Cx IH|Q QC QP x Px].
-   - now apply (Hf (chain Cx)).
-   - have Cx: C x by eapply Csup; eauto. 
-     exact (Hsup _ QC QP (chain Cx) Px). 
+   move=>P Psup Pnext.
+   suff H: forall x, C x -> forall Cx: C x, P (chn Cx). by move=>[??]; apply H. 
+   induction 1 as [x Cx IH|T TC IH t Ht]=>[Cfx|Ct].
+   - move: (Pnext (chn Cx) (IH _)). by apply sup_closed_Proper.
+   - apply (Psup (fun t => T t)).
+     -- move=>[x Cx] Tx. by apply IH.
+     -- move=>/=[x Cx]. etransitivity. apply Ht.
+        split. clear; firstorder.
+        move=>H y Ty. by apply (H (chn (TC _ Ty))).
  Qed.
+ End d.
+
+ (** when [f] is eqv-preserving (on [X]), so is [next] (on [Chain f])  *)
+ Section d.
+ Variable f: X -eqv-> X.
+ Lemma next_eqv: Proper (eqv ==> eqv) (@next f).
+ Proof. by move =>???; apply f. Qed.
+ HB.instance Definition _ := Setoid_morphism_of_FUN.Build _ _ _ next_eqv.
+ End d.
  
+ (** when [f] is monotone (on [X]), so is [next] (on [Chain f])  *)
+ Section d.
+ Variable f: X -mon-> X.
+ Lemma next_leq: Proper (leq ==> leq) (@next f).
+ Proof. by move =>???; apply f. Qed.
+ HB.instance Definition _ := Setoid_morphism_of_FUN.Build _ _ _ (@op_leq_eqv_1 _ _ _ next_leq).
+ HB.instance Definition _ := PartialOrder_of_Setoid_morphism.Build _ _ _ next_leq.
+
  (** elements of the chain are post-fixpoints of [f] *)
- Lemma chain_postfixpoint: forall c: Chain, c <= f c.
+ Lemma chain_postfixpoint: forall c: Chain f, c <= next c.
  Proof.
-   apply (tower (sup_closed_leq _))=>*.
-   by apply f.
+   apply tower. apply: sup_closed_leq. 
+   by move=>*; apply f.
  Qed.
 
  (** they are below all pre-fixpoints of [f] *)
- Theorem chain_below_prefixpoints x: f x <= x -> forall c: Chain, c <= x.
+ Theorem chain_below_prefixpoints x: f x <= x -> forall c: Chain f, c <=[X] x.
  Proof.
-   intro. apply (tower (sup_closed_leq (const x)))=>/=.
-   by move=>y ->.
- Qed.
- 
- (** relativised tower induction *)
- Proposition ptower (Q P: X -> Prop):
-   Proper (leq --> leq) Q ->
-   sup_closed P ->
-   (forall x: Chain, Q x -> P x -> P (f x)) ->
-   (forall x: Chain, Q x -> P x).
- Proof.
-   intros Qleq Psup Pb. apply (tower (P:=fun x => Q x -> P x)). 
-   - now apply sup_closed_impl.
-   - intros x I H. cut (Q x); auto. revert H. apply Qleq, chain_postfixpoint. 
+   (* we would like to use [tower], but this requires closure under sups in [Chain f],
+      and [sup_closed_leq] does not apply... *)
+   move=>Hx []/=.
+   induction 1 as [y Cy IH|T TC IH t Ht].
+   - by rewrite IH.
+   - move: T {TC} IH t Ht. apply: (sup_closed_leq (const x)). 
  Qed.
 
  (** if the chain contains a pre-fixpoint, then this is the least (pre-)fixpoint *)
- Theorem lpfp (c: Chain): f c <= c -> is_inf (fun x => f x <= x) c.
+ Theorem lpfp' (c: Chain f): f c <= c -> f c ≡ c /\ is_inf (fun x => f x <= x) c.
  Proof.
-   intros Hc x. split=>H.
+   intros Hc. split. apply: antisym=>//. apply chain_postfixpoint.
+   move=>x. split=>H.
    - intros y Hy. rewrite H. by apply chain_below_prefixpoints.
    - by apply H.
  Qed.
 
  (** if the chain has a supremum, then this is the least (pre-)fixpoint *)
- Theorem lpfp' t: is_sup C t -> is_inf (fun x => f x <= x) t.
+ Theorem lpfp c: is_sup (C f) c -> f c ≡ c /\ is_inf (fun x => f x <= x) c.
  Proof.
-   intro Ht.
-   have Ct: C t by eapply Csup.
-   apply (lpfp (chain Ct))=>/=. 
-   apply Ht=>//. by apply Cf. 
+   intro Hc.
+   have Cc: C f c by eapply Csup.
+   apply (lpfp' (chn Cc))=>/=. 
+   apply Hc=>//. by apply Cf. 
  Qed.
 
- (* * the chain inherits the partial order *)
- (* * deactivated: otherwise [c <= x] does no longer typecheck when [c: Chain] and [x: X] *)
- HB.instance Definition Chain_Setoid := kern_Setoid _ elem.
- HB.instance Definition Chain_PartialOrder := kern_PartialOrder _ elem.
- Lemma chain_next_leq: Proper (leq ==> leq) chain_next.
- Proof. by move =>???; apply f. Qed.
- (* TOTHINK: why can't we just proceed with the following def? *)
- (* HB.instance Definition _ := PartialOrder_morphism_of_FUN.Build Chain Chain chain_next chain_next_leq. *)
- (* Fail Check chain_next: Chain -mon-> Chain.  *)
- HB.instance Definition _ := Setoid_morphism_of_FUN.Build Chain Chain chain_next (@op_leq_eqv_1 _ _ _ chain_next_leq).
- HB.instance Definition _ := PartialOrder_of_Setoid_morphism.Build Chain Chain chain_next chain_next_leq.
- Check chain_next: Chain -mon-> Chain.
-
- Lemma id_next: id <=[Chain-mon->Chain] chain_next.
- Proof. move=>x. apply chain_postfixpoint. Qed.
- 
- (* TODO: exploit Bourbaki' from there *)
- 
+ End d.
 End c.
-
-
-Module Bourbaki. Section b.
-
- (* TODO: 
-    finish to get Theorem 2.1 from [Serge Lang, Algebra, p881]
-    (in two steps, for non-emptyness)
-  *)
-
- Context {X: PartialOrder.type}.
- Implicit Types x y z: X.
-
- Variable next: X -eqv-> X. 
- Hypothesis tower: forall (P: X -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
- Hypothesis id_next: forall x, x <= next x.
-
- (** relativised tower induction *)
- Lemma ptower (Q P: X -> Prop):
-   Proper (leq --> leq) Q ->
-   sup_closed P ->
-   (forall x, Q x -> P x -> P (next x)) ->
-   (forall x, Q x -> P x).
- Proof.
-   intros Qleq Psup Pb. apply: tower. 
-   - now apply sup_closed_impl.
-   - intros x I H. cut (Q x); auto. revert H. apply Qleq, id_next. 
+Section c.
+ Context {X: dCPO.type}.
+ Variable f: X->X.
+ (* TODO: generic sub-dCPO construct *)
+ Program Definition Chain_dCPO :=
+   dCPO_of_PartialOrder.Build (Chain f) (fun P D => {| elem := dsup (fun c => exists Cf: C f c, P (chn Cf)) _ |}) _.
+ Next Obligation.
+   move=>x y [Cx Px] [Cy Py]. case: (D _ _ Px Py)=>/=[[z Cz]] [Pz [xz yz]].
+   exists z. split. eauto. by split.
  Qed.
+ Next Obligation.
+   eapply Csup'. apply dsup_spec.
+ Qed.
+ Next Obligation.
+   move=>/=x. etransitivity. apply dsup_spec. simpl.
+   split;[|clear; firstorder]=>H [y Cy] Dy.
+   apply H. eauto.
+ Qed.
+ HB.instance Definition _ := Chain_dCPO.
+End c. 
 
+
+Section classical.
  Import Classical.
 
  (** a generic consequence of excluded-middle *)
- Lemma choose_gen (P A B: X -> Prop):
+ Lemma choose_gen (X: Type) (P A B: X -> Prop):
    (forall x, P x -> A x \/ B x) -> (forall x, P x -> A x) \/ (exists x, P x /\ B x).
  Proof.
    intro H. classical_left. intros x Px.
@@ -929,9 +1022,39 @@ Module Bourbaki. Section b.
      - we only use it with [f=id, y=y'] to get than the chain is totally ordered
      - we only use it with [f=id, y'=next y] and [f=next, y'= y] to get the stronger [total_chain_strong]
   *)
- Lemma choose (P: X -> Prop) f y y':
+ Lemma choose (X: PartialOrder.type) (P: X -> Prop) (f: X -eqv-> X) y y':
    (forall x, P x -> f x <= y \/ y' <= x) -> (forall x, P x -> f x <= y) \/ (exists x, P x /\ y' <= x).
  Proof. apply choose_gen. Qed.
+End classical.
+
+
+(** * Bournaki-Witt: every extensive function on a CPO has a fixpoint 
+    requires classical logic; more precisely, the above lemma [choose] 
+    the fixpoint is obtained as [sup (C f)], 
+    the difficulty consists in proving that [C f] is a chain so that it's sup exists
+ *)
+Module BourbakiWitt.
+ Section b.
+
+ Context {X: PartialOrder.type}.
+ Implicit Types x y z: X.
+
+ Variable next: X -eqv-> X. 
+ Hypothesis tower: forall P, sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
+ Hypothesis id_next: forall x, x <= next x.
+
+ (** relativised tower induction *)
+ (* unused for now *)
+ Lemma ptower (Q P: X -> Prop):
+   Proper (leq --> leq) Q -> 
+   sup_closed P ->
+   (forall x, Q x -> P x -> P (next x)) ->
+   (forall x, Q x -> P x).
+ Proof.
+   intros HQ Psup Pb. apply: tower. 
+   - by apply sup_closed_impl.
+   - intros x I H. cut (Q x); auto. revert H. apply HQ, id_next. 
+ Qed.
 
  (** strengthening the above result as follows requires more work, but leads to a proof that [X] is a well-order *)
  Theorem total_chain_strong: forall x y, x <= y \/ next y <= x.
@@ -940,16 +1063,16 @@ Module Bourbaki. Section b.
        as reported in [Serge Lang, Algebra, p883]
        differences are that:
        - we use definitions that attempt to minimise the required amount of classical logic
-       - we do no assume X (and thus admissible sets) to be non-empty
+       - we do not assume X (and thus admissible sets) to be non-empty
        - we do not start from a CPO, only from a mere partial order 
          (accordingly, the [tower] assumption requires closure under all existing suprema rather than under all directed suprema)
     *)
-   (* [split x c] is [x \in M c] in the aforementioned book *)
-   set split := fun x y => x <= y \/ next y <= x.
+   (* [split c x] is [x \in M c] in the aforementioned book *)
+   set split := fun c x => x <= c \/ next c <= x.
    (* [extreme c], up to classical logic, is [forall x, x < c -> next x <= c] *)
-   set extreme := fun c => forall x, x <= c -> split c x. 
+   set extreme := fun c => forall x, x <= c -> split x c. 
    (* Lemma 2.2 *)
-   have M: forall c, extreme c -> forall x, split x c. {
+   have M: forall c, extreme c -> forall x, split c x. {
      move=>c Ec. apply: tower.
      - move=>T IH t Ht.
        case: (choose T types_id c (next c)).
@@ -1037,11 +1160,12 @@ Module Bourbaki. Section b.
    - move=>x IH y.
      case: (total_chain_strong (next x) y); auto=>yn.
      case: (IH y)=>xy; swap 1 2.
-     right. contradict xy. rewrite -xy. by apply id_next.     
+     right. contradict xy. rewrite -xy. by apply id_next.
+     (* ?? *)
 
    (* excluded middle of course works *)
    Restart.
-   intros. apply: classic.
+   intros. apply: Classical_Prop.classic.
  Qed.
  
  Corollary chain_le_lt_dec x y: x <= y \/ y < x.
@@ -1057,10 +1181,47 @@ Module Bourbaki. Section b.
    case: (chain_le_lt_dec (next x) x); auto.
    by right; apply prefixpoint_top.
  Qed.
-                       
-End b. End Bourbaki. 
 
-Module Bourbaki'. Section b.
+End b.
+Section b.
+
+ Context {X: CPO.type}.
+ Variable f: X -eqv-> X. 
+ Hypothesis f_ext: forall x, x <= f x.
+ 
+ Lemma chain_C: chain (C f).
+ Proof.
+   move=>x y Cx Cy.
+   apply: (total_chain _ (tower (f:=f)) _ (chn Cx) (chn Cy)).
+   move=>*; apply f_ext.
+ Qed.
+ 
+ Definition fixpoint := csup (C f) chain_C.
+ Theorem is_fixpoint: f fixpoint ≡ fixpoint.
+ Proof.
+   apply: antisym=>//.
+   apply leq_csup. apply Cf. apply Csup with (C f)=>//. apply csup_spec.
+ Qed.
+
+ (* note: 
+    our definition of CPO implicitly requires a least element (since the empty set is a chain) 
+    we can drop this assumption assuming [X] contains some element x: 
+    { y: X | x <= y } is a CPO with least element x.
+  *)
+ 
+End b. 
+End BourbakiWitt. 
+
+(** * A variant of Bournaki-Witt: every monotone function on a CPO has a least (pre-)fixpoint 
+      still requires classical logic, but slightly less: only [forall T x, choose T id x x] 
+      the fixpoint is obtained as [sup (C f)],     
+      the difficulty consists in proving that [C f] is a chain so that it's sup exists
+
+      When moving to dCPOs, we can get a constructive proof (cf. Pataraia below): 
+      we can prove constructively that [C f] is directed.
+ *)
+Module BourbakiWitt'.
+Section b.
 
  Context {X: PartialOrder.type}.
  Implicit Types x y z: X.
@@ -1076,6 +1237,14 @@ Module Bourbaki'. Section b.
    - apply sup_closed_leq.
    - by move=>*; apply next.
  Qed.
+
+ (** thus we have relativised tower induction  *)
+ Lemma ptower (Q P: X -> Prop):
+   Proper (leq --> leq) Q -> 
+   sup_closed P ->
+   (forall x, Q x -> P x -> P (next x)) ->
+   (forall x, Q x -> P x).
+ Proof. apply (BourbakiWitt.ptower _ tower id_next). Qed.
 
  (** there is at most one prefixpoint, which must be a top element  *)
  Lemma prefixpoint_top x: next x <= x -> is_sup (fun _ => True) x.
@@ -1098,123 +1267,85 @@ Module Bourbaki'. Section b.
  Theorem total_chain: forall x y, x <= y \/ y <= x.
  Proof.
    (** actually an instance of [Bourbaki.total_chain] *)
-   exact (Bourbaki.total_chain next tower id_next).
+   exact (BourbakiWitt.total_chain next tower id_next).
    Restart. 
    (** but the following proof is simpler and requires only [choose _ id x x] *)
    apply: tower.
    - move=>T IH t Ht y.
-     case: (Bourbaki.choose T types_id y y). by move=>*; apply IH.
+     case: (choose T types_id y y). by move=>*; apply IH.
      -- move=>F. left. apply Ht=>x Tx. by apply F.
      -- move=>[x [Tx yx]]. right. rewrite yx. by apply Ht.
    - move=>x IH y.
-     case: (Bourbaki.choose (fun t => next t <= y) types_id x x).
+     case: (choose (fun t => next t <= y) types_id x x).
      by move=>t _; move: (IH t); tauto.
      -- move=>F. right. apply leq_next=>z zy. by apply F.
      -- move=>[t [ty xt]]. left. by rewrite xt.
  Qed.
 
- (** [X] is directed, as an immediate consequence *)
- Corollary directed_chain: directed (fun _: X => True).
- Proof. move=>x y _ _. case: (total_chain x y); eauto. Qed.
-                       
-End b. End Bourbaki'. 
+End b.
+Section b.
+
+ Context {X: CPO.type}.
+ Variable f: X -mon-> X. 
+
+ Lemma chain_C: chain (C f).
+ Proof.
+   move=>x y Cx Cy.
+   exact: (total_chain _ (tower (f:=f)) (chn Cx) (chn Cy)).
+ Qed.
+ 
+ Definition lfp := csup (C f) chain_C.
+ Theorem is_least_fixpoint: f lfp ≡ lfp /\ is_inf (fun x => f x <= x) lfp.
+ Proof. apply lpfp. apply csup_spec. Qed.
+
+ (* note: 
+    our definition of CPO implicitly requires a least element (since the empty set is a chain) 
+    we can drop this assumption assuming [X] contains some element x: 
+    { y: X | x <= y } is a CPO with least element x.
+  *)
+ 
+End b. 
+End BourbakiWitt'. 
 
 
-Definition empty {X}: X -> Prop := fun _ => False. 
-Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y. 
-
-Unset Implicit Arguments.  
-HB.mixin Record Lattice_of_PartialOrder X of PartialOrder X := {
-    #[canonical=no] bot: X;
-    #[canonical=no] top: X;
-    #[canonical=no] cup: X -> X -> X;
-    #[canonical=no] cap: X -> X -> X;
-    #[canonical=no] bot_spec: is_sup empty bot;
-    #[canonical=no] top_spec: is_inf empty top;
-    #[canonical=no] cup_spec: forall x y, is_sup (pair x y) (cup x y);
-    #[canonical=no] cap_spec: forall x y, is_inf (pair x y) (cap x y)
-}.
-HB.structure Definition Lattice := { X of Lattice_of_PartialOrder X & }.
-
-Program Definition Prop_Lattice := Lattice_of_PartialOrder.Build Prop False True or and _ _ _ _.
-Next Obligation. cbv. firstorder. Qed.
-Next Obligation. cbv. firstorder. Qed.
-Next Obligation. cbv. firstorder subst; eauto. Qed.
-Next Obligation. cbv. firstorder subst; eauto; apply H; eauto. Qed.
-HB.instance Definition _ := Prop_Lattice.
-
-Program Definition dprod_Lattice {A} {X: A -> Lattice.type} :=
-  Lattice_of_PartialOrder.Build
-    (forall a, X a) (fun _ => bot) (fun _ => top)
-    (fun f g a => cup (f a) (g a))
-    (fun f g a => cap (f a) (g a)) _ _ _ _.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-HB.instance Definition _ {A} {X: A -> Lattice.type} := @dprod_Lattice A X.
-
-
-
-HB.mixin Record CPO_of_PartialOrder X of PartialOrder X := {
-    #[canonical=no] dsup: forall D: X -> Prop, directed D -> X;
-    #[canonical=no] dsup_spec: forall D (DD: directed D), is_sup D (dsup D DD);
-}.
-HB.structure Definition CPO := { X of CPO_of_PartialOrder X & }.
-
-Lemma leq_dsup {X: CPO.type} (P: X -> Prop) D: forall y, P y -> y <= dsup P D.
-Proof. apply leq_sup, dsup_spec. Qed.
-
-Program Definition dprod_CPO {A} (X: A -> CPO.type) :=
-  CPO_of_PartialOrder.Build (forall a, X a) (fun F DF a => dsup (image (fun f => f a) F) _) _.
-Next Obligation.
-  move=>/=_ _ [g [G ->]] [h [H ->]].
-  case: (DF _ _ G H)=>/=[i [I [gi hi]]].
-  exists (i a). split. by exists i. split. apply gi. apply hi.
-Qed.
-Next Obligation.
-  move=>/=f. split=>H.
-  - move=>g G. rewrite -H=>a. apply leq_dsup. by exists g.
-  - move=>a. apply dsup_spec=>/=_ [g [G ->]]. by apply H. 
-Qed.
-HB.instance Definition _ {A} (X: A -> CPO.type) := dprod_CPO X.
-
-
-(* TOTHINK: required or not? *)
-(* HB.instance Definition mon_Setoid {X Y: PartialOrder.type} := kern_Setoid _ (fun f: X-mon->Y => f: X -> Y).  *)
-HB.instance Definition mon_PartialOrder {X Y: PartialOrder.type} := kern_PartialOrder _ (fun f: X-mon->Y => f: X -> Y). 
-(* TODO: generic construction (via dprod_CPO) *)  
-Program Definition mon_dsup {X} {Y: CPO.type} (F: (X-mon->Y) -> Prop) (DF: directed F): X -> Y :=
+(** the dCPO of monotone functions *)
+(* TODO: generic construction (via dprod_CPO) *)
+Section s.
+Context {X: PartialOrder.type} {Y: dCPO.type}.
+Program Definition mon_dsup (F: (X-mon->Y) -> Prop) (DF: directed F): X -> Y :=
   fun x => dsup (image (fun f: X-mon->Y => f x) F) _.
 Next Obligation.
   move=>/=_ _ [g [G ->]] [h [H ->]].
   case: (DF _ _ G H)=>/=[i [I [gi hi]]].
   exists (i x). split. by exists i. split. apply gi. apply hi.
 Qed.
-Lemma mon_dsup_leq {X} {Y: CPO.type} (F: (X-mon->Y) -> Prop) (DF: directed F): Proper (leq ==> leq) (mon_dsup F DF).
+Lemma mon_dsup_leq (F: (X-mon->Y) -> Prop) (DF: directed F): Proper (leq ==> leq) (mon_dsup DF).
 Proof.
   move=>x y xy. apply: is_sup_leq; try apply dsup_spec.
   apply covered_image=>//f. by apply f.
 Qed.
-Program Definition mon_dsup_setoid {X} {Y: CPO.type} (F: (X-mon->Y) -> Prop) (DF: directed F) :=
-  Setoid_morphism_of_FUN.Build X Y (mon_dsup F DF) _.
+Program Definition mon_dsup_setoid (F: (X-mon->Y) -> Prop) (DF: directed F) :=
+  Setoid_morphism_of_FUN.Build X Y (mon_dsup DF) _.
 Next Obligation. apply @op_leq_eqv_1. apply mon_dsup_leq. Qed.
-HB.instance Definition _ {X Y} F DF := @mon_dsup_setoid X Y F DF.
-HB.instance Definition mon_dsup_partialorder {X} {Y: CPO.type} (F: (X-mon->Y) -> Prop) (DF: directed F) :=
-  PartialOrder_of_Setoid_morphism.Build X Y (mon_dsup F DF) (mon_dsup_leq F DF).
-Program Definition mon_CPO {X} {Y: CPO.type} :=
-  CPO_of_PartialOrder.Build (X-mon->Y) (@mon_dsup X Y) _. 
+HB.instance Definition _ F DF := @mon_dsup_setoid F DF.
+HB.instance Definition mon_dsup_partialorder (F: (X-mon->Y) -> Prop) (DF: directed F) :=
+  PartialOrder_of_Setoid_morphism.Build X Y (mon_dsup DF) (mon_dsup_leq DF).
+Program Definition mon_dCPO :=
+  dCPO_of_PartialOrder.Build (X-mon->Y) (@mon_dsup) _. 
 Next Obligation.
   move=>/=f. split=>H.
   - move=>g G. rewrite -H=>a. apply leq_dsup. by exists g.
   - move=>a. apply dsup_spec=>/=_ [g [G ->]]. by apply H. 
 Qed.
-HB.instance Definition _ {X Y} := @mon_CPO X Y.
+HB.instance Definition _ := mon_dCPO.
+End s.
 
-Module P.
-Section pataraia.
- Context {X: CPO.type}.
- 
+Module Pataraia. 
+
+Section s.
+ Context {X: dCPO.type}.
+
+ (** the largest monotone and extensive function on [X] *)
  Program Definition h: X-mon->X := dsup (fun f => id ≦ f) _.
  Next Obligation.
    (* grrr: Program is unfolding things *)
@@ -1233,23 +1364,47 @@ Section pataraia.
    by rewrite -h_ext.
  Qed.
 
- Variable next: X-mon->X.
- Hypothesis id_next: id ≦ next. 
-
- Lemma next_h: next <= h.
- Proof. apply: leq_dsup. apply id_next. Qed.
- 
- Lemma h_prefixpoint: next ° h <= h.
- Proof. rewrite next_h. apply h_invol. Qed.
-
  (* TODO: define [bot] in all CPOs *)
- Program Definition lfp := h (dsup empty _).
+ Program Definition extensive_fixpoint := h (dsup empty _).
  Next Obligation. by []. Qed.
 
- Theorem next_lfp: next lfp ≡ lfp. 
- Proof. apply antisym. apply h_prefixpoint. apply id_next. Qed.
+ Variable f: X-mon->X.
+ Hypothesis f_ext: id ≦ f. 
+ 
+ Lemma h_prefixpoint: f ° h <= h.
+ Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
-End pataraia.
-End P.
+ Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
+ Proof. apply antisym. apply h_prefixpoint. apply f_ext. Qed.
+End s.
 
-HB.graph "graph.dot".
+Section s.
+ Context {X: dCPO.type}.
+ Variable f: X-mon->X.
+
+ Definition lfp := elem (@extensive_fixpoint (Chain f)).
+   
+ Theorem is_least_fixpoint: f lfp ≡ lfp /\ is_inf (fun x => f x <= x) lfp.
+ Proof.
+   apply lpfp'. apply eqv_leq.
+   apply (is_extensive_fixpoint (f:=next (f:=f))).
+   move=>x; apply chain_postfixpoint.
+ Qed.
+
+ Proposition lfp_is_sup_C: is_sup (C f) lfp. 
+ Proof.
+   move=>x. split=>H.
+   - move=>c Cc. rewrite -H.
+     apply: (chain_below_prefixpoints f _ _ (chn Cc)).
+     apply eqv_leq. apply is_least_fixpoint.
+   - apply H. apply Celem.
+ Qed.
+   
+End s.
+ 
+End Pataraia.
+End Chain.
+
+Print Assumptions Chain.BourbakiWitt.is_fixpoint.
+Print Assumptions Chain.BourbakiWitt'.is_least_fixpoint.
+Print Assumptions Chain.Pataraia.is_least_fixpoint.
