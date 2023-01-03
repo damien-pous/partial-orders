@@ -88,3 +88,29 @@ exact T P: exists f: T -> X, inj f /\ P == im f
  -> unit, nat, bool, Prop, +, +', *, *', forall, 
  
 
+
+
+(X,≡) setoid
+(X,≡,<=) partial order  (po)
+(X,≡,<=,gsup,gsinf) S,I-complete po
+
+setoid-morphisms
+po-morphisms
+S,I-po-morphisms
+
+
+Hom    Type Setoid PO S,I-PO
+Type        Setoid PO S,I-PO
+Setoid        ^.   ^.   ^.
+PO            ^    ^.   ^.
+S,I-PO        ^    ^    ^.
+
+comp   Type Setoid PO     S,I-PO
+Type   Type Type   Type   Type
+Setoid Type Setoid Setoid Setoid
+PO     Type Setoid PO     PO
+S,I-PO Type Setoid PO     S,I-PO
+
+comp: eqv/Setoid => eqv => eqv
+comp: leq/Setoid => eqv => leq
+comp: leq/PO     => leq => leq
