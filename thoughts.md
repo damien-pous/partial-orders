@@ -1,3 +1,10 @@
+S-PO then IS-PO ?  duality suffices for CL?
+
+image-sups?
+
+direct sub GPO construct?
+
+
 
 partial orders (leq, weq)
 duality
