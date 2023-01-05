@@ -3,6 +3,7 @@ Require Import ssreflect.
 Require Eqdep_dec Classical.
 
 Set Implicit Arguments.
+Local Unset Transparent Obligations.
 
 Definition comp {X Y Z} (f: Y -> Z) (g: X -> Y): X -> Z := fun x => f (g x).
 Arguments comp {_ _ _} _ _ _/. 
@@ -52,10 +53,10 @@ Canonical Structure id {X: type}: morphism X X :=
   build_morphism Datatypes.id _.
 Program Canonical Structure comp {X Y Z: type} (f: morphism Y Z) (g: morphism X Y): morphism X Z :=
   build_morphism (comp f g) _. 
-Next Obligation. move=>x y xy. apply f, g, xy. Defined.
+Next Obligation. move=>x y xy. apply f, g, xy. Qed.
 Program Canonical Structure const {X Y: type} (y: Y): morphism X Y :=
   build_morphism (const y) _.
-Next Obligation. move=>/=_ _ _. apply Equivalence_eqv. Defined.
+Next Obligation. move=>/=_ _ _. apply Equivalence_eqv. Qed.
 
 End Setoid.
 Notation Setoid := Setoid.type. 
@@ -113,7 +114,7 @@ Next Obligation.
 Qed.
 
 Program Definition kern_setoid A (X: Setoid) (f: A -> X) :=
-  Eval hnf in Setoid.build A (fun a b => f a ≡ f b) _.
+  Setoid.build A (fun a b => f a ≡ f b) _.
 Next Obligation.
   constructor.
   - by move=>//=. 
@@ -1247,9 +1248,6 @@ Section c.
  
  (** a type for the elements of the chain *)
  Structure Chain := chn { elem:> X; #[canonical=no] Celem: C elem}.
- (* Definition elem' := elem: Chain -> Setoid.sort X. *)
- (* Arguments elem' _/.  *)
- (* Coercion elem': Chain >-> Setoid.sort.  *)
 
  (** the chain inherits the partial order structure from X *)
  Canonical Structure Chain_setoid := Eval hnf in kern_setoid _ elem.
@@ -1281,9 +1279,6 @@ Section c.
  Proof. apply sup_closed_Proper. apply: Csup. Qed.
  
  End d.
- (* Set Printing All.  *)
- (* Coercion elem: Chain >-> Setoid.sort.  *)
- (* Coercion elem': Chain >-> PO.sort.  *)
  Arguments next: clear implicits.
 
  (** when [f] is eqv-preserving (on [X]), so is [next] (on [Chain f])  *)
@@ -1684,11 +1679,7 @@ Section s.
  Qed.
  
  Lemma h_ext: id <=[-mon->] h.
- Proof.
-   Time by apply: leq_dsup.     (* long *)
-   Restart.
-   Time by apply: (leq_dsup (L:=L)).
- Qed.
+ Proof. by apply: leq_dsup. Qed.
 
  Lemma h_invol: h ° h <=[-mon->] h.
  Proof.
@@ -1696,7 +1687,7 @@ Section s.
    by rewrite -h_ext.
  Qed.
 
- Definition extensive_fixpoint := h bot.
+ Definition extensive_fixpoint := locked (h bot).
 
  Variable f: C-mon->C.
  Hypothesis f_ext: id <=[-mon->] f. 
@@ -1705,19 +1696,21 @@ Section s.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
- Proof. apply antisym. apply h_prefixpoint. apply f_ext. Qed.
+ Proof. apply antisym. unlock extensive_fixpoint. apply h_prefixpoint. apply f_ext. Qed.
 End s.
 
 Section s.
  Context {l} {X: GPO l} {L: lD<<l}.
  Variable f: X-mon->X.
 
- Definition lfp: X := @extensive_fixpoint l (Chain f) L.
+ Definition lfp := locked (extensive_fixpoint (C:=Chain f): X).
    
  Theorem is_least_fixpoint: is_lfp f lfp. 
  Proof.
-   apply lpfp_of_chain_prefixpoint. apply eqv_leq.
-   exact (is_extensive_fixpoint (chain_postfixpoint f)). (* TODO: super loong *)
+   unlock lfp.
+   apply lpfp_of_chain_prefixpoint. 
+   apply eqv_leq.
+   exact (is_extensive_fixpoint (chain_postfixpoint f)).
  Qed.
 
  (* note: we could also prove that [C f] admits a supremum and is thus trivially directed, 
@@ -1730,7 +1723,7 @@ Section s.
    - move=>c Cc. rewrite -H.
      apply: (chain_below_prefixpoints f _ _ (chn Cc)).
      apply eqv_leq, lfp_fixpoint, is_least_fixpoint.
-   - apply H. apply Celem.
+   - apply H. unlock lfp. apply Celem.
  Qed.
 
  Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
@@ -1746,8 +1739,8 @@ Section s.
  Corollary lfp_prop (P: X -> Prop): (forall c: Chain f, P c) -> P lfp.
  Proof.
    move=>H.
-   apply: (H (chn (any_lfp_in_chain is_least_fixpoint))). (* TODO: loong *)
- Qed.                      (* TODO: loong *)
+   exact (H (chn (any_lfp_in_chain is_least_fixpoint))).
+ Qed.
  
 End s.
 
@@ -1758,4 +1751,4 @@ Print Assumptions Chain.BourbakiWitt.is_fixpoint.
 Print Assumptions Chain.BourbakiWitt'.is_least_fixpoint.
 Print Assumptions Chain.Pataraia.is_least_fixpoint.
 
-(* time coqc alone.v: 23s *)
+(* time coqc alone.v: 2.6s *)
