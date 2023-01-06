@@ -809,6 +809,9 @@ E,EB,B
 C,EC,(BC,EBC?)
 D,ED
 A
+
+then: Distributive, Heyting, Boole
+
 *)
 
 Record level := mk_level { has_E: bool; has_B: bool; has_C: bool; has_D: bool; has_A: bool}.
@@ -970,17 +973,19 @@ Program Canonical Structure bool_gpo: GPO (lE+lB) := Eval hnf in
 Next Obligation. by case. Qed.
 Next Obligation. Admitted. 
 
-Program Canonical Structure nat_gpo: GPO lE := Eval hnf in 
+Program Canonical Structure nat_gpo: GPO (lE+lB) := Eval hnf in 
   GPO.build _
             (fun k => match k with
                    | kE => fun _ _ => O
-                   | kA | kB | kC | kD => discriminate
+                   | kB => fun _ '(x,y) => Peano.max x y
+                   | kA | kC | kD => discriminate
                    end)
             (fun k => match k with
-                   | kE => fun _ _ => _
-                   | kA | kB | kC | kD => fun C => False_ind _ _
+                   | kE | kB => fun _ _ => _
+                   | kA | kC | kD => fun C => False_ind _ _
                    end).
 Next Obligation. Admitted.
+Next Obligation. cbn. Admitted.
 
 Program Canonical Structure Prop_gpo: GPO (lE+lB+lA) := Eval hnf in 
   GPO.build _

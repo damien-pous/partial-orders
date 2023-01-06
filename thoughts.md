@@ -1,15 +1,24 @@
-S-PO then IS-PO ?  duality suffices for CL?
-
+# TODO
+GPO -> S-PO, and from there IS-PO
+smart constructors?
 image-sups?
+direct sub-GPO construct?
+GPO products/sums
+distributive, Heyting, Boolean
 
-direct sub GPO construct?
+full duality
+more on adjunctions
+
+## later
+non-empty chains/directed/arbitrary?
+and/or I-indexed variants? (omega)
+
+in classical logic, 
+ chain-complete => directed-complete
 
 
 
-partial orders (leq, weq)
-duality
-monotone functions
-adjoints
+# MISC
 
 suprema
 (infima by duality)
