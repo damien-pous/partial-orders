@@ -1,4 +1,8 @@
 # TODO
+
+split ops and laws
+merge Setoid and PO ??
+
 GPO -> S-PO, and from there IS-PO
 smart constructors?
 image-sups?
@@ -18,7 +22,27 @@ in classical logic,
 
 
 
+
+
+
 # MISC
+
+- ops and laws via CS vs. laws via TC
+  -- cannot mix derived ops/concepts and lemmas in the same section
+  -- faster inferrence?
+
+- separate setoid from PO:
+  -- same equality structure for prod and lex_prod
+  -- but one more layer
+
+- separate PO from SI-PO ?
+
+- levels:
+  concrete instances with a fixed concrete level
+  definitions and lemmas explicitly upward closed (forall l, k<<l -> )
+
+
+
 
 suprema
 (infima by duality)

@@ -699,7 +699,7 @@ Proof.
       unfold h. case A_dec=>//e.
       have E: e = eq_refl by apply Eqdep_dec.UIP_dec.
       by rewrite E.
-    }.
+    }
     rewrite -ha. apply Pf=>g Pg b.
     unfold h. case A_dec=>ab. destruct ab.
     -- apply az. by exists g.
@@ -1139,7 +1139,7 @@ Module BourbakiWitt.
        -- move=>[u [Tu /=zu]]. by apply IH with u.
      - move=>x IH y yx. constructor=>z zy. apply IH.
        apply lt_leq. eapply ltle_lt; eassumption.
-   }.
+   }
    by move=>?; eauto.
  Qed.
  
@@ -1331,7 +1331,7 @@ Section s.
      etransitivity. apply eqv_covered. apply image_comp. 
      etransitivity. 2: apply eqv_covered; symmetry; apply image_comp. 
      apply covered_image=>//g/=. by apply g.
-   }.
+   }
    unshelve eexists. unshelve eexists. exact f. 
    constructor. constructor. apply op_leq_eqv_1. 
    constructor. constructor. exact I. 

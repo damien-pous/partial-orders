@@ -1,0 +1,8 @@
+-arg -w -arg -undo-batch-mode
+
+-R . PartialOrders
+
+alone.v
+orders.v
+split.v
+split_tc.v
