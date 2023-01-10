@@ -129,8 +129,8 @@ Canonical Structure sig_setoid (X: Setoid) (P: X -> Prop) :=
 
 Canonical Structure setoid_morphisms_setoid (X Y: Setoid) :=
   Eval hnf in kern_setoid _ (@Setoid.body X Y).
-Notation eqv_setoids := (@eqv (setoid_morphisms_setoid _ _)). 
-Infix "≡[-eqv->]" := (eqv_setoids) (at level 70).
+(* Notation eqv_setoids := (@eqv (setoid_morphisms_setoid _ _)).  *)
+(* Infix "≡[-eqv->]" := (eqv_setoids) (at level 70). *)
 
 
 Definition dual (X: Type) := X.
@@ -158,11 +158,11 @@ Check fun f: nat -eqv-> nat => f ° id ° f.
 
 #[export] Instance const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@const X Y).
 Proof. move=>/=y y' yy' _/=. apply yy'. Qed.
-#[export] Instance setoid_const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv_setoids) (@Setoid.const X Y) := const_eqv.
+#[export] Instance setoid_const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@Setoid.const X Y) := const_eqv.
 
 Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡ h.
 Proof. intros * H. rewrite H -H. Abort. 
-Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡[-eqv->] h.
+Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> Setoid.const x ≡ h.
 Proof. intros * H. rewrite H -H. Abort. 
 
 
@@ -389,12 +389,12 @@ Canonical Structure setoid_morphisms_po X (Y: PO): PO := Eval hnf in kern_po _ (
 Canonical Structure po_morphisms_setoid X Y: Setoid := Eval hnf in kern_setoid _ (@PO.body X Y). 
 Canonical Structure po_morphisms_po X Y: PO := Eval hnf in kern_po _ (@PO.body X Y). 
 
-Notation leq_setoids := (@leq (setoid_morphisms_po _ _)). 
-Notation eqv_pos := (@eqv (po_morphisms_setoid _ _)). 
-Notation leq_pos := (@leq (po_morphisms_po _ _)). 
-Infix "<=[-eqv->]" := (leq_setoids) (at level 70).
-Infix "≡[-mon->]" := (eqv_pos) (at level 70).
-Infix "<=[-mon->]" := (leq_pos) (at level 70).
+(* Notation leq_setoids := (@leq (setoid_morphisms_po _ _)).  *)
+(* Notation eqv_pos := (@eqv (po_morphisms_setoid _ _)).  *)
+(* Notation leq_pos := (@leq (po_morphisms_po _ _)).  *)
+(* Infix "<=[-eqv->]" := (leq_setoids) (at level 70). *)
+(* Infix "≡[-mon->]" := (eqv_pos) (at level 70). *)
+(* Infix "<=[-mon->]" := (leq_pos) (at level 70). *)
 
 Program Canonical Structure dual_po (X: PO): PO :=
   Eval hnf in
@@ -423,10 +423,10 @@ Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (leq_on (Y-eqv->Z) ==> eqv ==> leq) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 
-#[export] Instance setoid_comp_eqv {X Y Z}: Proper (eqv_setoids ==> eqv_setoids ==> eqv_setoids) (@Setoid.comp X Y Z) := comp_eqv.
-#[export] Instance setoid_comp_leq {X Y} {Z: PO}: Proper (leq_setoids ==> eqv_setoids ==> leq_setoids) (@Setoid.comp X Y Z) := comp_leq_eqv.
-#[export] Instance po_comp_leq {X Y Z}: Proper (leq_pos ==> leq_pos ==> leq_pos) (@PO.comp X Y Z) := comp_leq.
-#[export] Instance po_comp_eqv {X Y Z}: Proper (eqv_pos ==> eqv_pos ==> eqv_pos) (@PO.comp X Y Z) := op_leq_eqv_2.
+#[export] Instance setoid_comp_eqv {X Y Z}: Proper (eqv ==> eqv ==> eqv) (@Setoid.comp X Y Z) := comp_eqv.
+#[export] Instance setoid_comp_leq {X Y} {Z: PO}: Proper (leq ==> eqv ==> leq) (@Setoid.comp X Y Z) := comp_leq_eqv.
+#[export] Instance po_comp_leq {X Y Z}: Proper (leq ==> leq ==> leq) (@PO.comp X Y Z) := comp_leq.
+#[export] Instance po_comp_eqv {X Y Z}: Proper (eqv ==> eqv ==> eqv) (@PO.comp X Y Z) := op_leq_eqv_2.
 
 (* #[export] Existing Instance comp_eqv(* _ {X Y Z : Setoid}: *) *)
 (* (* Proper (meqv ==> meqv ==> meqv) (@comp X Y Z) := comp_eqv *). *)
@@ -437,23 +437,23 @@ Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
   Fail intros * ->.
 Abort.
-Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡[-eqv->] h.
+Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> Setoid.comp f g ≡ h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -eqv-> X, f ≡ g -> f ° g <=[-eqv->] h.
+Goal forall X: PO, forall f g h: X -eqv-> X, f ≡ g -> Setoid.comp f g <= h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g ≡[-mon->] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> PO.comp f g ≡ h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g <=[-eqv->] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> Setoid.comp f g <= h.
   Fail intros * ->.
-  intros * H. rewrite (H: f≡[-eqv->]g). 
+  intros * H. rewrite (H: f≡[_-eqv->_]g). 
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ° g <=[-mon->] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ° g <=[_-mon->_] h.
   intros * ->.
 Abort. 
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g <=[-mon->] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g <=[_-mon->_] h.
   intros * ->.
 Abort. 
 
@@ -470,9 +470,9 @@ Abort.
 
 #[export] Instance const_leq {X} {Y: PO}: Proper (leq ==> leq) (@const X Y).
 Proof. move=>/=y y' yy' _/=. apply yy'. Qed.
-#[export] Instance setoid_const_leq {X} {Y: PO}: Proper (leq ==> leq_setoids) (@Setoid.const X Y) := const_leq.
-#[export] Instance po_const_leq {X} {Y: PO}: Proper (leq ==> leq_pos) (@PO.const X Y) := const_leq.
-#[export] Instance po_const_eqv {X} {Y: PO}: Proper (eqv ==> eqv_pos) (@PO.const X Y) := const_eqv.
+#[export] Instance setoid_const_leq {X} {Y: PO}: Proper (leq ==> leq) (@Setoid.const X Y) := const_leq.
+#[export] Instance po_const_leq {X} {Y: PO}: Proper (leq ==> leq) (@PO.const X Y) := const_leq.
+#[export] Instance po_const_eqv {X} {Y: PO}: Proper (eqv ==> eqv) (@PO.const X Y) := const_eqv.
 
 
 Check nat: Setoid. 
@@ -774,10 +774,10 @@ Section s.
   Variables (f: X -> Y) (g: Y -> X).
   Class adjunction := adj: forall x y, f x <= y <-> x <= g y.
   
-  #[export] Instance left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
+  Lemma left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
   Proof. intros x y xy. apply adj. rewrite xy. by apply adj. Qed.
   
-  #[export] Instance right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
+  Lemma right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
   Proof. intros x y xy. apply adj. rewrite -xy. by apply adj. Qed.
   
   Lemma left_adjoint_sup (A: adjunction) P x: is_sup P x -> is_sup (image f P) (f x).
@@ -1138,131 +1138,6 @@ Section s.
 End s.
 
 
-(*
-(** * dCPOs *)
-
-Module dCPO.
-Record mixin X (M: Setoid.mixin X) (N: PO.mixin M) := from_po {
-    dsup: forall D: X -> Prop, @directed (PO.pack N) D -> X;
-    dsup_spec: forall D DD, @is_sup (PO.pack N) D (@dsup D DD);
-}.
-Structure type := pack {
-    sort:> Type;
-    #[canonical=no] setoid_mix: Setoid.mixin sort;
-    #[canonical=no] po_mix: PO.mixin setoid_mix;
-    #[canonical=no] mix: mixin po_mix;
-}.
-Canonical Structure to_PO (X: type): PO := PO.pack (po_mix X). 
-Canonical Structure to_Setoid (X: type): Setoid := Setoid.pack (setoid_mix X). 
-#[reversible] Coercion to_PO: type >-> PO.
-#[reversible] Coercion to_Setoid: type >-> Setoid.
-Definition build (X: PO) :=
-  let '@PO.pack T M N := X return
-                             forall dsup: (forall D: X -> Prop, @directed X D -> X),
-                              (forall D DD, @is_sup X D (@dsup D DD)) -> type in
-  fun dsup dsup_spec => @pack T M N (@from_po T M N dsup dsup_spec).
-Arguments build [_].
-End dCPO.
-Notation dCPO := dCPO.type.
-Canonical dCPO.to_PO.
-Canonical dCPO.to_Setoid.
-#[reversible] Coercion dCPO.to_Setoid: dCPO >-> Setoid.
-#[reversible] Coercion dCPO.to_PO: dCPO >-> PO.
-#[reversible] Coercion dCPO.sort: dCPO >-> Sortclass.
-Definition dsup {X: dCPO} := dCPO.dsup (dCPO.mix X).
-Arguments dsup {_}. 
-Definition dsup_spec {X: dCPO}: forall D DD, @is_sup X D (@dsup X D DD) := dCPO.dsup_spec (dCPO.mix X).
-Definition dcpo_on T (S: dCPO) (_: T -> S) := S.
-Notation dCPO_on T := (@dcpo_on T _ (fun x => x)).
-
-Lemma leq_dsup {X: dCPO} (P: X -> Prop) D: forall y, P y -> y <= dsup P D.
-Proof. apply leq_sup, dsup_spec. Qed.
-
-Program Canonical Structure dprod_dCPO {A} (X: A -> dCPO) :=
-  @dCPO.build (forall a, X a) (fun F DF a => dsup (image (fun f => f a) F) _) _.
-Next Obligation.
-  move=>/=_ _ [g [G ->]] [h [H ->]].
-  case: (DF _ _ G H)=>/=[i [I [gi hi]]].
-  exists (i a). split. by exists i. split. apply gi. apply hi.
-Qed.
-Next Obligation.
-  move=>/=f. split=>H.
-  - move=>g G. rewrite -H=>a. apply leq_dsup. by exists g.
-  - move=>a. apply dsup_spec=>/=_ [g [G ->]]. by apply H. 
-Qed.
-
-Section c.
- Context {A: Type} {X: dCPO}.
- Variable f: A->X.
- Variable from_sup: forall (P: A -> Prop) x, directed (image f P) -> is_sup (image f P) x -> A.
- Hypothesis f_from_sup: forall P x DfP (fPx: is_sup (image f P) x), f (from_sup DfP fPx) ≡ x.
- Program Definition kern_dCPO: dCPO :=
-   @dCPO.build (kern_po X f)
-               (fun P D =>
-                  let D' := _: directed (image f P) in
-                  from_sup D' (@dsup_spec _ (image f P) D')) _.
- Next Obligation.
-   move=>??[a [Pa ->]][b [Pb ->]]. case: (D _ _ Pa Pb)=>/=[c [Pc [ab ac]]].
-   exists (f c). split. by exists c. by split.
- Qed.
- Next Obligation.
-   move=>/=a. cbn. rewrite f_from_sup. rewrite dsup_spec=>/=. apply forall_image. 
- Qed.
-End c. 
-
-
-(** * CPOs *)
-
-Module CPO.
-Record mixin X (M: Setoid.mixin X) (N: PO.mixin M) := from_po {
-    csup: forall D: X -> Prop, @chain (PO.pack N) D -> X;
-    csup_spec: forall D DD, @is_sup (PO.pack N) D (@csup D DD);
-}.
-Structure type := pack {
-    sort:> Type;
-    #[canonical=no] setoid_mix: Setoid.mixin sort;
-    #[canonical=no] po_mix: PO.mixin setoid_mix;
-    #[canonical=no] mix: mixin po_mix;
-}.
-Canonical Structure to_PO (X: type): PO := PO.pack (po_mix X). 
-Canonical Structure to_Setoid (X: type): Setoid := Setoid.pack (setoid_mix X). 
-#[reversible] Coercion to_PO: type >-> PO.
-#[reversible] Coercion to_Setoid: type >-> Setoid.
-Definition build (X: PO) :=
-  let '@PO.pack T M N := X return
-                             forall csup: (forall D: X -> Prop, @chain X D -> X),
-                              (forall D DD, @is_sup X D (@csup D DD)) -> type in
-  fun csup csup_spec => @pack T M N (@from_po T M N csup csup_spec).
-Arguments build [_].
-End CPO.
-Notation CPO := CPO.type.
-Canonical CPO.to_PO.
-Canonical CPO.to_Setoid.
-#[reversible] Coercion CPO.to_Setoid: CPO >-> Setoid.
-#[reversible] Coercion CPO.to_PO: CPO >-> PO.
-#[reversible] Coercion CPO.sort: CPO >-> Sortclass.
-Definition csup {X: CPO} := CPO.csup (CPO.mix X).
-Arguments csup {_}. 
-Definition csup_spec {X: CPO}: forall D DD, @is_sup X D (@csup X D DD) := CPO.csup_spec (CPO.mix X).
-Definition cpo_on T (S: CPO) (_: T -> S) := S.
-Notation CPO_on T := (@cpo_on T _ (fun x => x)).
-
-Lemma leq_csup {X: CPO} (P: X -> Prop) D: forall y, P y -> y <= csup P D.
-Proof. apply leq_sup, csup_spec. Qed.
-
-Program Canonical Structure dprod_CPO {A} (X: A -> CPO) :=
-  @CPO.build (forall a, X a) (fun F CF a => csup (image (fun f => f a) F) _) _.
-Next Obligation.
-  move=>/=_ _ [g [G ->]] [h [H ->]].
-  case: (CF _ _ G H)=>E;[left|right]; apply E.
-Qed.
-Next Obligation.
-  move=>/=f. split=>H.
-  - move=>g G. rewrite -H=>a. apply leq_csup. by exists g.
-  - move=>a. apply csup_spec=>/=_ [g [G ->]]. by apply H. 
-Qed.
-*)
-
 (** * chain construction *)
 
 Module Chain.
@@ -1610,7 +1485,7 @@ Section b.
  Hypothesis tower: forall (P: C -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
 
  (** the function [next] must be extensive *)
- Lemma id_next: id <=[-mon->] next.
+ Lemma id_next: id <=[_-mon->_] next.
  Proof.
    apply: tower=>/=.
    - apply sup_closed_leq.
@@ -1700,7 +1575,7 @@ Section s.
  Context {l} {C: GPO l} {L: lD<<l}.
 
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => @id C <=[-mon->] f) _.
+ Program Definition h: C-mon->C := dsup (fun f => id <=[C-mon->C] f) _.
  Next Obligation.
    move=>/=i j I J. exists (i°j). split; last split.
    - by rewrite -I.
@@ -1708,10 +1583,10 @@ Section s.
    - by rewrite -I.
  Qed.
  
- Lemma h_ext: id <=[-mon->] h.
+ Lemma h_ext: id <=[_-mon->_] h.
  Proof. by apply: leq_dsup. Qed.
 
- Lemma h_invol: h ° h <=[-mon->] h.
+ Lemma h_invol: h ° h <=[_-mon->_] h.
  Proof.
    apply: leq_dsup.
    by rewrite -h_ext.
@@ -1720,9 +1595,9 @@ Section s.
  Definition extensive_fixpoint := locked (h bot).
 
  Variable f: C-mon->C.
- Hypothesis f_ext: id <=[-mon->] f. 
+ Hypothesis f_ext: id <=[_-mon->_] f. 
  
- Lemma h_prefixpoint: f ° h <=[-mon->] h.
+ Lemma h_prefixpoint: f ° h <=[_-mon->_] h.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 

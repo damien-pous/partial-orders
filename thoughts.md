@@ -1,3 +1,10 @@
+# FILES
+
+orders.v    with HB
+alone.v     without HB
+split.v     split operations/laws
+split_tc.v  idem, with TC for laws
+
 # TODO
 
 split ops and laws
@@ -21,23 +28,28 @@ in classical logic,
  chain-complete => directed-complete
 
 
-
-
-
-
 # MISC
 
-- ops and laws via CS vs. laws via TC
-  -- cannot mix derived ops/concepts and lemmas in the same section
-  -- faster inferrence?
+- split ops and laws:
+  + was forced in relation aglebra?
+  + less unification problems?
+  - less mathematical
+  - more arguments
+  - laws come into the way anyways, for building the GPO of monotone functions
+
+- laws via CS vs. laws via TC
+  - with CS, cannot mix derived ops/concepts and lemmas in the same section
+  - faster with TC (for now)
 
 - separate setoid from PO:
-  -- same equality structure for prod and lex_prod
-  -- but one more layer
+  + same equality structure for prod and lex_prod
+  - one more layer
 
 - separate PO from SI-PO ?
+  + PO remains without level arguments
+  - one more layer
 
-- levels:
+- levels (forced)
   concrete instances with a fixed concrete level
   definitions and lemmas explicitly upward closed (forall l, k<<l -> )
 
