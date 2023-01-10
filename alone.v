@@ -71,9 +71,8 @@ Definition eqv {X: Setoid} := Setoid.eqv (Setoid.mix X).
 #[export] Instance body_eqv {X Y} {f: X-eqv->Y}: Proper (eqv ==> eqv) f := Setoid.body_eqv f.
 Definition setoid_on T (S: Setoid) (_: T -> S) := S.
 Notation Setoid_on T := (@setoid_on T _ (fun x => x)).
-Notation eqv_on T := (@eqv (Setoid_on T)). 
 Infix "≡" := eqv (at level 70).
-Infix "≡[ X ]" := (@eqv_on X) (at level 70).
+Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
 #[export] Hint Extern 0 => reflexivity: core.
 
 (** ** instances *)
@@ -142,7 +141,7 @@ Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): 
   Setoid.build_morphism f body_eqv.
 
 (* most general lemma *)
-Lemma comp_eqv {X Y Z}: Proper (eqv_on (Y-eqv->Z) ==> eqv ==> eqv) (@comp X Y Z).
+Lemma comp_eqv {X Y Z}: Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 (* but only this restriction makes it possible to use [setoid_rewrite] *)
 (* #[export] Instance setoid_comp_eqv {X Y Z: Setoid}: Proper (meqv ==> meqv ==> meqv) (@Setoid.comp X Y Z) := comp_eqv. *)
@@ -245,13 +244,11 @@ Definition eqv_of_leq {X: PO}: forall x y, x ≡ y <-> (leq x y /\ leq y x) := P
 #[export] Instance body_leq {X Y} {f: X-mon->Y}: Proper (leq ==> leq) f := PO.body_leq f.
 Definition po_on T (S: PO) (_: T -> S) := S.
 Notation PO_on T := (@po_on T _ (fun x => x)).
-Notation leq_on T := (@leq (PO_on T)). 
 Infix "<=" := leq (at level 70).
-Infix "<=[ X ]" := (@leq_on X) (at level 70).
+Infix "<=[ X ]" := (@leq X) (at level 70, only parsing).
 Definition lt {X: PO} (x y: X) := x<=y /\ ~y<=x.
-Notation lt_on T := (@lt (PO_on T)). 
 Infix "<" := lt (at level 70).
-Infix "<[ X ]" := (@lt_on X) (at level 70).
+Infix "<[ X ]" := (@lt X) (at level 70, only parsing).
 
 (** ** basic properties *)
 
@@ -418,9 +415,9 @@ Proof. intros * ->. Abort.
 Goal forall x y: nat -> Prop, x ≡ y -> x <= y.
 Proof. intros * ->. Abort. 
 
-Lemma comp_leq {X Y Z}: Proper (leq_on (Y-mon->Z) ==> leq ==> leq) (@comp X Y Z).
+Lemma comp_leq {X Y Z}: Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
-Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (leq_on (Y-eqv->Z) ==> eqv ==> leq) (@comp X Y Z).
+Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 
 #[export] Instance setoid_comp_eqv {X Y Z}: Proper (eqv ==> eqv ==> eqv) (@Setoid.comp X Y Z) := comp_eqv.
@@ -569,6 +566,8 @@ Notation upward_closed := (Proper (leq --> impl)).
 
 Section s.
 Context {X: PO}.
+Implicit Types x y z: X. 
+Implicit Types P Q: X -> Prop. 
 
 Definition covered: relation (X -> Prop) := fun P Q => forall x, P x -> exists y, Q y /\ x <= y.
 #[export] Instance PreOrder_covered: PreOrder covered.
@@ -597,7 +596,7 @@ Lemma eqv_covered f g: f ≡ g -> bicovered f g.
 Proof. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
 
-Definition is_sup (P: X -> Prop) x := forall z, x <= z <-> forall y, P y -> y <= z.
+Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
 
 (* infer [is_sup] using typeclasses? *)
 Lemma leq_is_sup P x: is_sup P x -> forall y, P y -> y <= x.
@@ -612,7 +611,7 @@ Qed.
 Lemma is_sup_eqv P p Q q: is_sup P p -> is_sup Q q -> bicovered P Q -> p≡q.
 Proof. rewrite eqv_of_leq=>??[??]. eauto using is_sup_leq. Qed.
 
-Lemma supU (P: X -> Prop) x y: is_sup P x -> is_sup P y -> x ≡ y.
+Lemma supU P x y: is_sup P x -> is_sup P y -> x ≡ y.
 Proof. eauto using is_sup_eqv. Qed.
 
 Lemma is_sup_single x: is_sup (eq x) x.
@@ -627,9 +626,9 @@ Proof.
   split; apply E; apply PQ. 
 Qed.
 
-Definition sup_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_sup Q z -> P z.
+Definition sup_closed P := forall Q, Q <= P -> is_sup Q <= P.
 
-Lemma sup_closed_impl (P Q: X -> Prop): upward_closed P -> sup_closed Q -> sup_closed (fun x => P x -> Q x).
+Lemma sup_closed_impl P Q: upward_closed P -> sup_closed Q -> sup_closed (fun x => P x -> Q x).
 Proof.
   intros HP HQ T TPQ x Tx Px.
   eapply HQ. 2: apply Tx.
@@ -653,11 +652,31 @@ Proof.
   move: (is_sup_single x). apply Proper_is_sup=>//. by symmetry.
 Qed.
 
+Inductive sup_closure P: X -> Prop :=
+| sc_inj: P <= sup_closure P
+| sc_sup: sup_closed (sup_closure P).
+
+Lemma is_sup_closure P: is_sup (sup_closure P) ≡ is_sup P.
+Proof.
+  move=>x. 
+  apply: Proper_forall=>z.
+  apply: Proper_iff=>//{x}.
+  split=>H x Px.
+  - by apply H, sc_inj.
+  - elim: Px=>//Q QP IH y Hy. by apply Hy, IH. 
+Qed.
+
 Definition directed (P: X -> Prop) :=
   forall x y, P x -> P y -> exists z, P z /\ x <= z /\ y <= z.
 
+Lemma directed_empty: directed empty.
+Proof. by []. Qed.
+
 Definition chain (P: X -> Prop) :=
   forall x y, P x -> P y -> x <= y \/ y <= x.
+
+Lemma chain_empty: chain empty.
+Proof. by []. Qed.
 
 Lemma chain_directed P: chain P -> directed P.
 Proof. move=>H x y Px Py; by case:(H _ _ Px Py); eauto. Qed.
@@ -839,6 +858,51 @@ then: Distributive, Heyting, Boole
 
 *)
 
+Variant K := kE | kB | kC | kD | kA.
+Definition args k (X: PO): Type :=
+  match k with
+  | kE => unit
+  | kB => X * X
+  | kC => sig (@chain X)
+  | kD => sig (@directed X)
+  | kA => (X -> Prop)
+  end.
+Definition setof {X: PO} k: args k X -> X -> Prop :=
+  match k with
+  | kE => fun _ => empty
+  | kB => fun p => pair (fst p) (snd p)
+  | kC => @proj1_sig _ _
+  | kD => @proj1_sig _ _
+  | kA => fun P => P
+  end.
+
+Section map_args.
+ Context {X Y: PO}.
+ Variable f: X -mon-> Y.
+ Lemma image_chain P: chain P -> chain (image f P).
+ Proof.
+   move=>C _ _ [x [Px ->]] [y [Py ->]].
+   case: (C x y Px Py)=>H; [left|right]; by apply f.
+ Qed.
+ Lemma image_directed P: directed P -> directed (image f P).
+ Proof.
+   move=>D _ _ [x [Px ->]] [y [Py ->]].
+   case: (D x y Px Py)=>[z [Pz [xz yz]]].
+   exists (f z). split. by exists z. split; by apply f.
+ Qed.
+ Definition map_args k: args k X -> args k Y :=
+   match k return args k X -> args k Y with
+   | kE => id
+   | kB => fun '(x,y) => (f x,f y)
+   | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
+   | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
+   | kA => image f
+   end.
+ Lemma setof_map_args k: forall x, setof k (map_args k x) ≡ image f (setof k x).
+ Proof. case: k=>/=[_|[x x']|[P C]|[P D]|P]//=; firstorder congruence. Qed. 
+End map_args.
+
+
 Record level := mk_level { has_E: bool; has_B: bool; has_C: bool; has_D: bool; has_A: bool}.
 Declare Scope level_scope.
 Bind Scope level_scope with level.
@@ -866,6 +930,7 @@ Infix "+" := cup_level: level_scope.
 Section levels.
 Notation "1" := true.
 Notation "0" := false.
+Definition lN := mk_level 0 0 0 0 0.
 Definition lE := mk_level 1 0 0 0 0.
 Definition lB := mk_level 0 1 0 0 0.
 Definition lC := mk_level 1 0 1 0 0.
@@ -876,24 +941,56 @@ End levels.
 Goal lE << lA. typeclasses eauto. Qed.
 Goal forall l, lE+lB << l -> lB << l. typeclasses eauto. Qed.
 
-Variant K := kE | kB | kC | kD | kA.
 Coercion level_for k := match k with kE => lE | kB => lB | kC => lC | kD => lD | kA => lA end.
-Definition args k (X: PO): Type :=
-  match k with
-  | kE => unit
-  | kB => X * X
-  | kC => sig (@chain X)
-  | kD => sig (@directed X)
-  | kA => (X -> Prop)
-  end.
-Definition setof {X: PO} k: args k X -> X -> Prop :=
-  match k with
-  | kE => fun _ => empty
-  | kB => fun p => pair (fst p) (snd p)
-  | kC => @proj1_sig _ _
-  | kD => @proj1_sig _ _
-  | kA => fun P => P
-  end.
+
+Section reduce.
+  Variable T: K -> Type.
+  Variable f: forall k, option (T k).
+  Definition level_of: level :=
+    let f k := match f k with None => lN | Some _ => level_for k end
+    in f kE + f kB + f kC + f kD + f kA.
+  Ltac discriminate_levels :=
+    (discriminate ||
+       lazymatch goal with |- context [f ?k] => (* idtac k; *) case: (f k)=>[_|]; discriminate_levels end).    
+  Hypothesis H: forall h k: K, h << k -> T k -> T h. 
+  Definition reduce: forall k: K, k<<level_of -> T k.
+    unfold level_of. 
+    case.
+    - case (f kE)=>[v _|]. exact v.
+      case (f kA)=>[v _|]. revert v. by apply H. 
+      case (f kD)=>[v _|]. revert v. by apply H. 
+      case (f kC)=>[v _|]. revert v. by apply H.
+      discriminate_levels. 
+    - case (f kB)=>[v _|]. exact v.
+      case (f kA)=>[v _|]. revert v. by apply H. 
+      discriminate_levels. 
+    - case (f kC)=>[v _|]. exact v.
+      case (f kA)=>[v _|]. revert v. by apply H. 
+      case (f kD)=>[v _|]. revert v. by apply H. 
+      discriminate_levels. 
+    - case (f kD)=>[v _|]. exact v.
+      case (f kA)=>[v _|]. revert v. by apply H. 
+      discriminate_levels.
+    - case (f kA)=>[v _|]. exact v.
+      discriminate_levels.
+  Defined.
+End reduce.
+Section reduce_ops.
+  Variable X: PO.
+  Definition gsup_ops k := sig (fun sup: args k X -> X => forall x, is_sup (setof k x) (sup x)).
+  Variable f: forall k: K, option (gsup_ops k). 
+  Definition reducer: forall h k: K, h << k -> gsup_ops k -> gsup_ops h.
+    case; case=>//_ [v H].
+    - exists (fun _ => v (exist _ empty chain_empty)). by move=>/=_; apply H. 
+    - exists (fun _ => v (exist _ empty directed_empty)). by move=>/=_; apply H. 
+    - exists (fun _ => v empty). by move=>/=_; apply H. 
+    - exists (fun '(x,y) => v (pair x y)). by move=>/=[??]; apply H. 
+    - exists (fun '(exist _ P C) => v (exist _ P (chain_directed C))). by move=>/=[??]; apply H. 
+    - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
+    - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
+  Defined.
+End reduce_ops.
+
 
 Module GPO.
 
@@ -918,7 +1015,15 @@ Definition build (l: level) (X: PO) :=
                            forall gsup: (forall k: K, k << l -> args k X -> X),
                              (forall k kl x, is_sup (setof k x) (gsup k kl x)) -> type l in
   fun gsup gsup_spec => @pack l T M N (@from_po l T M N gsup gsup_spec).
-Arguments build _ [_].
+Arguments build [_ _].
+Definition reduced_build (X: PO) (f: forall k, option (gsup_ops X k)): type (level_of _ f).
+Proof.
+  set f' := reduce _ f (@reducer _). 
+  unshelve eapply build. exact X.
+  - move=>k kl. apply (proj1_sig (f' k kl)).
+  - move=>k kl. apply (proj2_sig (f' k kl)).
+Defined.
+Arguments reduced_build: clear implicits.
 End GPO.
 Notation GPO := GPO.type.
 Canonical GPO.to_PO.
@@ -969,94 +1074,97 @@ Proof. rewrite is_sup_cup /pair; intuition subst; auto. Qed.
 Lemma cupA {l} {X: GPO l} {L: lB << l} (x y z: X): x ⊔ (y ⊔ z) ≡ x ⊔ y ⊔ z. 
 Proof. apply: from_above=>t. rewrite 4!cup_spec. tauto. Qed.
 
+Lemma csup_sup {l} {X: GPO l} {L: lA << l} P C: csup P C ≡[X] sup P.
+Proof. apply: supU. apply is_sup_csup. apply is_sup_sup. Qed.
+Lemma dsup_sup {l} {X: GPO l} {L: lA << l} P D: dsup P D ≡[X] sup P.
+Proof. apply: supU. apply is_sup_dsup. apply is_sup_sup. Qed.
+
 Lemma csup_empty {l} {X: GPO l} {L: lC << l} C: csup empty C ≡[X] bot.
 Proof. apply: supU. apply is_sup_csup. apply is_sup_bot. Qed.
 Lemma dsup_empty {l} {X: GPO l} {L: lD << l} D: dsup empty D ≡[X] bot.
 Proof. apply: supU. apply is_sup_dsup. apply is_sup_bot. Qed.
 Lemma sup_empty {l} {X: GPO l} {L: lA << l}: sup empty ≡[X] bot.
 Proof. apply: supU. apply is_sup_sup. apply is_sup_bot. Qed.
+
 Lemma sup_pair {l} {X: GPO l} {L: lA << l} (x y: X): sup (pair x y) ≡ x ⊔ y.
 Proof. apply: supU. apply is_sup_sup. apply is_sup_cup. Qed.
 
-
+Lemma directed_sup_closure {l} {X: GPO l} {L: lB << l} (P: X -> Prop): directed (sup_closure P).
+Proof.
+  move=>x y Px Py. exists (x⊔y); split. 2: by apply cup_spec.
+  apply sc_sup with (pair x y). 2: apply is_sup_cup.
+  by move=>z [->|->].
+Qed.
+Corollary sup_dsup {l} {X: GPO l} {L: lA << l} (P: X -> Prop):
+  sup P ≡ dsup (sup_closure P) (directed_sup_closure (P:=P)).
+Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is_sup_sup. Qed.
 
 Lemma discriminate {P: Type}: is_true false -> P.
 Proof. by []. Qed.
   
 Program Canonical Structure bool_gpo: GPO (lE+lB) := Eval hnf in 
-  GPO.build _
-            (fun k => match k with
-                   | kE => fun _ _ => false
-                   | kB => fun _ '(x,y) => orb x y
-                   | kC | kD | kA  => discriminate
-                   end)
-            (fun k => match k with
-                   | kE => fun _ _ => _
-                   | kB => fun _ '(x,y) => _
-                   | kC | kD | kA => fun C => False_ind _ _
-                   end).
+    GPO.build
+      (fun k => match k with
+             | kE => fun _ _ => false
+             | kB => fun _ '(x,y) => orb x y
+             | kC | kD | kA  => discriminate
+             end)
+      (fun k => match k with
+             | kE => fun _ _ => _
+             | kB => fun _ '(x,y) => _
+             | kC | kD | kA => fun C => False_ind _ _
+             end).
 Next Obligation. by case. Qed.
 Next Obligation. Admitted. 
 
 Program Canonical Structure nat_gpo: GPO (lE+lB) := Eval hnf in 
-  GPO.build _
-            (fun k => match k with
-                   | kE => fun _ _ => O
-                   | kB => fun _ '(x,y) => Peano.max x y
-                   | kA | kC | kD => discriminate
-                   end)
-            (fun k => match k with
-                   | kE | kB => fun _ _ => _
-                   | kA | kC | kD => fun C => False_ind _ _
-                   end).
+    GPO.build
+      (fun k => match k with
+             | kE => fun _ _ => O
+             | kB => fun _ '(x,y) => Peano.max x y
+             | kA | kC | kD => discriminate
+             end)
+      (fun k => match k with
+             | kE | kB => fun _ _ => _
+             | kA | kC | kD => fun C => False_ind _ _
+             end).
 Next Obligation. Admitted.
 Next Obligation. cbn. Admitted.
 
-Program Canonical Structure Prop_gpo: GPO (lE+lB+lA) := Eval hnf in 
-  GPO.build _
-            (fun k => match k with
-                   | kE => fun _ _ => False
-                   | kB => fun _ '(p,q) => p\/q
-                   | kC => fun _ P => exists2 p, proj1_sig P p & p
-                   | kD => fun _ P => exists2 p, proj1_sig P p & p
-                   | kA => fun _ P => exists2 p, P p & p
-                   end)
-            (fun k => match k with
-                   | kE => fun _ _ => _
-                   | kB => fun _ '(x,y) => _
-                   | kC | kD | kA => fun _ P => _
-                   end).
+
+Program Canonical Structure Prop_gpo: GPO lA := Eval hnf in
+  GPO.reduced_build Prop
+    (fun k => match k with
+           | kE => Some (exist _ (fun _ => False) _)
+           | kB => Some (exist _ (fun '(p,q) => p\/q) _)
+           | kC => None          (* generated *)
+           | kD => None          (* generated *)
+           | kA => Some (exist _ (fun P => exists2 p, P p & p) _)
+           end).
 Next Obligation. firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto. Qed.
 Next Obligation. firstorder. Qed.
-Next Obligation. firstorder. Qed.
-Next Obligation. firstorder. Qed.
 
-Section map_args.
- Context {X Y: PO}.
- Variable f: X -mon-> Y.
- Lemma image_chain P: chain P -> chain (image f P).
- Proof.
-   move=>C _ _ [x [Px ->]] [y [Py ->]].
-   case: (C x y Px Py)=>H; [left|right]; by apply f.
- Qed.
- Lemma image_directed P: directed P -> directed (image f P).
- Proof.
-   move=>D _ _ [x [Px ->]] [y [Py ->]].
-   case: (D x y Px Py)=>[z [Pz [xz yz]]].
-   exists (f z). split. by exists z. split; by apply f.
- Qed.
- Definition map_args k: args k X -> args k Y :=
-   match k return args k X -> args k Y with
-   | kE => id
-   | kB => fun '(x,y) => (f x,f y)
-   | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
-   | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
-   | kA => image f
-   end.
- Lemma setof_map_args k: forall x, setof k (map_args k x) ≡ image f (setof k x).
- Proof. case: k=>/=[_|[x x']|[P C]|[P D]|P]//=; firstorder congruence. Qed. 
-End map_args.
+
+(* Program Definition Prop_gpo': GPO lA := Eval hnf in  *)
+(*   GPO.build *)
+(*     (fun k => match k with *)
+(*            | kE => fun _ _ => False *)
+(*            | kB => fun _ '(p,q) => p\/q *)
+(*            | kC => fun _ P => exists2 p, proj1_sig P p & p *)
+(*            | kD => fun _ P => exists2 p, proj1_sig P p & p *)
+(*            | kA => fun _ P => exists2 p, P p & p *)
+(*            end) *)
+(*     (fun k => match k with *)
+(*            | kE => fun _ _ => _ *)
+(*            | kB => fun _ '(x,y) => _ *)
+(*            | kC | kD | kA => fun _ P => _ *)
+(*            end). *)
+(* Next Obligation. firstorder. Qed. *)
+(* Next Obligation. cbv; firstorder subst; eauto. Qed. *)
+(* Next Obligation. firstorder. Qed. *)
+(* Next Obligation. firstorder. Qed. *)
+(* Next Obligation. firstorder. Qed. *)
 
 Definition app {A} {X: A -> PO} a: (forall a, X a)-mon->X a :=
   PO.build_morphism (fun f => f a) (fun f g fg => fg a).
