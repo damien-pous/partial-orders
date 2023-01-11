@@ -2,23 +2,31 @@
 
 orders.v    with HB
 alone.v     without HB
+alone_fun.v without HB, SPO,IPO,GPO duality, etc
 split.v     split operations/laws
 split_tc.v  idem, with TC for laws
 
 # TODO
 
-split ops and laws
-merge Setoid and PO ??
+smart constructor for GPO 
+image-sups
 
-GPO -> S-PO, and from there IS-PO
-smart constructors?
-image-sups?
 direct sub-GPO construct?
 GPO products/sums
+
+resplit ops and laws ??
+merge Setoid and PO ??
+
 distributive, Heyting, Boolean
 
-full duality
 more on adjunctions
+
+cast_setoid
+
+strong eqc
+decidable eqv, leq
+finite
+
 
 ## later
 non-empty chains/directed/arbitrary?
@@ -49,10 +57,17 @@ in classical logic,
   + PO remains without level arguments
   - one more layer
 
-- levels (forced)
+- levels and inheritance
+  concrete instances could be polymorphic, but not abstract assumptions
+  -> anticipate coercions in all lemma statements
+  
   concrete instances with a fixed concrete level
   definitions and lemmas explicitly upward closed (forall l, k<<l -> )
 
+- SPO, IPO (by duality), GPO ?  (in that case, remove slevel sN)
+
+
+- duality: difficulty with monotone functions: [X-mon->Y] =/= [dual X-mon-> dual Y] due to the switch in monotonicity statement proofs 
 
 
 
@@ -166,3 +181,4 @@ S,I-PO Type Setoid PO     S,I-PO
 comp: eqv/Setoid => eqv => eqv
 comp: leq/Setoid => eqv => leq
 comp: leq/PO     => leq => leq
+

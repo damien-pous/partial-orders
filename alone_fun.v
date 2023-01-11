@@ -24,11 +24,15 @@ Lemma compxC {X Y Z} (f: Y->Z) (y: Y): f ° @const X _ y = const (f y).
 Proof. by []. Qed.
 
 Definition empty {X}: X -> Prop := fun _ => False. 
-Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y. 
+Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y.
+Lemma forall_pair {X} (P: X -> Prop) x y: (forall z, pair x y z -> P z) <-> P x /\ P y.
+Proof. split. move=>H; split; apply H; cbv; auto. by move=>[??]?[->|->]. Qed.
 
 Notation "a &&& b" := (if a then b else false) (at level 60): bool_scope. 
 Notation "a ||| b" := (if a then true else b) (at level 60): bool_scope. 
 Notation "a ==> b" := (if a then b else true): bool_scope.
+
+Notation unify M N := (eq_refl: M = N).
 
 
 (** * setoids *)
@@ -45,6 +49,7 @@ Structure type := pack {
     sort:> Type;
     #[canonical=no] mix: mixin sort;
 }.
+Notation cast T X := (let X':=X in @pack T (mix X')).
 Definition build X eq eqE := pack (@from_type X eq eqE). 
 Arguments build: clear implicits. 
 
@@ -74,8 +79,6 @@ Canonical Setoid.const.
 Definition eqv {X: Setoid} := Setoid.eqv (Setoid.mix X).
 #[export] Instance Equivalence_eqv {X: Setoid}: @Equivalence X eqv := Setoid.Equivalence_eqv (Setoid.mix X).
 #[export] Instance body_eqv {X Y} {f: X-eqv->Y}: Proper (eqv ==> eqv) f := Setoid.body_eqv f.
-Definition setoid_on T (S: Setoid) (_: T -> S) := S.
-Notation Setoid_on T := (@setoid_on T _ (fun x => x)).
 Infix "≡" := eqv (at level 70).
 Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
 #[export] Hint Extern 0 => reflexivity: core.
@@ -84,32 +87,49 @@ Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
 
 Definition eq_setoid X := Setoid.build X eq eq_equivalence.
 
-Canonical Structure unit_setoid := Eval hnf in eq_setoid unit.
-Canonical Structure bool_setoid := Eval hnf in eq_setoid bool.
-Canonical Structure nat_setoid := Eval hnf in eq_setoid nat.
+Canonical Structure unit_setoid := eq_setoid unit.
+Canonical Structure bool_setoid := eq_setoid bool.
+Canonical Structure nat_setoid := eq_setoid nat.
 
 (* Program Canonical Structure irrelevant_setoid (P: Prop) := *)
 (*   Eval hnf in Setoid.build P (fun _ _ => True) _. *)
 (* Next Obligation. by constructor. Qed. *)
 
-Canonical Structure Prop_setoid := Eval hnf in Setoid.build Prop iff _.
+Canonical Structure Prop_setoid := Setoid.build Prop iff _.
 
 Program Canonical Structure prod_setoid (X Y: Setoid) :=
-  Eval hnf in Setoid.build (X*Y) (fun p q => fst p ≡ fst q /\ snd p ≡ snd q) _.
+  Setoid.build (X*Y) (fun p q => fst p ≡ fst q /\ snd p ≡ snd q) _.
 Next Obligation.
   constructor=>//.
   by move=>??[??]; split; symmetry; assumption.
   by move=>???[??][]; split; etransitivity; eassumption.
 Qed.
 
-Program Canonical Structure sum_setoid (X Y: Setoid) :=
-  Eval hnf in Setoid.build (X+Y) (fun p q => match p,q with inl p,inl q | inr p,inr q => p ≡ q | _,_ => False end) _.
-Next Obligation. constructor=>//; intuition discriminate. Qed.
+Definition sum_eqv {X Y: Setoid} (p q: X+Y) :=
+  match p,q with inl p,inl q | inr p,inr q => p ≡ q | _,_ => False end.
+Program Canonical Structure sum_setoid (X Y: Setoid) := Setoid.build (X+Y) sum_eqv _.
+Next Obligation.
+  constructor.
+  by move=>[?|?]//. 
+  by move=>[?|?][?|?]?//=; symmetry. 
+  by move=>[?|?][y|y][?|?]??//=; transitivity y. 
+Qed.
+
+Definition option_eqv {X: Setoid} (p q: option X) :=
+  match p,q with Some p,Some q => p≡q | None,None => True | _,_ => False end.
+Program Canonical Structure option_setoid (X: Setoid) :=
+  Setoid.build (option X) option_eqv _.
+Next Obligation.
+  constructor.
+  by move=>[?|]//. 
+  by move=>[?|][?|]//=; symmetry. 
+  by move=>[?|][y|][?|]??//=; transitivity y. 
+Qed.
   
 (* TODO: lists *)
 
 Program Canonical Structure dprod_setoid A (X: A -> Setoid) :=
-  Eval hnf in Setoid.build (forall a, X a) (fun f g => forall a, f a ≡ g a) _.
+  Setoid.build (forall a, X a) (fun f g => forall a, f a ≡ g a) _.
 Next Obligation.
   constructor.
   - by move=>??. 
@@ -129,18 +149,16 @@ Defined.
 Check fun A B (X: Setoid) (f: B -> X) (g: A -> B) => eq_refl: kern_setoid (kern_setoid X f) g = kern_setoid X (f ° g).
 
 Canonical Structure sig_setoid (X: Setoid) (P: X -> Prop) :=
-  Eval hnf in kern_setoid X (@proj1_sig X P).
+  kern_setoid X (@proj1_sig X P).
 
 Canonical Structure setoid_morphisms_setoid (X Y: Setoid) :=
-  Eval hnf in kern_setoid _ (@Setoid.body X Y).
-(* Notation eqv_setoids := (@eqv (setoid_morphisms_setoid _ _)).  *)
-(* Infix "≡[-eqv->]" := (eqv_setoids) (at level 70). *)
+  kern_setoid _ (@Setoid.body X Y).
 
-
+Print Canonical Projections. 
 Definition dual (X: Type) := X.
 Canonical Structure dual_setoid (X: Setoid) :=
   (* just a clone *)
-  Eval hnf in Setoid.build (dual X) eqv Equivalence_eqv.
+  Setoid.build (dual X) eqv Equivalence_eqv.
 
 Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): dual X -eqv-> dual Y :=
   Setoid.build_morphism f body_eqv.
@@ -192,6 +210,7 @@ Structure type := pack {
 }.
 Canonical Structure to_Setoid (X: type) := Setoid.pack (setoid_mix X).
 #[reversible] Coercion to_Setoid: type >-> Setoid.
+Notation cast T X := (let X':=X in @pack T _ (mix X')).
 Definition build (X: Setoid) :=
   (* fun leq H H' => @pack _ (Setoid.mix X) (@from_setoid _ (Setoid.mix X) leq H H').  *)
   let '@Setoid.pack T M := X return
@@ -252,8 +271,6 @@ Definition leq {X: PO} := PO.leq (PO.mix X).
 #[export] Instance PreOrder_leq {X: PO}: @PreOrder X leq := PO.PreOrder_leq (PO.mix X).
 Definition eqv_of_leq {X: PO}: forall x y, x ≡ y <-> (leq x y /\ leq y x) := PO.eqv_of_leq (PO.mix X).
 #[export] Instance body_leq {X Y} {f: X-mon->Y}: Proper (leq ==> leq) f := PO.body_leq f.
-Definition po_on T (S: PO) (_: T -> S) := S.
-Notation PO_on T := (@po_on T _ (fun x => x)).
 Infix "<=" := leq (at level 70).
 Infix "<=[ X ]" := (@leq X) (at level 70, only parsing).
 Definition lt {X: PO} (x y: X) := x<=y /\ ~y<=x.
@@ -324,22 +341,23 @@ Qed.
 Program Definition discrete_po (X: Setoid) := @PO.build X eqv _ _.
 Next Obligation. fold (x ≡ y). by intuition symmetry. Qed.
 
-Canonical Structure unit_po := Eval hnf in discrete_po unit.
+Canonical Structure unit_po := discrete_po unit.
 
 (* this one makes [prod_po] fail below, can't see why... *)
-(* Canonical Structure irrelevant_po (P: Prop) := Eval hnf in discrete_po (Setoid_on P). *)
+(* Canonical Structure irrelevant_po (P: Prop) := Eval hnf in discrete_po P. *)
 
-Program Canonical Structure bool_po: PO := Eval hnf in PO.build Bool.le _ _.
+Program Canonical Structure bool_po: PO := PO.build implb _ _.
+Next Obligation. split. by case. move=>[][][]//=. Qed.
+Next Obligation. case: x; case: y=>//=; intuition discriminate. Qed.
+
+Program Canonical Structure nat_po: PO := PO.build Peano.le _ _.
 Admit Obligations.
 
-Program Canonical Structure nat_po: PO := Eval hnf in PO.build Peano.le _ _.
-Admit Obligations.
-
-Program Canonical Structure Prop_po: PO := Eval hnf in PO.build impl _ _.
+Program Canonical Structure Prop_po: PO := PO.build impl _ _.
 Next Obligation. split; cbv; tauto. Qed.
 
 Program Canonical Structure prod_po (X Y: PO): PO :=
-  Eval hnf in PO.build (fun p q: X*Y => fst p <= fst q /\ snd p <= snd q) _ _.
+  PO.build (fun p q: X*Y => fst p <= fst q /\ snd p <= snd q) _ _.
 Next Obligation.
   constructor=>//.
   by move=>???[??][]; split; etransitivity; eassumption.
@@ -351,9 +369,8 @@ Qed.
 Definition lex_prod := prod.
 Canonical Structure lex_prod_setoid (X Y: Setoid) :=
   (* a clone of [prod_setoid] *)
-  Setoid.build (lex_prod X Y) (fun p q => fst p ≡ fst q /\ snd p ≡ snd q) Equivalence_eqv.
+  Setoid.cast (lex_prod X Y) (prod_setoid X Y). 
 Program Canonical Structure lex_prod_po (X Y: PO): PO :=
-  Eval hnf in
   PO.build (fun p q: lex_prod X Y => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q)) _ _.
 Next Obligation.
   constructor=>//.
@@ -363,11 +380,26 @@ Qed.
 Next Obligation.
   rewrite 2!eqv_of_leq. intuition.
 Qed.
-  
+
+(* with [None] as top element *)
+Definition leq_option (X: PO) (p q: option X) :=
+  match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
+Program Canonical Structure option_po (X: PO) :=
+  PO.build (leq_option X) _ _.
+Next Obligation.
+  constructor.
+  by case=>/=.
+  case=>[?|]; case=>[?|]=>//=; case=>[?|]=>//=. apply transitivity.
+Qed.
+Next Obligation.
+  case:x=>[?|]; case:y=>[?|]=>/=; rewrite ?eqv_of_leq; tauto. 
+Qed.
+
+
 (* TODO: parallel and sequential sums, lists *)
 
 Program Canonical Structure dprod_po A (X: A -> PO): PO :=
-  Eval hnf in PO.build (fun f g: forall a, X a => forall a, f a <= g a) _ _.
+  PO.build (fun f g: forall a, X a => forall a, f a <= g a) _ _.
 Next Obligation.
   constructor.
   - by move=>??. 
@@ -390,11 +422,11 @@ Defined.
 (* lucky here too *)
 Check fun A B (X: PO) (f: B -> X) (g: A -> B) => eq_refl: kern_po (kern_po X f) g = kern_po X (f ° g).
 
-Canonical Structure sig_po (X: PO) (P: X -> Prop): PO := Eval hnf in kern_po X (@proj1_sig X P).
+Canonical Structure sig_po (X: PO) (P: X -> Prop): PO := kern_po X (@proj1_sig X P).
 
-Canonical Structure setoid_morphisms_po X (Y: PO): PO := Eval hnf in kern_po _ (@Setoid.body X Y). 
-Canonical Structure po_morphisms_setoid X Y: Setoid := Eval hnf in kern_setoid _ (@PO.body X Y). 
-Canonical Structure po_morphisms_po X Y: PO := Eval hnf in kern_po _ (@PO.body X Y). 
+Canonical Structure setoid_morphisms_po X (Y: PO): PO := kern_po _ (@Setoid.body X Y). 
+Canonical Structure po_morphisms_setoid X Y: Setoid := kern_setoid _ (@PO.body X Y). 
+Canonical Structure po_morphisms_po X Y: PO := kern_po _ (@PO.body X Y). 
 
 (* Notation leq_setoids := (@leq (setoid_morphisms_po _ _)).  *)
 (* Notation eqv_pos := (@eqv (po_morphisms_setoid _ _)).  *)
@@ -404,7 +436,6 @@ Canonical Structure po_morphisms_po X Y: PO := Eval hnf in kern_po _ (@PO.body X
 (* Infix "<=[-mon->]" := (leq_pos) (at level 70). *)
 
 Program Canonical Structure dual_po (X: PO): PO :=
-  Eval hnf in
   PO.build (flip leq: relation (dual X)) _ _.
 Next Obligation. rewrite eqv_of_leq. tauto. Qed.
 
@@ -497,7 +528,6 @@ Abort.
 (* need irrelevant po *)
 Fail Check forall (x: nat * forall b: bool, nat * True), x <= x.
 
-Check fun X: PO => PO_on (dual X). 
 Check fun X: PO => dual X: PO. 
 Check fun (X: PO) (x: dual X) => x <= x. 
 Check fun (X: PO) (f: X-mon->X) => f <= f. 
@@ -569,6 +599,12 @@ Lemma Proper_and: Proper (iff ==> iff ==> iff) and.
 Proof. cbv. tauto. Qed.
 Lemma Proper_or: Proper (iff ==> iff ==> iff) or. 
 Proof. cbv. tauto. Qed.
+
+
+Lemma Proper_flip A B (R: relation A) (S: relation B): Proper (flip R ==> S) ≡ Proper (R ==> flip S).
+Proof. move=>f. apply: antisym=>Hf x y xy; by apply Hf. Qed.
+Lemma Proper_half (X Y: PO): Proper (@eqv X ==> @leq Y) <= Proper (@eqv X ==> @eqv Y).
+Proof. move=>f H x y xy. apply: antisym; apply H=>//; by symmetry. Qed.
 
 
 Notation downward_closed := (Proper (leq ==> impl)). 
@@ -656,9 +692,7 @@ Qed.
 
 Lemma sup_closed_Proper P: sup_closed P -> Proper (eqv ==> eqv) P.
 Proof.
-  move=>H. suff E: Proper (eqv ==> leq) P.
-   by move=>x y xy; apply: antisym; apply E=>//; symmetry. 
-  move=>x y xy Px. apply (H (eq x)). by move=>?<-. 
+  move=>H. apply Proper_half=>x y xy Px. apply (H (eq x)). by move=>?<-. 
   move: (is_sup_single x). apply Proper_is_sup=>//. by symmetry.
 Qed.
 
@@ -714,7 +748,7 @@ Proof. apply: (@is_sup_eqv _ (P: dual X -> Prop)). Qed.
 Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
 Proof. apply (supU (P:=P: dual X -> Prop)). Qed.
 
-Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
+Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> is_inf Q <= P.
 
 Lemma inf_closed_impl (P Q: X -> Prop): downward_closed P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).
 Proof. apply (sup_closed_impl (X:=dual_po X)). Qed.
@@ -723,6 +757,7 @@ Lemma inf_closed_leq (f: X -mon-> X): inf_closed (fun x => f x <= x).
 Proof. apply (sup_closed_leq (dual_po_morphism f)). Qed.
 
 End s.
+Check fun X => unify (@inf_closed X) (@sup_closed (dual X)).
 
 
 Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
@@ -850,25 +885,33 @@ End d.
 (*
 E: empty
 B: binary
-C: chains    
-D: directed
+C: chains (possibly empty for now)
+D: directed (possibly empty for now)
 A: all
 
-D=>C
+D=>C=>E
 A=>E,B,C,D
-E+B+D=>A
-
-real points:
-E,EB,B
-C,EC,(BC,EBC?)
-D,ED
-A
+B+D=>A
 
 then: Distributive, Heyting, Boole
 
 *)
 
 Variant K := kE | kB | kC | kD | kA.
+Canonical Structure K_setoid := Eval hnf in eq_setoid K.
+Definition leq_K h k :=
+  match h,k with
+  | _,kA
+  | kE,(kE|kC|kD)
+  | kB,kB
+  | kC,(kC|kD)
+  | kD,kD => True
+  | _,_ => False
+  end.
+Program Canonical Structure K_po := Eval hnf in PO.build leq_K _ _.
+Next Obligation. split. by case. by do 3 (case=>//). Qed.
+Next Obligation. (case x; case y=>//=); intuition discriminate. Qed.
+
 Definition args k (X: PO): Type :=
   match k with
   | kE => unit
@@ -912,94 +955,147 @@ Section map_args.
  Proof. case: k=>/=[_|[x x']|[P C]|[P D]|P]//=; firstorder congruence. Qed. 
 End map_args.
 
-Record prelevel := mk_prelevel { has_E: bool; has_B: bool; has_C: bool; has_D: bool}.
-Definition leq_prelevel h h' :=
-  let 'mk_prelevel e b c d := h in
-  let 'mk_prelevel e' b' c' d' := h' in
-  (e==>e' &&& b==>b' &&& c==>c' &&& d==>d')%bool.
-Definition cup_prelevel h h' :=
-  let 'mk_prelevel e b c d := h in
-  let 'mk_prelevel e' b' c' d' := h' in
-  mk_prelevel (e|||e') (b|||b') (c|||c') (d|||d').
-
-Definition slevel := option prelevel.
-Declare Scope level_scope.
-Bind Scope level_scope with slevel.
-Delimit Scope level_scope with level.
-Definition leq_slevel (h k: slevel): bool :=
-  match k,h with
-  | None,_ => true
-  | _,None => false
-  | Some t, Some s => leq_prelevel s t
-  end.
-Definition cup_slevel (h k: slevel): slevel :=
+Variant plevel := pN | pE | pB | pF | pEC | pFC | pED.
+Canonical Structure plevel_setoid := Eval hnf in eq_setoid plevel.
+Definition leq_plevel h k :=
   match h,k with
-  | None,_ | _,None => None
-  | Some s, Some t => Some (cup_prelevel s t)
+  | pN,_
+  | pE,(pE|pF|pEC|pFC|pED)
+  | pB,(pB|pF|pFC)
+  | pF,(pF|pFC)
+  | pFC,pFC
+  | pEC,(pEC|pED|pFC)
+  | pED,pED => True
+  | _,_ => False
   end.
+Program Canonical Structure plevel_po := Eval hnf in PO.build leq_plevel _ _.
+Next Obligation. split. by case. by do 3 (case=>//). Qed.
+Next Obligation. (case x; case y=>//=); intuition discriminate. Qed.
 
-Class slower h k := sLower: leq_slevel h k.
-Infix "<<" := slower (at level 70). 
-#[export] Instance PreOrder_slower: PreOrder slower.
-Admitted.
-Ltac solve_slower :=
-  solve [ reflexivity | assumption |
-          match goal with H: ?h << ?l |- ?k << ?l => transitivity h; [reflexivity|exact H] end].
-#[export] Hint Extern 0 (_ << _) => solve_slower: typeclass_instances.
-Infix "+" := cup_slevel (at level 50, left associativity): level_scope.
+Definition plevel_fun (l: plevel) k: bool :=
+  match k,l with
+  | kE,(pE|pF|pEC|pFC|pED)
+  | kB,(pB|pF|pFC)
+  | kC,(pEC|pFC|pED)
+  | kD,(pED) => true
+  | _,_ => false
+  end.
+Coercion plevel_fun: plevel >-> Funclass.
+Lemma plevel_mon: Proper (leq ==> leq) plevel_fun.
+Proof. by case; case=>//=_; case. Qed.
 
-Section levels.
+Definition slevel := option plevel.
+Definition sN: slevel := Some pN. 
+Definition sE: slevel := Some pE. 
+Definition sB: slevel := Some pB. 
+Definition sF: slevel := Some pF. 
+Definition sEC: slevel := Some pEC. 
+Definition sFC: slevel := Some pFC. 
+Definition sED: slevel := Some pED. 
+Definition sA: slevel := None.
+Definition slevel_fun (l: slevel) k: bool :=
+  match l,k with
+  | None,_ => true
+  | Some p,k => p k
+  end.
+Coercion slevel_fun: slevel >-> Funclass.
+Lemma slevel_mon: Proper (leq ==> leq) slevel_fun.
+Proof.
+  case=>[p|]; case=>[q|]//=. 
+  move=>pq; case=>//; by apply plevel_mon.
+  move=>_; case=>//; by case: p.
+Qed.
+Definition slevel_of k: slevel :=
+  match k with
+  | kE => sE
+  | kB => sB
+  | kC => sEC
+  | kD => sED
+  | kA => sA
+  end.
+Lemma has_slevel_of: forall k, slevel_of k k.
+Proof. by case. Qed.
+Lemma has_slevel (k: K) (l: slevel): slevel_of k <= l -> l k.
+Proof.
+  move=>H. move: (has_slevel_of k).
+  move: (slevel_mon _ _ H k).
+  by case (slevel_of k k).
+Qed.
+
+Section s.
 Notation "1" := true.
 Notation "0" := false.
-Definition plN := mk_prelevel 0 0 0 0.
-Definition lE := mk_prelevel 1 0 0 0.
-Definition lB := mk_prelevel 0 1 0 0.
-Definition lC := mk_prelevel 1 0 1 0.
-Definition lD := mk_prelevel 1 0 1 1.
-Definition lF := mk_prelevel 1 1 0 0.
-Definition lS k: slevel := Some k.
-Definition sA: slevel := None.
-End levels.
-  
-Coercion slevel_for k: slevel := match k with kE => Some lE | kB => Some lB | kC => Some lC | kD => Some lD | kA => None end.
+Definition slevel_for (f: K -> bool): slevel :=
+  if f kA then None
+  else match f kE, f kB, f kC, f kD return slevel with
+       | _,1,_,1 => sA
+       | 0,0,0,0 => sN
+       | 1,0,0,0 => sE
+       | 0,1,0,0 => sB
+       | 1,1,0,0 => sF
+       | _,0,1,0 => sEC
+       | _,1,1,0 => sFC
+       | _,0,_,1 => sED
+       end.
+End s.
+Lemma forall_K (P: K -> Prop): (forall k, P k) <-> P kE /\ P kB /\ P kC /\ P kD /\ P kA.
+Proof. split; auto=>?[]; tauto. Qed.
+Lemma slevel_adj f (l: slevel): slevel_for f <= l <-> f <= slevel_fun l.
+Proof.
+  have I: forall b, false <= b <-> True. by case. 
+  have I': forall b, b <= true <-> True. by case. 
+  have E: forall b, true <= b <-> b. by case. 
+  setoid_rewrite forall_K. unfold slevel_for.
+  case: (f kA)=>//=. {
+    case: l=>//=. cbn; intuition discriminate.
+    rewrite !I'. cbn; tauto. 
+  }
+  case: (f kE); rewrite ?(I,I',E);
+    case: (f kB); rewrite ?(I,I',E);
+    case: (f kC); rewrite ?(I,I',E);
+    case: (f kD); rewrite ?(I,I',E);
+  case: l=>[[]|]; cbn; intuition congruence.
+Qed.
 
-Section reduce.
+Definition gsup_ops (X: PO) k := sig (fun sup: args k X -> X => forall x, is_sup (setof k x) (sup x)).
+Definition ginf_ops (X: PO) := gsup_ops (dual X).
+
+Module sreduce.
+  Section s.
   Variable T: K -> Type.
   Variable f: forall k, option (T k).
-  Definition slevel_of: slevel :=
-    let f k := match f k with None => Some plN | Some _ => slevel_for k end
-    in f kE + f kB + f kC + f kD + f kA.
+  Coercion option_bool {A} (x: option A) := match x with None => false | Some _ => true end.
   Ltac discriminate_levels :=
     (discriminate ||
-       lazymatch goal with |- context [f ?k] => (* idtac k; *) case: (f k)=>[_|]; discriminate_levels end).
-  Hypothesis H: forall h k: K, leq_slevel h k -> T k -> T h. 
-  Definition reduce: forall k: K, leq_slevel k slevel_of -> T k.
-    unfold slevel_of. 
-    case.
-    - case (f kE)=>[v _|]. exact v.
+       lazymatch goal with |- context [f ?k] => (* idtac k; *) case: (f k)=>[/=_|]; discriminate_levels end).
+  Hypothesis H: forall h k: K, h <= k -> T k -> T h.
+  Hypothesis H': T kB -> T kD -> T kA. 
+  Definition abstract_reduce: forall k: K, slevel_for f k -> T k.
+    unfold slevel_for. case.
+    - case (f kE)=>[//|]. 
       case (f kA)=>[v _|]. revert v. by apply H. 
       case (f kD)=>[v _|]. revert v. by apply H. 
       case (f kC)=>[v _|]. revert v. by apply H.
       discriminate_levels. 
-    - case (f kB)=>[v _|]. exact v.
+    - case (f kB)=>[//|]. 
       case (f kA)=>[v _|]. revert v. by apply H. 
       discriminate_levels. 
-    - case (f kC)=>[v _|]. exact v.
+    - case (f kC)=>[//|]. 
       case (f kA)=>[v _|]. revert v. by apply H. 
       case (f kD)=>[v _|]. revert v. by apply H. 
       discriminate_levels. 
-    - case (f kD)=>[v _|]. exact v.
+    - case (f kD)=>[//|]. 
       case (f kA)=>[v _|]. revert v. by apply H. 
       discriminate_levels.
-    - case (f kA)=>[v _|]. exact v.
-      discriminate_levels.
+    - case (f kA)=>[//|/=]. 
+      case (f kE)=>/=[_|];
+        (case (f kB)=>/=[vB|]; [|discriminate_levels]); 
+        case (f kC)=>/=[_|]; case (f kD)=>/=[vD _|//]; by auto. 
   Defined.
-End reduce.
-Section reduce_ops.
+  End s.
+  Section s.
   Variable X: PO.
-  Definition gsup_ops k := sig (fun sup: args k X -> X => forall x, is_sup (setof k x) (sup x)).
-  Variable f: forall k: K, option (gsup_ops k). 
-  Definition reducer: forall h k: K, leq_slevel h k -> gsup_ops k -> gsup_ops h.
+  Definition reducer: forall h k: K, h <= k -> gsup_ops X k -> gsup_ops X h.
     case; case=>//_ [v H].
     - exists (fun _ => v (exist _ empty chain_empty)). by move=>/=_; apply H. 
     - exists (fun _ => v (exist _ empty directed_empty)). by move=>/=_; apply H. 
@@ -1009,30 +1105,40 @@ Section reduce_ops.
     - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
     - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
   Defined.
-End reduce_ops.
+  Definition reducer': gsup_ops X kB -> gsup_ops X kD -> gsup_ops X kA.
+    move=>[cup cup_spec] [dsup dsup_spec].
+    unshelve eexists (fun P => dsup (exist _ (sup_closure P) _)).
+    (* TOTHINK: how to perform such proofs in a nice conext? *)
+    abstract (move=>x y Px Py; exists (cup (x,y)); split; [
+    (apply: sc_sup; [|apply cup_spec])=>_[->|->]// |
+    move: (proj1 (cup_spec (x,y) (cup (x,y))))=>H; split; apply H=>//=; rewrite /pair; auto ]).
+    abstract (move=>P; apply is_sup_closure, dsup_spec).
+  Defined.
+  Definition reduce f := abstract_reduce _ f reducer reducer'. 
+  End s.    
+End sreduce.
 
 Module SPO.
-
-(** ** class *)
-
-Definition mixin (l: slevel) X (M: Setoid.mixin X) (N: PO.mixin M) :=
-  forall k: K, k << l -> gsup_ops (PO.pack N) k.
-Structure type l := pack {
-    sort:> Type;
-    #[canonical=no] setoid_mix: Setoid.mixin sort;
-    #[canonical=no] po_mix: PO.mixin setoid_mix;
-    #[canonical=no] mix: mixin l po_mix;
-}.
-Canonical Structure to_PO l (X: type l): PO := PO.pack (po_mix X). 
-Canonical Structure to_Setoid l (X: type l): Setoid := Setoid.pack (setoid_mix X). 
-#[reversible] Coercion to_PO: type >-> PO.
-#[reversible] Coercion to_Setoid: type >-> Setoid.
-Definition build (l: slevel) (X: PO): (forall k: K, k << l -> gsup_ops X k) -> type l :=
-  let '@PO.pack T M N := X in @pack l T M N.
-Arguments build [_] _.
-Definition reduced_build (X: PO) (f: forall k, option (gsup_ops X k)): type (slevel_of _ f) :=
-  build X (reduce _ f (@reducer _)).
-Arguments reduced_build: clear implicits.
+ Definition mixin (l: slevel) X (M: Setoid.mixin X) (N: PO.mixin M) :=
+   forall k, l k -> gsup_ops (PO.pack N) k.
+ Structure type (l: slevel) := pack {
+     sort:> Type;
+     #[canonical=no] setoid_mix: Setoid.mixin sort;
+     #[canonical=no] po_mix: PO.mixin setoid_mix;
+     #[canonical=no] mix: mixin l po_mix;
+ }.
+ Canonical Structure to_PO l (X: type l): PO := PO.pack (po_mix X). 
+ Canonical Structure to_Setoid l (X: type l): Setoid := Setoid.pack (setoid_mix X). 
+ Notation cast T X := (let X':=X in @pack T _ _ (mix X')).
+ Definition build (l: slevel) (X: PO): (forall k, l k -> gsup_ops X k) -> type l :=
+   let '@PO.pack T M N := X in @pack l T M N.
+ Arguments build [_] _.
+ Definition reduced_build (X: PO) (f: forall k, option (gsup_ops X k)): type (slevel_for f) :=
+   build X (sreduce.reduce f).
+ Arguments reduced_build: clear implicits.
+ Program Definition weaken (h l: slevel) (X: type l) (hl: h<=l): type h :=
+   build X (fun k hk => mix X k _).
+ Next Obligation. apply slevel_mon in hl. specialize (hl k). by destruct (h k). Qed.
 End SPO.
 Notation SPO := SPO.type.
 Canonical SPO.to_PO.
@@ -1044,114 +1150,36 @@ Definition gsup {l} {X: SPO l} k kl: args k X -> X := proj1_sig (SPO.mix X k kl)
 Arguments gsup {_ _}. 
 Definition gsup_spec {l} {X: SPO l} {k kl}: forall (x: args k X), is_sup (setof k x) (gsup k kl x) :=
   proj2_sig (SPO.mix X k kl).
-Definition spo_on l T (S: SPO l) (_: T -> S) := S.
-Notation "'SPO[' l ']_on' T" := (@spo_on l T _ (fun x => x)) (at level 20).
-
 Lemma leq_gsup {l} {X: SPO l} k kl x (y: X): setof k x y -> y <= gsup k kl x.
 Proof. apply leq_is_sup, gsup_spec. Qed.
-
-Definition bot {l} {X: SPO l} {L: Some lE << l}: X := gsup kE L tt. 
-Definition cup {l} {X: SPO l} {L: Some lB << l} (x y: X): X := gsup kB L (x,y).
-Definition csup {l} {X: SPO l} {L: Some lC << l} (P: X -> Prop) (C: chain P): X := gsup kC L (exist _ P C).
-Definition dsup {l} {X: SPO l} {L: Some lD << l} (P: X -> Prop) (D: directed P): X := gsup kD L (exist _ P D). 
-Definition sup {l} {X: SPO l} {L: None << l}: (X -> Prop) -> X := gsup kA L. 
-Infix "⊔" := cup (left associativity, at level 50). 
-Arguments csup {_ _ _}. 
-Arguments dsup {_ _ _}. 
-
-Lemma is_sup_bot {l} {X: SPO l} {L: Some lE << l}: is_sup (@empty X) bot.
-Proof. apply: gsup_spec. Qed.
-Lemma is_sup_cup {l} {X: SPO l} {L: Some lB << l} (x y: X): is_sup (pair x y) (x ⊔ y).
-Proof. apply: gsup_spec. Qed.
-Lemma is_sup_csup {l} {X: SPO l} {L: Some lC << l} (P: X -> Prop) C: is_sup P (csup P C).
-Proof. apply: gsup_spec. Qed.
-Lemma is_sup_dsup {l} {X: SPO l} {L: Some lD << l} (P: X -> Prop) D: is_sup P (dsup P D).
-Proof. apply: gsup_spec. Qed.
-Lemma is_sup_sup {l} {X: SPO l} {L: None << l} (P: X -> Prop): is_sup P (sup P).
-Proof. apply: gsup_spec. Qed.
-
-Lemma leq_csup {l} {X: SPO l} {L: lS lC << l} (P: X -> Prop) C x: P x -> x <= csup P C. 
-Proof. move=>Px. by apply: leq_gsup. Qed.
-Lemma leq_dsup {l} {X: SPO l} {L: lS lD << l} (P: X -> Prop) D x: P x -> x <= dsup P D. 
-Proof. move=>Px. by apply leq_gsup. Qed.
-Lemma leq_sup {l} {X: SPO l} {L: sA << l} (P: X -> Prop) x: P x -> x <= sup P. 
-Proof. move=>Px. by apply leq_gsup. Qed.
-
-
-Lemma cup_spec {l} {X: SPO l} {L: lS lB << l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
-Proof. rewrite is_sup_cup /pair; intuition subst; auto. Qed.
-
-Lemma cupA {l} {X: SPO l} {L: lS lB << l} (x y z: X): x ⊔ (y ⊔ z) ≡ x ⊔ y ⊔ z. 
-Proof. apply: from_above=>t. rewrite 4!cup_spec. tauto. Qed.
-
-Lemma csup_sup {l} {X: SPO l} {L: sA << l} P C: csup P C ≡[X] sup P.
-Proof. apply: supU. apply is_sup_csup. apply is_sup_sup. Qed.
-Lemma dsup_sup {l} {X: SPO l} {L: sA << l} P D: dsup P D ≡[X] sup P.
-Proof. apply: supU. apply is_sup_dsup. apply is_sup_sup. Qed.
-
-Lemma csup_empty {l} {X: SPO l} {L: lS lC << l} C: csup empty C ≡[X] bot.
-Proof. apply: supU. apply is_sup_csup. apply is_sup_bot. Qed.
-Lemma dsup_empty {l} {X: SPO l} {L: lS lD << l} D: dsup empty D ≡[X] bot.
-Proof. apply: supU. apply is_sup_dsup. apply is_sup_bot. Qed.
-Lemma sup_empty {l} {X: SPO l} {L: sA << l}: sup empty ≡[X] bot.
-Proof. apply: supU. apply is_sup_sup. apply is_sup_bot. Qed.
-
-Lemma sup_pair {l} {X: SPO l} {L: sA << l} (x y: X): sup (pair x y) ≡ x ⊔ y.
-Proof. apply: supU. apply is_sup_sup. apply is_sup_cup. Qed.
-
-Lemma directed_sup_closure {l} {X: SPO l} {L: lS lB << l} (P: X -> Prop): directed (sup_closure P).
-Proof.
-  move=>x y Px Py. exists (x⊔y); split. 2: by apply cup_spec.
-  apply sc_sup with (pair x y). 2: apply is_sup_cup.
-  by move=>z [->|->].
-Qed.
-Corollary sup_dsup {l} {X: SPO l} {L: sA << l} (P: X -> Prop):
-  sup P ≡ dsup (sup_closure P) (directed_sup_closure (P:=P)).
-Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is_sup_sup. Qed.
 
 Lemma discriminate {P: Type}: false -> P.
 Proof. by []. Qed.
 
-Program Canonical Structure bool_spo: SPO (lS lF) := Eval hnf in 
-    SPO.build bool
-      (fun k => match k with
-             | kE => fun _ => exist _ (fun _ => false) _
-             | kB => fun _ => exist _ (fun '(x,y) => orb x y) _
-             | kC | kD | kA  => discriminate
-             end).
+Program Canonical Structure bool_spo: SPO sF := 
+  SPO.build bool
+    (fun k => match k with
+           | kE => fun _ => exist _ (fun _ => false) _
+           | kB => fun _ => exist _ (fun '(x,y) => orb x y) _
+           | kC | kD | kA  => discriminate
+           end).
 Next Obligation. by case. Qed.
-Next Obligation. Admitted.
+Next Obligation. 
+  move=>c/=. rewrite forall_pair. cbn.
+  rewrite Bool.implb_orb_distrib_l.
+  apply Bool.andb_true_iff.
+Qed.
 
-Program Definition dual_bool_spo: SPO (lS lF) := Eval hnf in 
-    SPO.build (dual bool)
-      (fun k => match k with
-             | kE => fun _ => exist _ (fun _ => true) _
-             | kB => fun _ => exist _ (fun '(x,y) => andb x y) _
-             | kC | kD | kA  => discriminate
-             end).
-Next Obligation. by case. Qed.
-Next Obligation. Admitted.
+Program Canonical Structure nat_spo: SPO sF :=
+  SPO.build nat
+    (fun k => match k with
+           | kE => fun _ => exist _ (fun _ => 0) _
+           | kB => fun _ => exist _ (fun '(x,y) => Peano.max x y) _
+           | kC | kD | kA  => discriminate
+           end).
+Admit Obligations.
 
-Program Canonical Structure nat_spo: SPO (lS lF) := Eval hnf in 
-    SPO.build nat
-      (fun k => match k with
-             | kE => fun _ => exist _ (fun _ => 0) _
-             | kB => fun _ => exist _ (fun '(x,y) => Peano.max x y) _
-             | kC | kD | kA  => discriminate
-             end).
-Next Obligation. Admitted.
-Next Obligation. cbn. Admitted.
-
-
-Program Definition dual_nat_spo: SPO (lS lB) := Eval hnf in 
-    SPO.build (dual nat)
-      (fun k => match k with
-             | kB => fun _ => exist _ (fun '(x,y) => Peano.min x y) _
-             | kE | kC | kD | kA  => discriminate
-             end).
-Next Obligation. cbn. Admitted.
-
-Program Canonical Structure Prop_spo: SPO sA := Eval hnf in
+Program Canonical Structure Prop_spo: SPO sA :=
   SPO.reduced_build Prop
     (fun k => match k with
            | kE => Some (exist _ (fun _ => False) _)
@@ -1164,26 +1192,12 @@ Next Obligation. firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto. Qed.
 Next Obligation. firstorder. Qed.
 
-Program Definition dual_Prop_spo: SPO sA := Eval hnf in
-  SPO.reduced_build (dual Prop)
-    (fun k => match k with
-           | kE => Some (exist _ (fun _ => True) _)
-           | kB => Some (exist _ (fun '(p,q) => p/\q) _)
-           | kC => None          (* generated *)
-           | kD => None          (* generated *)
-           | kA => Some (exist _ (fun P => forall p, P p -> p) _)
-           end).
-Next Obligation. firstorder. Qed.
-Next Obligation. cbv; firstorder subst; eauto; apply H; eauto. Qed.
-Next Obligation. firstorder. Qed.
-
-
 Definition app {A} {X: A -> PO} a: (forall a, X a)-mon->X a :=
   PO.build_morphism (fun f => f a) (fun f g fg => fg a).
 
 (** SPOs on dependent products *)
 Program Canonical Structure dprod_spo {A l} (X: A -> SPO l): SPO l :=
-  Eval hnf in SPO.build (forall a, X a) (fun k kl => exist _ (fun F a => gsup k kl (map_args (app a) k F)) _). 
+  SPO.build (forall a, X a) (fun k kl => exist _ (fun F a => gsup k kl (map_args (app a) k F)) _). 
 Next Obligation.
   apply dprod_sup=>a. eapply Proper_is_sup.
   2: reflexivity. 2: apply: gsup_spec.
@@ -1197,12 +1211,13 @@ Next Obligation. by []. Qed.
 (** sub-SPOs *)
 Section sub.
  Context {l} {X: SPO l}.
- Variable P: X -> Prop.
- Definition sup_closed' :=
-   forall k: K, forall kl: k<<l, forall x, setof k x <= P ->  P (gsup k kl x).
- Lemma sup_closed_sup_closed': sup_closed P -> sup_closed'. 
- Proof. move=>H k kl x Hx. apply: H. apply Hx. apply gsup_spec. Qed.
- Program Definition sig_spo (Psup: sup_closed'): SPO l := Eval hnf in
+ Definition sup_closed' (P: X -> Prop) :=
+   forall k: K, forall kl: l k, forall x, setof k x <= P ->  P (gsup k kl x).
+ Lemma sup_closed_sup_closed': sup_closed <= sup_closed'. 
+ Proof. move=>P H k kl x Hx. apply: H. apply Hx. apply gsup_spec. Qed.
+ #[export] Instance sup_closed'_eqv: Proper (eqv==>eqv) sup_closed'.
+ Proof. apply Proper_half=>P Q H HP k kl x E. apply H. apply HP. by rewrite H. Qed.
+ Program Definition sig_spo P (Psup: sup_closed' P): SPO l := 
    SPO.build (sig P) (fun k kl => exist _ (fun F => exist _ (gsup k kl (map_args (proj1_sig_mon P) k F)) _) _). 
  Next Obligation.
    apply: Psup. rewrite setof_map_args. 
@@ -1223,8 +1238,8 @@ Section c.
  Hypothesis ri: r°i ≡ id. 
  Program Let r': kern_po X r -mon-> X := PO.build_morphism r _.
  Next Obligation. by []. Qed.
- Program Definition retract_spo: SPO l := Eval hnf in 
-     SPO.build (kern_po X r) (fun k kl => exist _ (fun x => i (gsup k kl (map_args r' k x))) _).
+ Program Definition retract_spo: SPO l := 
+   SPO.build (kern_po X r) (fun k kl => exist _ (fun x => i (gsup k kl (map_args r' k x))) _).
  Next Obligation.
    apply kern_sup. eapply Proper_is_sup. 2: apply ri. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args.
@@ -1239,97 +1254,605 @@ Section c.
  Variable i: sig P->A.
  Hypothesis ri: r°i ≡ id. 
  Hypothesis Psup: sup_closed' P.
- Definition sub_spo: SPO l := Eval hnf in retract_spo (sig_spo Psup) ri. 
+ Definition sub_spo: SPO l := retract_spo (sig_spo Psup) ri. 
 End c. 
 
 (** the SPO of monotone functions *)
+Lemma po_morphism_as_sig {X Y: PO}:
+  (fun f: X-mon->Y => exist (Proper (leq ==> leq)) (PO.body f) (@body_leq _ _ f))
+    ° (fun f: sig (Proper (leq ==> leq)) => PO.build_morphism _ (proj2_sig f)) ≡ id.
+Proof. by case. Qed.
 Section s.
  Context {X: PO} {l} {Y: SPO l}.
- Lemma po_morphism_as_sig:
-   (fun f: X-mon->Y => exist (Proper (leq ==> leq)) (PO.body f) (@body_leq _ _ f))
-     ° (fun f: sig (Proper (leq ==> leq)) => PO.build_morphism _ (proj2_sig f)) ≡ id.
- Proof. by case. Qed.
- Program Canonical Structure mon_spo: SPO l := Eval hnf in sub_spo po_morphism_as_sig _.
- Next Obligation.
+ Lemma sup_closed'_monotone: sup_closed' (Proper (@leq X ==> @leq Y)).
+ Proof.
    move=>k kl P HP x y xy.
    apply gsup_spec=>z Hz. apply setof_map_args in Hz as [f [Hf ->]].
    transitivity (f y). apply (HP _ Hf _ _ xy). apply leq_gsup. 
    apply setof_map_args. by exists f.
  Qed.
+ Canonical Structure mon_spo: SPO l := sub_spo (@po_morphism_as_sig X Y) sup_closed'_monotone.
 End s.
 
-(** * partial orders with both suprema and infima *)
+Module Failed_CS_level_inheritance_attempts.
+  
+Definition bot {X: SPO sE}: X := @gsup _ X kE isT tt. 
+Fail Check bot: nat. 
 
-Variant level := lA | lSI(lS lI: prelevel).
-Definition dual_level l := match l with lA => lA | lSI s i => lSI i s end.
-Definition bilevel (s i: slevel): level := match s,i with Some s,Some i => lSI s i | _,_ => lA end.
-Definition leq_level h h': bool :=
-  match h',h with
-  | lA,_ => true
-  | _,lA => false
-  | lSI s' i', lSI s i => leq_prelevel s s' &&& leq_prelevel i i'
-  end.                                     
-Definition cup_level h k: level :=
-  match h,k with
-  | lA,_ | _,lA => lA
-  | lSI s i, lSI t j => lSI (cup_prelevel s t) (cup_prelevel i j)
-  end.
-Class lower h k := Lower: leq_level h k.
-Infix "<<<" := lower (at level 70). 
-#[export] Instance PreOrder_lower: PreOrder lower.
-Admitted.
+Definition bot' {X: SPO sF}: X := @gsup _ X kE isT tt. 
+Check bot': nat. 
+
+Module A. 
+Structure coercer (l: slevel) := c {
+    ck: slevel;
+    #[canonical=no] ckl: l <= ck;
+  }.
+Canonical Structure cEF := c sE sF I.
+Structure SPO' l := {
+    get:> SPO l;
+    coe: coercer l;
+  }.
+Canonical Structure coercion l (coe: coercer l) (X: SPO (ck coe)): SPO' l :=
+  Eval hnf in
+  {| coe := coe; get := SPO.weaken _ X (ckl coe) |}.
+
+Definition bot {X: SPO' sE}: X := @gsup _ (get X) kE isT tt. 
+Fail Check bot: nat. 
+Check @bot (@coercion _ cEF nat_spo): nat.
+Set Printing All. 
+Check @bot (@coercion _ _ _): nat. 
+End A.
+
+Module B. 
+Structure coercer (l: slevel) := c {
+    ck: slevel;
+    #[canonical=no] ckl: ck <= l;
+}.
+Notation "h <: k" := (c k h I) (at level 80). 
+Canonical Structure cEF := sE <: sF.
+Canonical Structure cEC := sE <: sEC. (* argh *)
+Definition SPO' l := SPO l.
+Coercion sort' l (X: SPO' l): Type := X.
+Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (ck coe) :=
+  Eval hnf in @SPO.pack (ck coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ckl coe))).
+Print Canonical Projections. 
+Definition bot {X: SPO' sE}: X := @gsup _ X kE isT tt. 
+Fail Check bot: nat. 
+Check @bot (@coercion _ nat_spo cEF): nat.
+Check @bot (@coercion _ _ _): nat.
+Set Printing All.
+Check forall X: SPO' sF, forall (x: X), bot ≡ x. 
+Check forall X: SPO' sE, forall (x: X), bot ≡ x. 
+End B.
+
+Module C.
+  Module N.  Structure coercer := c { k; #[canonical=no] ck: k <= sN  }. End N.
+  Module E.  Structure coercer := c { k; #[canonical=no] ck: k <= sE  }. End E.
+  Module B.  Structure coercer := c { k; #[canonical=no] ck: k <= sB  }. End B.
+  Module F.  Structure coercer := c { k; #[canonical=no] ck: k <= sF  }. End F.
+  Module EC. Structure coercer := c { k; #[canonical=no] ck: k <= sEC }. End EC.
+  Module FC. Structure coercer := c { k; #[canonical=no] ck: k <= sFC }. End FC.
+  Module ED. Structure coercer := c { k; #[canonical=no] ck: k <= sED }. End ED.
+  Module A.  Structure coercer := c { k; #[canonical=no] ck: k <= sA  }. End A.
+  Definition coercer l :=
+    match l with
+    | Some pN => N.coercer
+    | Some pE => E.coercer
+    | Some pB => B.coercer
+    | Some pF => F.coercer
+    | Some pEC => EC.coercer
+    | Some pFC => FC.coercer
+    | Some pED => ED.coercer
+    | None => A.coercer
+    end.
+  Definition k l: coercer l -> slevel :=
+    match l with
+    | Some pN => N.k
+    | Some pE => E.k
+    | Some pB => B.k
+    | Some pF => F.k
+    | Some pEC => EC.k
+    | Some pFC => FC.k
+    | Some pED => ED.k
+    | None => A.k
+    end.
+  Definition ck l: forall x: coercer l, k l x <= l :=
+    match l with
+    | Some pN => N.ck
+    | Some pE => E.ck
+    | Some pB => B.ck
+    | Some pF => F.ck
+    | Some pEC => EC.ck
+    | Some pFC => FC.ck
+    | Some pED => ED.ck
+    | None => A.ck
+    end.
+  Definition c l: forall k, k <= l -> coercer l :=
+    match l with
+    | Some pN => N.c
+    | Some pE => E.c
+    | Some pB => B.c
+    | Some pF => F.c
+    | Some pEC => EC.c
+    | Some pFC => FC.c
+    | Some pED => ED.c
+    | None => A.c
+    end.
+  Notation "h <: k" := (c k h I) (at level 80).
+  (* also N? *)
+  Canonical Structure cEF   : coercer _ := Eval hnf in sE <: sF.
+  Canonical Structure cEEC  : coercer _ := Eval hnf in sE <: sEC.
+  Canonical Structure cEFC  : coercer _ := Eval hnf in sE <: sFC.
+  Canonical Structure cEED  : coercer _ := Eval hnf in sE <: sED.
+  Canonical Structure cBF   : coercer _ := Eval hnf in sB <: sF.
+  Canonical Structure cBFC  : coercer _ := Eval hnf in sB <: sFC.
+  Canonical Structure cFFC  : coercer _ := Eval hnf in sF <: sFC.
+  Canonical Structure cECFC : coercer _ := Eval hnf in sEC <: sFC.
+  Canonical Structure cECED : coercer _ := Eval hnf in sEC <: sED.
+  Canonical Structure c_A p := Eval hnf in Some p <: sA.
+  
+  Definition SPO' l := SPO l.
+  Coercion sort' l (X: SPO' l): Type := X.
+  Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (k l coe) :=
+    Eval hnf in @SPO.pack (k l coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ck l coe))).
+  Definition bot {X: SPO' sE}: X := @gsup _ X kE isT tt. 
+  Fail Check bot: nat. 
+  Check @bot (@coercion _ nat_spo cEF): nat.
+  Check @bot (@coercion _ _ cEF): nat.
+  Fail Check @bot (@coercion _ nat_spo _): nat.
+  Fail Check @bot (@coercion _ _ _): nat.
+  Set Printing All.
+  Check forall X: SPO' sE, forall (x: X), bot ≡ x.
+  Fail Check forall X: SPO' sF, forall (x: X), bot ≡ x. 
+End C.
+
+End Failed_CS_level_inheritance_attempts.
+
+Class lower {X: PO} (h k: X) := Lower: h <= k.
+Infix "<<" := lower (at level 70).
+#[export] Instance PreOrder_lower X: PreOrder (@lower X) := PreOrder_leq. 
 Ltac solve_lower :=
   solve [ reflexivity | assumption |
-          match goal with H: ?h <<< ?l |- ?k <<< ?l => transitivity h; [reflexivity|exact H] end].
-#[export] Hint Extern 0 (_ <<< _) => solve_lower: typeclass_instances.
-Infix "++" := cup_level: level_scope.
+          match goal with H: ?h << ?l |- ?k << ?l => transitivity h; [reflexivity|exact H] end].
+#[export] Hint Extern 0 (lower _ _) => solve_lower: typeclass_instances.
 
-(* Definition suplevel (k: level): slevel := match k with lSI s _ => Some s | lA => None end. *)
-(* Definition inflevel (k: level): slevel := match k with lSI _ i => Some i | lA => None end. *)
-(* Definition leq_suplevel p k := match k with lSI s _ => leq_prelevel p s | lA => true end. *)
-(* Definition leq_inflevel p k := match k with lSI _ i => leq_prelevel p i | lA => true end. *)
-Notation suplevel := id. 
-Notation inflevel := id. 
+(* TOTHINK: should we move this theory directly to GPOs ? *)
+
+Definition bot {l} {X: SPO l} {L: sE<<l}: X := gsup kE (has_slevel kE l L) tt.
+Definition cup {l} {X: SPO l} {L: sB<<l} (x y: X): X := gsup kB (has_slevel kB l L) (x,y).
+Definition csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) (C: chain P): X := gsup kC (has_slevel kC l L) (exist _ P C).
+Definition dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) (D: directed P): X := gsup kD (has_slevel kD l L) (exist _ P D). 
+Definition sup {l} {X: SPO l} {L: sA<<l}: (X -> Prop) -> X := gsup kA (has_slevel kA l L). 
+Infix "⊔" := cup (left associativity, at level 50). 
+Arguments csup {_ _ _}. 
+Arguments dsup {_ _ _}. 
+
+Lemma is_sup_bot {l} {X: SPO l} {L: sE<<l}: @is_sup X bot bot.
+Proof. apply: gsup_spec. Qed.
+Lemma is_sup_cup {l} {X: SPO l} {L: sB<<l} (x y: X): is_sup (pair x y) (x ⊔ y).
+Proof. apply: gsup_spec. Qed.
+Lemma is_sup_csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) C: is_sup P (csup P C).
+Proof. apply: gsup_spec. Qed.
+Lemma is_sup_dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) D: is_sup P (dsup P D).
+Proof. apply: gsup_spec. Qed.
+Lemma is_sup_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop): is_sup P (sup P).
+Proof. apply: gsup_spec. Qed.
+
+Lemma leq_csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) C x: P x -> x <= csup P C. 
+Proof. move=>Px. by apply: leq_gsup. Qed.
+Lemma leq_dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) D x: P x -> x <= dsup P D. 
+Proof. move=>Px. by apply leq_gsup. Qed.
+Lemma leq_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P. 
+Proof. move=>Px. by apply leq_gsup. Qed.
+
+
+Lemma cup_spec {l} {X: SPO l} {L: sB<<l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
+Proof. rewrite is_sup_cup /pair; intuition subst; auto. Qed.
+
+Lemma cupA {l} {X: SPO l} {L: sB<<l} (x y z: X): x ⊔ (y ⊔ z) ≡ x ⊔ y ⊔ z. 
+Proof. apply: from_above=>t. rewrite 4!cup_spec. tauto. Qed.
+(* TODO: etc... *)
+
+Lemma csup_sup {l} {X: SPO l} {L: sA<<l} P C: csup P C ≡[X] sup P.
+Proof. apply: supU. apply is_sup_csup. apply is_sup_sup. Qed.
+Lemma dsup_sup {l} {X: SPO l} {L: sA<<l} P D: dsup P D ≡[X] sup P.
+Proof. apply: supU. apply is_sup_dsup. apply is_sup_sup. Qed.
+
+Lemma csup_bot {l} {X: SPO l} {L: sEC<<l} C: csup bot C ≡[X] bot.
+Proof. apply: supU. apply is_sup_csup. apply is_sup_bot. Qed.
+Lemma dsup_bot {l} {X: SPO l} {L: sED<<l} D: dsup bot D ≡[X] bot.
+Proof. apply: supU. apply is_sup_dsup. apply is_sup_bot. Qed.
+Lemma sup_bot {l} {X: SPO l} {L: sA<<l}: sup bot ≡[X] bot.
+Proof. apply: supU. apply is_sup_sup. apply is_sup_bot. Qed.
+
+Lemma sup_pair {l} {X: SPO l} {L: sA<<l} (x y: X): sup (pair x y) ≡ x ⊔ y.
+Proof. apply: supU. apply is_sup_sup. apply is_sup_cup. Qed.
+
+Lemma directed_sup_closure {l} {X: SPO l} {L: sB<<l} (P: X -> Prop): directed (sup_closure P).
+Proof.
+  (* TODO: use in [reducer.reduce] *)
+  move=>x y Px Py. exists (x⊔y); split. 2: by apply cup_spec.
+  apply sc_sup with (pair x y). 2: apply is_sup_cup.
+  by move=>z [->|->].
+Qed.
+Corollary sup_dsup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop):
+  sup P ≡ dsup (sup_closure P) (directed_sup_closure (P:=P)).
+Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is_sup_sup. Qed.
+
+
+
+(** * partial orders with infima *)
+
+
+Module IPO.
+ Definition mixin (l: slevel) X (M: Setoid.mixin X) (N: PO.mixin M) :=
+   forall k, l k -> ginf_ops (PO.pack N) k.
+ Structure type (l: slevel) := pack {
+     sort:> Type;
+     #[canonical=no] setoid_mix: Setoid.mixin sort;
+     #[canonical=no] po_mix: PO.mixin setoid_mix;
+     #[canonical=no] mix: mixin l po_mix;
+ }.
+ Canonical Structure to_PO l (X: type l): PO := PO.pack (po_mix X). 
+ Canonical Structure to_Setoid l (X: type l): Setoid := Setoid.pack (setoid_mix X). 
+ Notation cast T X := (let X':=X in @pack _ T _ _ (mix X')).
+ Definition build (l: slevel) (X: PO): (forall k, l k -> ginf_ops X k) -> type l :=
+   let '@PO.pack T M N := X in @pack l T M N.
+ Arguments build [_] _.
+ Definition reduced_build (X: PO) (f: forall k, option (ginf_ops X k)): type (slevel_for f) :=
+   build X (sreduce.reduce f). 
+ Arguments reduced_build: clear implicits.
+ Program Definition weaken (h l: slevel) (X: type l) (hl: h<=l): type h :=
+   build X (fun k hk => mix X k _).
+ Next Obligation. apply slevel_mon in hl. specialize (hl k). by destruct (h k). Qed.
+ Definition dual l (X: type l): SPO l := SPO.pack (mix X). 
+ Definition dual' l (X: SPO l): type l := @pack _ _ _ (PO.dual_mixin (SPO.po_mix X)) (SPO.mix X).
+End IPO.
+Notation IPO := IPO.type.
+Canonical IPO.to_PO.
+Canonical IPO.to_Setoid.
+#[reversible] Coercion IPO.to_Setoid: IPO >-> Setoid.
+#[reversible] Coercion IPO.to_PO: IPO >-> PO.
+#[reversible] Coercion IPO.sort: IPO >-> Sortclass.
+Canonical IPO.dual.
+Canonical IPO.dual'. 
+Tactic Notation "spo_dual" constr(L) := apply: (L _ (IPO.dual _)).
+Definition ginf {l} {X: IPO l}: forall k kl, args k (dual X) -> X := @gsup l (IPO.dual X).
+Lemma ginf_spec {l} {X: IPO l} {k kl}: forall (x: args k (dual X)), is_inf (X:=X) (setof k x) (ginf k kl x).
+Proof. apply: gsup_spec. Qed.
+Lemma geq_ginf {l} {X: IPO l} k kl (x: args k (dual X)) (y: X): setof k x y -> ginf k kl x <= y.
+Proof. apply: leq_gsup. Qed.
+
+
+
+Program Canonical Structure bool_ipo: IPO sF :=
+  IPO.build bool
+    (fun k => match k with
+           | kE => fun _ => exist _ (fun _ => true) _
+           | kB => fun _ => exist _ (fun '(x,y) => andb x y) _
+           | kC | kD | kA  => discriminate
+           end).
+Next Obligation. by case. Qed.
+Next Obligation.
+  move=>c/=. rewrite forall_pair. cbn.
+  rewrite Bool.implb_andb_distrib_r.
+  apply Bool.andb_true_iff.
+Qed.
+
+Program Canonical Structure nat_ipo: IPO sB :=
+  IPO.build nat
+    (fun k => match k with
+           | kB => fun _ => exist _ (fun '(x,y) => Peano.min x y) _
+           | kE | kC | kD | kA  => discriminate
+           end).
+Admit Obligations.
+
+Program Canonical Structure Prop_ipo: IPO sA :=
+  IPO.reduced_build Prop
+    (fun k => match k with
+           | kE => Some (exist _ (fun _ => True) _)
+           | kB => Some (exist _ (fun '(p,q) => p/\q) _)
+           | kC => None          (* generated *)
+           | kD => None          (* generated *)
+           | kA => Some (exist _ (fun P => forall p, P p -> p) _)
+           end).
+Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder subst; eauto; apply H; eauto. Qed.
+Next Obligation. firstorder. Qed.
+
+Program Canonical Structure dprod_ipo {A l} (X: A -> IPO l): IPO l :=
+  IPO.cast (forall a, X a) (IPO.dual' (dprod_spo (fun a => IPO.dual (X a)))).
+
+Section sub.
+ Context {l} {X: IPO l}.
+ Definition inf_closed' (P: X -> Prop) := sup_closed' (X:=IPO.dual X) P. 
+ Lemma inf_closed_inf_closed': inf_closed (X:=X) <= inf_closed'.
+ Proof. spo_dual @sup_closed_sup_closed'. Qed.
+ #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed'.
+ Proof. spo_dual @sup_closed'_eqv. Qed.
+ Definition sig_ipo P (Pinf: inf_closed' P): IPO l :=
+   IPO.cast (sig P) (IPO.dual' (sig_spo Pinf)). 
+End sub.
+
+Section c.
+ Context {A: Type} {l} (X: IPO l).
+ Variable r: A->X.               (* retraction *)
+ Variable i: X->A.               (* section *)
+ Hypothesis ri: r°i ≡ id. 
+ Definition retract_ipo: IPO l :=
+   IPO.cast A (IPO.dual' (retract_spo (IPO.dual X) ri)). 
+End c.
+Arguments retract_ipo [_ _] _ [_ _]. 
+
+Section c.
+ Context {A: Type} {l} {X: IPO l} (P: X -> Prop).
+ Variable r: A->sig P.
+ Variable i: sig P->A.
+ Hypothesis ri: r°i ≡ id. 
+ Hypothesis Pinf: inf_closed' P.
+ Definition sub_ipo: IPO l := retract_ipo (sig_ipo Pinf) ri. 
+End c. 
+
+Section s.
+ Context {X: PO} {l} {Y: IPO l}.
+ Lemma inf_closed'_monotone: inf_closed' (Proper (@leq X ==> @leq Y)).
+ Proof.
+   rewrite Proper_flip.
+   apply: (@sup_closed'_monotone (dual X) _ (dual Y)).
+ Qed.
+ Canonical Structure mon_ipo: IPO l := sub_ipo (@po_morphism_as_sig X Y) inf_closed'_monotone.
+End s.
+
+
+
+Definition top {l} {X: IPO l} {L: sE<<l}: X := ginf kE (has_slevel kE l L) tt.
+Definition cap {l} {X: IPO l} {L: sB<<l} (x y: X): X := ginf kB (has_slevel kB l L) (x,y).
+Definition cinf {l} {X: IPO l} {L: sEC<<l} (P: X -> Prop) (C: chain (X:=dual X) P): X := ginf kC (has_slevel kC l L) (exist _ P C).
+Definition dinf {l} {X: IPO l} {L: sED<<l} (P: X -> Prop) (D: directed (X:=dual X) P): X := ginf kD (has_slevel kD l L) (exist _ P D). 
+Definition inf {l} {X: IPO l} {L: sA<<l}: (X -> Prop) -> X := ginf kA (has_slevel kA l L). 
+Infix "⊓" := cap (left associativity, at level 50). 
+Arguments cinf {_ _ _}. 
+Arguments dinf {_ _ _}. 
+
+Lemma is_inf_top {l} {X: IPO l} {L: sE<<l}: @is_inf X bot top.
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_cap {l} {X: IPO l} {L: sB<<l} (x y: X): is_inf (pair x y) (x ⊓ y).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_cinf {l} {X: IPO l} {L: sEC<<l} (P: X -> Prop) C: is_inf P (cinf P C).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_dinf {l} {X: IPO l} {L: sED<<l} (P: X -> Prop) D: is_inf P (dinf P D).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_inf {l} {X: IPO l} {L: sA<<l} (P: X -> Prop): is_inf P (inf P).
+Proof. apply: ginf_spec. Qed.
+
+Lemma geq_cinf {l} {X: IPO l} {L: sEC<<l}: forall (P: X -> Prop) C x, P x -> cinf P C <= x. 
+Proof. spo_dual @leq_csup. Qed.
+Lemma geq_dinf {l} {X: IPO l} {L: sED<<l}: forall (P: X -> Prop) D x, P x -> dinf P D <= x. 
+Proof. spo_dual @leq_dsup. Qed.
+Lemma geq_inf {l} {X: IPO l} {L: sA<<l}: forall (P: X -> Prop) x, P x -> inf P <= x. 
+Proof. spo_dual @leq_sup. Qed.
+
+
+Lemma cap_spec {l} {X: IPO l} {L: sB<<l} (x y z: X): z <= x ⊓ y <-> z <= x /\ z <= y.
+Proof. spo_dual @cup_spec. Qed.
+
+Lemma capA {l} {X: IPO l} {L: sB<<l} (x y z: X): x ⊓ (y ⊓ z) ≡ x ⊓ y ⊓ z. 
+Proof. spo_dual @cupA. Qed.
+
+Lemma cinf_inf {l} {X: IPO l} {L: sA<<l} P C: cinf P C ≡[X] inf P.
+Proof. spo_dual @csup_sup. Qed.
+Lemma dinf_inf {l} {X: IPO l} {L: sA<<l} P D: dinf P D ≡[X] inf P.
+Proof. spo_dual @dsup_sup. Qed.
+
+Lemma cinf_bot {l} {X: IPO l} {L: sEC<<l} C: cinf bot C ≡[X] top.
+Proof. spo_dual @csup_bot. Qed.
+Lemma dinf_bot {l} {X: IPO l} {L: sED<<l} D: dinf bot D ≡[X] top.
+Proof. spo_dual @dsup_bot. Qed.
+Lemma inf_bot {l} {X: IPO l} {L: sA<<l}: inf bot ≡[X] top.
+Proof. spo_dual @sup_bot. Qed.
+
+Lemma inf_pair {l} {X: IPO l} {L: sA<<l} (x y: X): inf (pair x y) ≡ x ⊓ y.
+Proof. spo_dual @sup_pair. Qed.
+
+(* TODO: etc *)
+
+
+(** * partial orders with suprema and infima *)
+
+
+Module IDEAL.
+Definition level := option (plevel * plevel).
+Definition suplevel: level -> slevel := option_map fst.
+Definition inflevel: level -> slevel := option_map snd.
+Definition dual_level: level -> level := option_map (fun p => (snd p,fst p)).
+Definition level_fun (l: level) k: bool :=
+  match k with
+  | inl k => suplevel l k
+  | inr k => inflevel l k
+  end.
+Coercion level_fun: level >-> Funclass.
+Lemma level_mon: Proper (leq ==> leq) level_fun.
+Proof.
+  case=>[[p q]|]; case=>[[p' q']|]=>//=H[k|k]/=;
+    try apply implybT; apply plevel_mon=>//=; apply H.
+Qed.
+Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
+Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
+Goal forall l, dual_level l ° inr = l ° inl. Fail reflexivity. Abort. 
+Goal forall l k, dual_level (dual_level l) k = l k. Fail reflexivity. Abort. 
+End IDEAL.
+
+Module EXTENDEDPAIRS.
+Record level := mk_level { suplevel: slevel; inflevel: slevel; more: bool}.
+Definition dual_level (l: level) := mk_level (inflevel l) (suplevel l) (more l).
+Definition level_fun (l: level) k: bool :=
+  match k with
+  | inl k => suplevel l k
+  | inr k => inflevel l k
+  end.
+Coercion level_fun: level >-> Funclass.
+Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
+Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
+Goal forall l, dual_level l ° inr = l ° inl. reflexivity. Qed.
+Goal forall l x, dual_level (dual_level l) x = l x. reflexivity. Qed.
+End EXTENDEDPAIRS.
+
+Module WORKING.
+  (* isomorphic to [option (plevel*plevel)], but enabling duality *)
+  Record level := mk_level { suplevel: slevel; inflevel: slevel; merge_tops: suplevel=None <-> inflevel=None }.
+  Arguments mk_level: clear implicits.  
+
+  Definition alt_level l :=
+    match suplevel l,inflevel l with
+    | None,_ | _,None => None
+    | Some p,Some q => Some (p,q)
+    end.
+  Canonical Structure level_setoid := Eval hnf in kern_setoid _ alt_level.
+  Canonical Structure level_po := Eval hnf in kern_po _ alt_level.
+  Lemma suplevel_mon: Proper (leq ==> leq) suplevel.
+  Proof.
+    move=>[[?|] [?|] ?] [[?|] [?|] ?] //=hk;
+         try apply hk; exfalso; clear hk; intuition congruence.
+  Qed.
+  Lemma inflevel_mon: Proper (leq ==> leq) inflevel.
+  Proof.
+    move=>[[?|] [?|] ?] [[?|] [?|] ?] //=hk;
+         try apply hk; exfalso; clear hk; intuition congruence.
+  Qed.
+  
+  Definition dual_level (l: level) := mk_level (inflevel l) (suplevel l) (symmetry (merge_tops l)).
+  
+  Definition level_fun (l: level) k: bool :=
+    match k with
+    | inl k => suplevel l k
+    | inr k => inflevel l k
+    end.
+  Coercion level_fun: level >-> Funclass.
+  Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
+  Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
+  Goal forall l, dual_level l ° inr = l ° inl. reflexivity. Qed.
+  Goal forall l x, dual_level (dual_level l) x = l x. reflexivity. Qed.
+  Definition lA := mk_level None None (reflexivity _).
+  Goal forall l, (lA << l) = (lA << dual_level l).
+    intro. cbn.  Fail reflexivity. (* dommage *)
+  Abort.
+  Program Definition lSI p q := mk_level (Some p) (Some q) _.
+  Next Obligation. split; discriminate. Qed.
+  Definition merge_slevels p q :=
+    match p,q with
+    | None,_ | _,None => lA
+    | Some p,Some q => lSI p q
+    end.
+End WORKING.
+Import WORKING.
+
 
 Module GPO.
-
-(** ** class *)
-
-Structure type l := pack {
-    sort:> Type;
-    #[canonical=no] setoid_mix: Setoid.mixin sort;
-    #[canonical=no] po_mix: PO.mixin setoid_mix;
-    #[canonical=no] s_mix: SPO.mixin (suplevel l) po_mix;
-    #[canonical=no] i_mix: SPO.mixin (inflevel l) (PO.dual_mixin po_mix);
-}.
-Canonical Structure to_SPO l (X: type l): SPO (suplevel l) := SPO.pack (s_mix X). 
-Canonical Structure to_PO l (X: type l): PO := PO.pack (po_mix X). 
-Canonical Structure to_Setoid l (X: type l): Setoid := Setoid.pack (setoid_mix X). 
-#[reversible] Coercion to_SPO: type >-> SPO.
-#[reversible] Coercion to_PO: type >-> PO.
-#[reversible] Coercion to_Setoid: type >-> Setoid.
-Definition build l (X: SPO (suplevel l)): (forall k: K, k << inflevel l -> gsup_ops (dual X) k) -> type l :=
-  let '@SPO.pack _ T M N P := X in @pack l T M N P.
-Arguments build [_] _.
-Goal forall X M (N: @PO.mixin X M), N = PO.dual_mixin (PO.dual_mixin N). Fail reflexivity. Abort.
-Goal forall X M (N: @PO.mixin X M) l, SPO.mixin l N = SPO.mixin l (PO.dual_mixin (PO.dual_mixin N)). reflexivity. Abort.
-Definition dual l (X: type l): type l :=
-  let '@GPO.pack _ T M N P Q := X in 
-  @pack l T M (PO.dual_mixin N) Q P.
-  
-(* Definition reduced_build (X: PO) (f: forall k, option (gsup_ops X k)): type (slevel_of _ f) := *)
-(*   build X (reduce _ f (@reducer _)). *)
-(* Arguments reduced_build: clear implicits. *)
+ Structure type (l: level) := pack {
+     sort:> Type;
+     #[canonical=no] setoid_mix: Setoid.mixin sort;
+     #[canonical=no] po_mix: PO.mixin setoid_mix;
+     #[canonical=no] s_mix: SPO.mixin (suplevel l) po_mix;
+     #[canonical=no] i_mix: IPO.mixin (inflevel l) po_mix;
+ }.
+ Canonical Structure to_SPO l (X: type l): SPO (suplevel l) := SPO.pack (s_mix X). 
+ Canonical Structure to_IPO l (X: type l): IPO (inflevel l) := IPO.pack (i_mix X). 
+ Canonical Structure to_PO l (X: type l): PO := PO.pack (po_mix X). 
+ Canonical Structure to_Setoid l (X: type l): Setoid := Setoid.pack (setoid_mix X). 
+ Notation cast T X := (let X':=X in @pack _ T _ _ (s_mix X') (i_mix X')).
+ Definition from_PO (l: level) (X: PO): (forall k, suplevel l k -> gsup_ops X k) -> (forall k, inflevel l k -> ginf_ops X k) -> type l :=
+   let '@PO.pack T M N := X in @pack l T M N.
+ Arguments from_PO [_] _.
+ Definition from_SPO l (X: SPO (suplevel l)): (forall k, inflevel l k -> ginf_ops X k) -> type l :=
+   let '@SPO.pack _ T M N P := X in @pack l T M N P.
+ Arguments from_SPO [_] _.
+ Notation from_ISPO l T := (@from_SPO l T%type (@IPO.mix (inflevel l) T%type)).
 End GPO.
 Notation GPO := GPO.type.
 Canonical GPO.to_SPO.
+Canonical GPO.to_IPO.
 Canonical GPO.to_PO.
 Canonical GPO.to_Setoid.
 #[reversible] Coercion GPO.to_Setoid: GPO >-> Setoid.
 #[reversible] Coercion GPO.to_PO: GPO >-> PO.
 #[reversible] Coercion GPO.to_SPO: GPO >-> SPO.
+#[reversible] Coercion GPO.to_IPO: GPO >-> IPO.
 #[reversible] Coercion GPO.sort: GPO >-> Sortclass.
+Canonical Structure dual_gpo l (X: GPO l): GPO (dual_level l) :=
+  @GPO.pack (dual_level l) (dual X) (GPO.setoid_mix X) (PO.dual_mixin (GPO.po_mix X)) (GPO.i_mix X) (GPO.s_mix X).
 
+Canonical Structure bool_gpo :=
+  GPO.from_ISPO (lSI pF pF) bool. 
+
+Canonical Structure nat_gpo :=
+  GPO.from_ISPO (lSI pF pB) nat. 
+
+Canonical Structure dprod_gpo {A l} (X: A -> GPO l): GPO l :=
+   (* TOFIX: loong *)
+  GPO.from_ISPO l (forall a, X a).
+
+Section sub.
+ Context {l} {X: GPO l}.
+ Variable P: X -> Prop.
+ Definition closed' := sup_closed' P /\ inf_closed' P.
+ Definition sig_gpo (HP: closed'): GPO l :=
+   (* TOFIX: loong *)
+   GPO.from_SPO (sig_spo (proj1 HP)) (IPO.mix (sig_ipo (proj2 HP))). 
+End sub.
+
+(** GPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
+Section c.
+ Context {A: Type} {l} (X: GPO l).
+ Variable r: A->X.               (* retraction *)
+ Variable i: X->A.               (* section *)
+ Hypothesis ri: r°i ≡ id. 
+ Definition retract_gpo: GPO l :=
+   (* TOFIX: loong *)
+   GPO.from_SPO (retract_spo X ri) (IPO.mix (retract_ipo X ri)). 
+End c.
+Arguments retract_gpo [_ _] _ [_ _]. 
+
+(** altogether, we get general sub-GPOs  *)
+Section c.
+ Context {A: Type} {l} {X: GPO l} (P: X -> Prop).
+ Variable r: A->sig P.
+ Variable i: sig P->A.
+ Hypothesis ri: r°i ≡ id. 
+ Hypothesis HP: closed' P.
+ Definition sub_gpo: GPO l := retract_gpo (sig_gpo HP) ri. 
+End c.
+
+(** the GPO of monotone functions *)
+Section s.
+ Context {X: PO} {l} {Y: GPO l}.
+ Lemma closed'_monotone: closed' (Proper (@leq X ==> @leq Y)).
+ Proof. split. exact sup_closed'_monotone. exact (@inf_closed'_monotone X _ Y). Qed.
+ Canonical Structure mon_gpo: GPO l :=
+   (* TOFIX: loong *)
+   GPO.cast (X-mon->Y) (sub_gpo (@po_morphism_as_sig X Y) closed'_monotone).
+End s.
+
+
+Compute fun P: (nat -> nat -> Prop) -> Prop => inf P. (* ugly, should move to indexed sups *)
+Compute fun P: nat -> nat -> Prop => P⊔P.
+Compute fun P: nat -> nat -> Prop => P⊓P.
+
+Ltac solve_lower ::=
+  solve [ reflexivity | assumption |
+          match goal with
+          | H: ?h << ?l |- ?k << ?l => transitivity h; [reflexivity|exact H]
+          | H: ?h << ?l |- ?k << suplevel ?l => transitivity (suplevel h); [reflexivity|exact (suplevel_mon _ _ H)]
+          | H: ?h << ?l |- ?k << inflevel ?l => transitivity (inflevel h); [reflexivity|exact (inflevel_mon _ _ H)]
+          end].
+
+Lemma sup_top {l} {X: GPO l} {L: lA<<l}: sup top ≡[X] top.
+Proof.
+  apply: antisym. admit.
+  by apply: leq_sup. 
+Admitted.
+
+Lemma inf_top {l} {X: GPO l} {L: lA<<l}: inf top ≡[X] bot.
+Proof. Fail move: (@sup_top l (dual_gpo' X)). Abort. (* TODO *)
 
 
 (** * chain construction *)
@@ -1495,10 +2018,22 @@ Module BourbakiWitt.
    - intros x I H. cut (Q x); auto. revert H. apply HQ, id_next. 
  Qed.
 
- (** strengthening the above result as follows requires more work, but leads to a proof that [X] is a well-order *)
+
+ (** direct proof??? *)
+ Lemma next_leq: Proper (leq ==> leq) next. 
+ Proof.
+   move=>x y. revert y. apply: tower. (* by move=>u v uv <-. *)
+   - admit.
+   - move=>y IH xy.
+ Abort.
+
+ 
+ (** the chain is totally ordered, and [next] acts as a successor
+     (proved twice for now, cf comments in the proof)
+  *)
  Theorem total_chain_strong: forall x y, x <= y \/ next y <= x.
  Proof.
-   (** this proof is inspired from Bourbaki's proof, 
+   (** this first proof is inspired from Bourbaki's proof, 
        as reported in [Serge Lang, Algebra, p883]
        differences are that:
        - we use definitions that attempt to minimise the required amount of classical logic
@@ -1542,9 +2077,32 @@ Module BourbakiWitt.
         by rewrite cx; apply id_next.  
        by left. 
    }
-   move=>??. by apply M, N. 
+   move=>??. by apply M, N.
+   Fail idtac "done". 
+   (** this second proof is inspired from Jules Jacobs' one, it requires only [choose id] *)
+   Restart.
+   apply: tower.
+   - move=>T IH t Ht c.
+       case: (choose T Datatypes.id c (next c)).
+         by move=>x Tx; apply IH.
+       -- move=>F. left. by apply Ht.
+       -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
+   - move=>x IHx y. 
+     have H: next x <= y \/ y <= x. {
+       revert y. apply: tower.
+       -- move=>T IH t Ht. case: (choose T Datatypes.id x (next x)).
+          by move=>y Ty/=; rewrite or_comm; apply IH.
+          --- move=>F. right. by apply Ht.
+          --- move=>[y [Ty xy]]. left. rewrite xy. by apply Ht. 
+       -- move=>y IHy. case: (IHx y); auto=>xy. left. 
+          case: IHy=>yx. by rewrite yx.
+          by apply eqv_leq, next, antisym. 
+     }
+     case: H; auto=>yx. right. case: (IHx y)=>xy.
+     by apply eqv_leq, next, antisym.
+     by rewrite xy.
  Qed.
-
+ 
  Corollary lt_leq x y: x < next y -> x <= y.
  Proof. case: (total_chain_strong x y)=>?[]; tauto. Qed. 
  Corollary lt_leq' x y: x < y -> next x <= y.
@@ -1557,8 +2115,16 @@ Module BourbakiWitt.
    right. rewrite -xy. apply id_next.
  Qed.
 
+ (** and [next] must actually be monotone *)
+ Corollary next_leq: Proper (leq ==> leq) next. 
+ Proof.
+   move=>x y xy. case: (total_chain_strong y x)=>yx.
+   by apply eqv_leq, next, antisym.
+   by rewrite yx.
+ Qed.
+
  (** there is at most one prefixpoint, which must be a top element  *)
- Lemma prefixpoint_top x: next x <= x -> is_sup (fun _ => True) x.
+ Lemma prefixpoint_top x: next x <= x -> is_sup top x.
  Proof.
    move=>H y. split; auto=>xy z _. rewrite -xy. clear y xy.
    revert z. apply: tower. apply (sup_closed_leq (const x)).
@@ -1617,14 +2183,14 @@ Module BourbakiWitt.
  Qed.
 
  (** [next] is strictly increasing, except possibly on the top element *)
- Corollary lt_next x: x < next x \/ is_sup (fun _ => True) x.
+ Corollary lt_next x: x < next x \/ is_sup top x.
  Proof.
    case: (chain_le_lt_dec (next x) x); auto.
    by right; apply prefixpoint_top.
  Qed.
 
  (** [x<y] is almost equivalent to [next x<=y] *)
- Corollary lt_leq'' x y: next x <= y -> x < y \/ is_sup (fun _ => True) x. 
+ Corollary lt_leq'' x y: next x <= y -> x < y \/ is_sup top x. 
  Proof.
    move=>H. case: (lt_next x); auto=>//H'.
    left. eapply ltle_lt; eassumption. 
@@ -1633,7 +2199,7 @@ Module BourbakiWitt.
 End b.
 Section b.
 
- Context {l} {X: SPO l} {L: lS lC<<l}.
+ Context {l} {X: SPO l} {L: sEC<<l}.
  Variable f: X -eqv-> X. 
  Hypothesis f_ext: forall x, x <= f x.
  
@@ -1695,7 +2261,7 @@ Section b.
  Proof. apply (BourbakiWitt.ptower _ tower id_next). Qed.
 
  (** there is at most one prefixpoint, which must be a top element  *)
- Lemma prefixpoint_top x: next x <= x -> is_sup (fun _ => True) x.
+ Lemma prefixpoint_top x: next x <= x -> is_sup top x.
  Proof.
    move=>H y. split; auto=>xy z _. rewrite -xy. clear y xy.
    revert z. apply: tower. apply (sup_closed_leq (const x)).
@@ -1733,7 +2299,7 @@ Section b.
 End b.
 Section b.
 
- Context {l} {X: SPO l} {L: lS lC<<l}.
+ Context {l} {X: SPO l} {L: sEC<<l}.
  Variable f: X -mon-> X. 
 
  Lemma chain_C: chain (C f).
@@ -1766,7 +2332,7 @@ End BourbakiWitt'.
 Module Pataraia. 
 
 Section s.
- Context {l} {C: SPO l} {L: lS lD<<l}.
+ Context {l} {C: SPO l} {L: sED<<l}.
 
  (** the largest monotone and extensive function on [C] *)
  Program Definition h: C-mon->C := dsup (fun f => Datatypes.id <=[C-mon->C] f) _.
@@ -1799,7 +2365,7 @@ Section s.
 End s.
 
 Section s.
- Context {l} {X: SPO l} {L: lS lD<<l}.
+ Context {l} {X: SPO l} {L: sED<<l}.
  Variable f: X-mon->X.
 
  Definition lfp := locked (extensive_fixpoint (C:=Chain f): X).

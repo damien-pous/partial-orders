@@ -1,8 +1,9 @@
     Time |  Peak Mem | File Name            
 --------------------------------------------
-0m16.67s | 490196 ko | Total Time / Peak Mem
+0m25.64s | 490196 ko | Total Time / Peak Mem
 --------------------------------------------
+0m08.92s | 405444 ko | alone_fun.vo         
 0m06.57s | 490196 ko | orders.vo            
 0m04.05s | 416188 ko | split.vo             
 0m03.18s | 372400 ko | split_tc.vo          
-0m02.87s | 378056 ko | alone.vo             
+0m02.92s | 378132 ko | alone.vo             

@@ -3,6 +3,7 @@
 -R . PartialOrders
 
 alone.v
+alone_fun.v
 orders.v
 split.v
 split_tc.v
