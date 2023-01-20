@@ -638,8 +638,8 @@ Proof. by []. Qed.
 (* TOTHINK: declare [subrelation] instances? *)
 Lemma leq_covered P Q: P <= Q -> covered P Q.
 Proof. move=>H x Px. exists x; split=>//. by apply H. Qed.
-Lemma eqv_covered f g: f ≡ g -> bicovered f g.
-Proof. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
+#[export] Instance eqv_covered: subrelation eqv bicovered.
+Proof. move=>P Q. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
 
 Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
@@ -763,13 +763,16 @@ Check fun X => unify (@inf_closed X) (@sup_closed (dual X)).
 Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
 Definition image_id {X: Type} (P: X -> Prop): image Datatypes.id P ≡ P.
 Proof. cbv. by firstorder subst. Qed.
-Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (fun x => f (g x)) P ≡ image f (image g P).
+Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (f ° g) P ≡ image f (image g P).
 Proof. cbv. firstorder subst; eauto. Qed.
+Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
+Proof. by exists x. Qed.
+#[export] Hint Resolve in_image: core. 
 Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
   image f P <= Q <-> forall x, P x -> Q (f x).
 Proof.
   split=>H.
-  - move=>x Px. apply H. by exists x.
+  - move=>x Px. by apply H; auto.
   - move=>y [x [Px ->]]; auto. 
 Qed.
 Section s.
@@ -827,7 +830,7 @@ Lemma kern_sup {A} {X: PO} (f: A -> X) (P: A->Prop) (a: A):
   is_sup (image f P) (f a) -> is_sup (X:=kern_po X f) P a.
 Proof.
   move=>H b; split=>ab.
-  -- move=>c Pc. rewrite -ab. apply H=>//. by exists c.
+  -- move=>c Pc. rewrite -ab. by apply H; auto. 
   -- apply H=>_ [c [Pc ->]]. by apply ab. 
 Qed.
 
@@ -912,13 +915,19 @@ Program Canonical Structure K_po := Eval hnf in PO.build leq_K _ _.
 Next Obligation. split. by case. by do 3 (case=>//). Qed.
 Next Obligation. (case x; case y=>//=); intuition discriminate. Qed.
 
+Definition sigset X := sigT (fun I => (I -> Prop) * (I -> X))%type.
+Definition sig2set {X}: sigset X -> (X -> Prop) := fun '(existT _ _ (P,f)) => image f P.
+Definition set2sig {X}: (X -> Prop) -> sigset X := fun P => existT _ _ (P,id).
+Lemma set2sig2set {X} (P: X -> Prop): sig2set (set2sig P) ≡ P.
+Proof. firstorder congruence. Qed.
+
 Definition args k (X: PO): Type :=
   match k with
   | kE => unit
   | kB => X * X
   | kC => sig (@chain X)
   | kD => sig (@directed X)
-  | kA => (X -> Prop)
+  | kA => sigset X
   end.
 Definition setof {X: PO} k: args k X -> X -> Prop :=
   match k with
@@ -926,7 +935,7 @@ Definition setof {X: PO} k: args k X -> X -> Prop :=
   | kB => fun p => pair (fst p) (snd p)
   | kC => @proj1_sig _ _
   | kD => @proj1_sig _ _
-  | kA => fun P => P
+  | kA => @sig2set X
   end.
 
 Section map_args.
@@ -941,7 +950,7 @@ Section map_args.
  Proof.
    move=>D _ _ [x [Px ->]] [y [Py ->]].
    case: (D x y Px Py)=>[z [Pz [xz yz]]].
-   exists (f z). split. by exists z. split; by apply f.
+   exists (f z). split; auto. split; by apply f.
  Qed.
  Definition map_args k: args k X -> args k Y :=
    match k return args k X -> args k Y with
@@ -949,10 +958,14 @@ Section map_args.
    | kB => fun '(x,y) => (f x,f y)
    | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
    | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
-   | kA => image f
+   | kA => fun '(existT _ _ (P,g)) => existT _ _ (P,f°g)
    end.
  Lemma setof_map_args k: forall x, setof k (map_args k x) ≡ image f (setof k x).
- Proof. case: k=>/=[_|[x x']|[P C]|[P D]|P]//=; firstorder congruence. Qed. 
+ Proof.
+   case: k=>/=[_|[x x']|[P C]|[P D]|[I [P g]]]//=;
+           try firstorder congruence.
+   apply image_comp.
+ Qed. 
 End map_args.
 
 Variant plevel := pN | pE | pB | pF | pEC | pFC | pED.
@@ -1099,15 +1112,15 @@ Module sreduce.
     case; case=>//_ [v H].
     - exists (fun _ => v (exist _ empty chain_empty)). by move=>/=_; apply H. 
     - exists (fun _ => v (exist _ empty directed_empty)). by move=>/=_; apply H. 
-    - exists (fun _ => v empty). by move=>/=_; apply H. 
-    - exists (fun '(x,y) => v (pair x y)). by move=>/=[??]; apply H. 
+    - exists (fun _ => v (set2sig empty)). by move=>/=_; rewrite -{1}(set2sig2set empty); apply H. 
+    - exists (fun '(x,y) => v (set2sig (pair x y))). by move=>[??]/=; rewrite -{1}(set2sig2set (pair _ _)); apply H. 
     - exists (fun '(exist _ P C) => v (exist _ P (chain_directed C))). by move=>/=[??]; apply H. 
-    - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
-    - exists (fun '(exist _ P C) => v P). by move=>/=[??]; apply H. 
+    - exists (fun '(exist _ P C) => v (set2sig P)). by move=>[P?]/=; rewrite -{1}(set2sig2set P); apply H. 
+    - exists (fun '(exist _ P C) => v (set2sig P)). by move=>[P?]/=; rewrite -{1}(set2sig2set P); apply H. 
   Defined.
   Definition reducer': gsup_ops X kB -> gsup_ops X kD -> gsup_ops X kA.
     move=>[cup cup_spec] [dsup dsup_spec].
-    unshelve eexists (fun P => dsup (exist _ (sup_closure P) _)).
+    unshelve eexists (fun P => dsup (exist _ (sup_closure (sig2set P)) _)).
     (* TOTHINK: how to perform such proofs in a nice conext? *)
     abstract (move=>x y Px Py; exists (cup (x,y)); split; [
     (apply: sc_sup; [|apply cup_spec])=>_[->|->]// |
@@ -1186,11 +1199,11 @@ Program Canonical Structure Prop_spo: SPO sA :=
            | kB => Some (exist _ (fun '(p,q) => p\/q) _)
            | kC => None          (* generated *)
            | kD => None          (* generated *)
-           | kA => Some (exist _ (fun P => exists2 p, P p & p) _)
+           | kA => Some (exist _ (fun '(existT _ _ (P,f)) => exists2 i, P i & f i) _)
            end).
 Next Obligation. firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto. Qed.
-Next Obligation. firstorder. Qed.
+Next Obligation. destruct x as [I [P f]]; cbv. firstorder subst; eauto. Qed.
 
 Definition app {A} {X: A -> PO} a: (forall a, X a)-mon->X a :=
   PO.build_morphism (fun f => f a) (fun f g fg => fg a).
@@ -1422,7 +1435,8 @@ Definition bot {l} {X: SPO l} {L: sE<<l}: X := gsup kE (has_slevel kE l L) tt.
 Definition cup {l} {X: SPO l} {L: sB<<l} (x y: X): X := gsup kB (has_slevel kB l L) (x,y).
 Definition csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) (C: chain P): X := gsup kC (has_slevel kC l L) (exist _ P C).
 Definition dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) (D: directed P): X := gsup kD (has_slevel kD l L) (exist _ P D). 
-Definition sup {l} {X: SPO l} {L: sA<<l}: (X -> Prop) -> X := gsup kA (has_slevel kA l L). 
+Definition isup {l} {X: SPO l} {L: sA<<l} {I} (P: I -> Prop) (f: I -> X): X := gsup kA (has_slevel kA l L) (existT _ I (P,f)). 
+Notation sup P := (isup P id). 
 Infix "⊔" := cup (left associativity, at level 50). 
 Arguments csup {_ _ _}. 
 Arguments dsup {_ _ _}. 
@@ -1435,15 +1449,19 @@ Lemma is_sup_csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) C: is_sup P (csup P 
 Proof. apply: gsup_spec. Qed.
 Lemma is_sup_dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) D: is_sup P (dsup P D).
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop): is_sup P (sup P).
+Lemma is_sup_isup {l} {X: SPO l} {L: sA<<l} I P (f: I -> X): is_sup (image f P) (isup P f).
 Proof. apply: gsup_spec. Qed.
+Lemma is_sup_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop): is_sup P (sup P).
+Proof. rewrite -{1}(image_id P). apply: is_sup_isup. Qed.
 
 Lemma leq_csup {l} {X: SPO l} {L: sEC<<l} (P: X -> Prop) C x: P x -> x <= csup P C. 
 Proof. move=>Px. by apply: leq_gsup. Qed.
 Lemma leq_dsup {l} {X: SPO l} {L: sED<<l} (P: X -> Prop) D x: P x -> x <= dsup P D. 
 Proof. move=>Px. by apply leq_gsup. Qed.
+Lemma leq_isup {l} {X: SPO l} {L: sA<<l} I (P: I -> Prop) (f: I -> X) i: P i -> f i <= isup P f. 
+Proof. move=>Pi. by apply leq_gsup=>/=; auto. Qed.
 Lemma leq_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P. 
-Proof. move=>Px. by apply leq_gsup. Qed.
+Proof. apply: leq_isup. Qed.
 
 
 Lemma cup_spec {l} {X: SPO l} {L: sB<<l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
@@ -1554,11 +1572,11 @@ Program Canonical Structure Prop_ipo: IPO sA :=
            | kB => Some (exist _ (fun '(p,q) => p/\q) _)
            | kC => None          (* generated *)
            | kD => None          (* generated *)
-           | kA => Some (exist _ (fun P => forall p, P p -> p) _)
+           | kA => Some (exist _ (fun '(existT _ _ (P,f)) => forall i, P i -> f i) _)
            end).
 Next Obligation. firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto; apply H; eauto. Qed.
-Next Obligation. firstorder. Qed.
+Next Obligation. destruct x as [I [P f]]; cbv. firstorder subst; apply H; eauto. Qed.
 
 Program Canonical Structure dprod_ipo {A l} (X: A -> IPO l): IPO l :=
   IPO.cast (forall a, X a) (IPO.dual' (dprod_spo (fun a => IPO.dual (X a)))).
@@ -1609,7 +1627,8 @@ Definition top {l} {X: IPO l} {L: sE<<l}: X := ginf kE (has_slevel kE l L) tt.
 Definition cap {l} {X: IPO l} {L: sB<<l} (x y: X): X := ginf kB (has_slevel kB l L) (x,y).
 Definition cinf {l} {X: IPO l} {L: sEC<<l} (P: X -> Prop) (C: chain (X:=dual X) P): X := ginf kC (has_slevel kC l L) (exist _ P C).
 Definition dinf {l} {X: IPO l} {L: sED<<l} (P: X -> Prop) (D: directed (X:=dual X) P): X := ginf kD (has_slevel kD l L) (exist _ P D). 
-Definition inf {l} {X: IPO l} {L: sA<<l}: (X -> Prop) -> X := ginf kA (has_slevel kA l L). 
+Definition iinf {l} {X: IPO l} {L: sA<<l} {I} (P: I -> Prop) (f: I -> X): X := ginf kA (has_slevel kA l L) (existT _ I (P,f)). 
+Notation inf P := (iinf P id). 
 Infix "⊓" := cap (left associativity, at level 50). 
 Arguments cinf {_ _ _}. 
 Arguments dinf {_ _ _}. 
@@ -1622,13 +1641,17 @@ Lemma is_inf_cinf {l} {X: IPO l} {L: sEC<<l} (P: X -> Prop) C: is_inf P (cinf P 
 Proof. apply: ginf_spec. Qed.
 Lemma is_inf_dinf {l} {X: IPO l} {L: sED<<l} (P: X -> Prop) D: is_inf P (dinf P D).
 Proof. apply: ginf_spec. Qed.
-Lemma is_inf_inf {l} {X: IPO l} {L: sA<<l} (P: X -> Prop): is_inf P (inf P).
+Lemma is_inf_iinf {l} {X: IPO l} {L: sA<<l} I P (f: I -> X): is_inf (image f P) (iinf P f).
 Proof. apply: ginf_spec. Qed.
+Lemma is_inf_inf {l} {X: IPO l} {L: sA<<l} (P: X -> Prop): is_inf P (inf P).
+Proof. spo_dual @is_sup_sup. Qed.
 
 Lemma geq_cinf {l} {X: IPO l} {L: sEC<<l}: forall (P: X -> Prop) C x, P x -> cinf P C <= x. 
 Proof. spo_dual @leq_csup. Qed.
 Lemma geq_dinf {l} {X: IPO l} {L: sED<<l}: forall (P: X -> Prop) D x, P x -> dinf P D <= x. 
 Proof. spo_dual @leq_dsup. Qed.
+Lemma geq_iinf {l} {X: IPO l} {L: sA<<l}: forall I (P: I -> Prop) (f: I -> X) i, P i -> iinf P f <= f i. 
+Proof. spo_dual @leq_isup. Qed.
 Lemma geq_inf {l} {X: IPO l} {L: sA<<l}: forall (P: X -> Prop) x, P x -> inf P <= x. 
 Proof. spo_dual @leq_sup. Qed.
 
@@ -1833,7 +1856,7 @@ Section s.
 End s.
 
 
-Compute fun P: (nat -> nat -> Prop) -> Prop => inf P. (* ugly, should move to indexed sups *)
+Compute fun P: (nat -> nat -> Prop) -> Prop => inf P. (* nice thanks to indexed sups *)
 Compute fun P: nat -> nat -> Prop => P⊔P.
 Compute fun P: nat -> nat -> Prop => P⊓P.
 
@@ -2416,4 +2439,4 @@ Print Assumptions Chain.BourbakiWitt.is_fixpoint.
 Print Assumptions Chain.BourbakiWitt'.is_least_fixpoint.
 Print Assumptions Chain.Pataraia.is_least_fixpoint.
 
-(* time coqc alone.v: 2.6s *)
+(* time coqc alone_fun.v: 9.35s *)

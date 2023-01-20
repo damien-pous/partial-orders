@@ -9,7 +9,6 @@ split_tc.v  idem, with TC for laws
 # TODO
 
 smart constructor for GPO 
-image-sups
 
 direct sub-GPO construct?
 GPO products/sums
