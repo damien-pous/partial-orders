@@ -28,9 +28,9 @@ Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y.
 Lemma forall_pair {X} (P: X -> Prop) x y: (forall z, pair x y z -> P z) <-> P x /\ P y.
 Proof. split. move=>H; split; apply H; cbv; auto. by move=>[??]?[->|->]. Qed.
 
-Notation "a &&& b" := (if a then b else false) (at level 60): bool_scope. 
-Notation "a ||| b" := (if a then true else b) (at level 60): bool_scope. 
-Notation "a ==> b" := (if a then b else true): bool_scope.
+(* Notation "a &&& b" := (if a then b else false) (at level 60): bool_scope.  *)
+(* Notation "a ||| b" := (if a then true else b) (at level 60): bool_scope.  *)
+(* Notation "a ==> b" := (if a then b else true): bool_scope. *)
 
 Notation unify M N := (eq_refl: M = N).
 
@@ -50,7 +50,7 @@ Structure type := pack {
     #[canonical=no] mix: mixin sort;
 }.
 Notation cast T X := (let X':=X in @pack T (mix X')).
-Definition build X eq eqE := pack (@from_type X eq eqE). 
+Definition build X eq eqE := @pack X (@from_type X eq eqE). 
 Arguments build: clear implicits. 
 
 Structure morphism (X Y: type) := build_morphism {
@@ -81,19 +81,27 @@ Definition eqv {X: Setoid} := Setoid.eqv (Setoid.mix X).
 #[export] Instance body_eqv {X Y} {f: X-eqv->Y}: Proper (eqv ==> eqv) f := Setoid.body_eqv f.
 Infix "≡" := eqv (at level 70).
 Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
-#[export] Hint Extern 0 => reflexivity: core.
+Lemma eqv_refl {X: Setoid} (x: X): x ≡ x.
+Proof. reflexivity. Defined.
+Lemma eqv_sym {X: Setoid} (x y: X): x ≡ y -> y ≡ x.
+Proof. apply symmetry. Defined.
+#[export] Hint Extern 0 (_ ≡ _)=> exact: (eqv_refl _) || apply: eqv_sym; assumption: core.
 
 (** ** instances *)
 
-Definition eq_setoid X := Setoid.build X eq eq_equivalence.
+Definition dual (X: Type) := X.
+Canonical Structure dual_setoid (X: Setoid) := Setoid.cast (dual X) X.
+Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): dual X -eqv-> Y :=
+  Setoid.build_morphism f body_eqv.
 
+Definition eq_setoid X := Setoid.build X eq eq_equivalence.
 Canonical Structure unit_setoid := eq_setoid unit.
 Canonical Structure bool_setoid := eq_setoid bool.
 Canonical Structure nat_setoid := eq_setoid nat.
 
-(* Program Canonical Structure irrelevant_setoid (P: Prop) := *)
-(*   Eval hnf in Setoid.build P (fun _ _ => True) _. *)
-(* Next Obligation. by constructor. Qed. *)
+Program Canonical Structure irrelevant_setoid (P: Prop) :=
+  Eval hnf in Setoid.build P (fun _ _ => True) _.
+Next Obligation. by constructor. Qed.
 
 Canonical Structure Prop_setoid := Setoid.build Prop iff _.
 
@@ -110,8 +118,8 @@ Definition sum_eqv {X Y: Setoid} (p q: X+Y) :=
 Program Canonical Structure sum_setoid (X Y: Setoid) := Setoid.build (X+Y) sum_eqv _.
 Next Obligation.
   constructor.
-  by move=>[?|?]//. 
-  by move=>[?|?][?|?]?//=; symmetry. 
+  by move=>[?|?]//=. 
+  by move=>[?|?][?|?]?//=. 
   by move=>[?|?][y|y][?|?]??//=; transitivity y. 
 Qed.
 
@@ -121,8 +129,8 @@ Program Canonical Structure option_setoid (X: Setoid) :=
   Setoid.build (option X) option_eqv _.
 Next Obligation.
   constructor.
-  by move=>[?|]//. 
-  by move=>[?|][?|]//=; symmetry. 
+  by move=>[?|]//=. 
+  by move=>[?|][?|]//=. 
   by move=>[?|][y|][?|]??//=; transitivity y. 
 Qed.
   
@@ -141,12 +149,13 @@ Program Definition kern_setoid A (X: Setoid) (f: A -> X) :=
   Setoid.build A (fun a b => f a ≡ f b) _.
 Next Obligation.
   constructor.
-  - by move=>//=. 
-  - by move=>???; symmetry.
+  - by move=>?. 
+  - by move=>???.
   - by move=>?????; etransitivity; eauto.
 Defined.
 (* we are lucky here... *)
-Check fun A B (X: Setoid) (f: B -> X) (g: A -> B) => eq_refl: kern_setoid (kern_setoid X f) g = kern_setoid X (f ° g).
+Check fun A B (X: Setoid) (f: B -> X) (g: A -> B) =>
+        unify (kern_setoid (kern_setoid X f) g) (kern_setoid X (f ° g)).
 
 Canonical Structure sig_setoid (X: Setoid) (P: X -> Prop) :=
   kern_setoid X (@proj1_sig X P).
@@ -154,29 +163,23 @@ Canonical Structure sig_setoid (X: Setoid) (P: X -> Prop) :=
 Canonical Structure setoid_morphisms_setoid (X Y: Setoid) :=
   kern_setoid _ (@Setoid.body X Y).
 
-Print Canonical Projections. 
-Definition dual (X: Type) := X.
-Canonical Structure dual_setoid (X: Setoid) :=
-  (* just a clone *)
-  Setoid.build (dual X) eqv Equivalence_eqv.
-
-Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): dual X -eqv-> dual Y :=
-  Setoid.build_morphism f body_eqv.
 
 (* most general lemma *)
 Lemma comp_eqv {X Y Z}: Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 (* but only this restriction makes it possible to use [setoid_rewrite] *)
-(* #[export] Instance setoid_comp_eqv {X Y Z: Setoid}: Proper (meqv ==> meqv ==> meqv) (@Setoid.comp X Y Z) := comp_eqv. *)
+#[export] Instance setoid_comp_eqv {X Y Z: Setoid}: Proper (eqv ==> eqv ==> eqv) (@Setoid.comp X Y Z) := comp_eqv.
 
 Check fun f: nat -eqv-> nat => f ° f. 
 Check fun f: nat -eqv-> nat => f ° id ° f. 
 
-(* Goal forall X: Setoid, forall f g h: X -eqv-> X, f ⩧ g -> f ° g ⩧ h. *)
-(* Proof. *)
-(*   intros * H. *)
-(*   rewrite H -H. cbn.  *)
-(* Abort.  *)
+Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
+Proof.
+  intros * H.
+  Fail rewrite H -H.
+  change (f ° g ≡[_-eqv->_] h).
+  rewrite H -H.  
+Abort.
 
 #[export] Instance const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@const X Y).
 Proof. move=>/=y y' yy' _/=. apply yy'. Qed.
@@ -216,7 +219,7 @@ Definition build (X: Setoid) :=
   let '@Setoid.pack T M := X return
                              forall leq: relation X,
                                PreOrder leq ->
-                               (forall x y, Setoid.eqv (Setoid.mix X) x y <-> (leq x y /\ leq y x)) -> type in
+                               (forall x y, x ≡ y <-> (leq x y /\ leq y x)) -> type in
   fun leq H H' => @pack T M (@from_setoid T M leq H H').
 Arguments build [_].
 
@@ -226,9 +229,12 @@ Program Definition build_from_type (X: Type) (leq: relation X) (H: PreOrder leq)
   @pack X M (from_setoid M H _). 
 Next Obligation.
   constructor; repeat intro.
-  - by []. 
+  - split; reflexivity.
   - tauto.
   - split; transitivity y; tauto.
+Qed.
+Next Obligation.
+  reflexivity.
 Qed.
 Arguments build_from_type: clear implicits.
 
@@ -278,6 +284,10 @@ Infix "<" := lt (at level 70).
 Infix "<[ X ]" := (@lt X) (at level 70, only parsing).
 
 (** ** basic properties *)
+
+Lemma leq_refl {X: PO} (x: X): x <= x.
+Proof. reflexivity. Defined.
+#[export] Hint Extern 0 (_ <= _)=> exact: (leq_refl _): core.
 
 Section s.
  Context {X: PO}.
@@ -344,7 +354,7 @@ Next Obligation. fold (x ≡ y). by intuition symmetry. Qed.
 Canonical Structure unit_po := discrete_po unit.
 
 (* this one makes [prod_po] fail below, can't see why... *)
-(* Canonical Structure irrelevant_po (P: Prop) := Eval hnf in discrete_po P. *)
+(* Canonical Structure irrelevant_po (P: Prop) := discrete_po P. *)
 
 Program Canonical Structure bool_po: PO := PO.build implb _ _.
 Next Obligation. split. by case. move=>[][][]//=. Qed.
@@ -359,11 +369,14 @@ Next Obligation. split; cbv; tauto. Qed.
 Program Canonical Structure prod_po (X Y: PO): PO :=
   PO.build (fun p q: X*Y => fst p <= fst q /\ snd p <= snd q) _ _.
 Next Obligation.
+  reflexivity.
+Qed.
+Next Obligation.
   constructor=>//.
   by move=>???[??][]; split; etransitivity; eassumption.
 Qed.
 Next Obligation.
-  rewrite 2!eqv_of_leq. tauto. 
+  cbn. rewrite 2!eqv_of_leq. tauto. 
 Qed.
 
 Definition lex_prod := prod.
@@ -378,7 +391,7 @@ Next Obligation.
   intuition solve [transitivity y; auto|transitivity y'; auto].
 Qed.
 Next Obligation.
-  rewrite 2!eqv_of_leq. intuition.
+  cbn. rewrite 2!eqv_of_leq. intuition.
 Qed.
 
 (* with [None] as top element *)
@@ -392,7 +405,7 @@ Next Obligation.
   case=>[?|]; case=>[?|]=>//=; case=>[?|]=>//=. apply transitivity.
 Qed.
 Next Obligation.
-  case:x=>[?|]; case:y=>[?|]=>/=; rewrite ?eqv_of_leq; tauto. 
+  case:x=>[?|]; case:y=>[?|]; cbn; rewrite ?eqv_of_leq; tauto. 
 Qed.
 
 
@@ -406,7 +419,7 @@ Next Obligation.
   - by move=>??????; etransitivity; eauto.
 Qed.
 Next Obligation.
-  setoid_rewrite eqv_of_leq. firstorder. 
+  cbn. setoid_rewrite eqv_of_leq. firstorder. 
 Qed.
 
 Program Definition kern_po A (X: PO) (f: A -> X): PO :=
@@ -420,20 +433,14 @@ Next Obligation.
   apply eqv_of_leq.
 Defined.
 (* lucky here too *)
-Check fun A B (X: PO) (f: B -> X) (g: A -> B) => eq_refl: kern_po (kern_po X f) g = kern_po X (f ° g).
+Check fun A B (X: PO) (f: B -> X) (g: A -> B) =>
+        unify (kern_po (kern_po X f) g) (kern_po X (f ° g)).
 
 Canonical Structure sig_po (X: PO) (P: X -> Prop): PO := kern_po X (@proj1_sig X P).
 
 Canonical Structure setoid_morphisms_po X (Y: PO): PO := kern_po _ (@Setoid.body X Y). 
 Canonical Structure po_morphisms_setoid X Y: Setoid := kern_setoid _ (@PO.body X Y). 
 Canonical Structure po_morphisms_po X Y: PO := kern_po _ (@PO.body X Y). 
-
-(* Notation leq_setoids := (@leq (setoid_morphisms_po _ _)).  *)
-(* Notation eqv_pos := (@eqv (po_morphisms_setoid _ _)).  *)
-(* Notation leq_pos := (@leq (po_morphisms_po _ _)).  *)
-(* Infix "<=[-eqv->]" := (leq_setoids) (at level 70). *)
-(* Infix "≡[-mon->]" := (eqv_pos) (at level 70). *)
-(* Infix "<=[-mon->]" := (leq_pos) (at level 70). *)
 
 Program Canonical Structure dual_po (X: PO): PO :=
   PO.build (flip leq: relation (dual X)) _ _.
@@ -461,7 +468,6 @@ Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 
-#[export] Instance setoid_comp_eqv {X Y Z}: Proper (eqv ==> eqv ==> eqv) (@Setoid.comp X Y Z) := comp_eqv.
 #[export] Instance setoid_comp_leq {X Y} {Z: PO}: Proper (leq ==> eqv ==> leq) (@Setoid.comp X Y Z) := comp_leq_eqv.
 #[export] Instance po_comp_leq {X Y Z}: Proper (leq ==> leq ==> leq) (@PO.comp X Y Z) := comp_leq.
 #[export] Instance po_comp_eqv {X Y Z}: Proper (eqv ==> eqv ==> eqv) (@PO.comp X Y Z) := op_leq_eqv_2.
@@ -658,7 +664,7 @@ Lemma is_sup_eqv P p Q q: is_sup P p -> is_sup Q q -> bicovered P Q -> p≡q.
 Proof. rewrite eqv_of_leq=>??[??]. eauto using is_sup_leq. Qed.
 
 Lemma supU P x y: is_sup P x -> is_sup P y -> x ≡ y.
-Proof. eauto using is_sup_eqv. Qed.
+Proof. intros. eapply is_sup_eqv; eauto; reflexivity. Qed.
 
 Lemma is_sup_single x: is_sup (eq x) x.
 Proof. intro. by firstorder subst. Qed.
@@ -693,7 +699,7 @@ Qed.
 Lemma sup_closed_Proper P: sup_closed P -> Proper (eqv ==> eqv) P.
 Proof.
   move=>H. apply Proper_half=>x y xy Px. apply (H (eq x)). by move=>?<-. 
-  move: (is_sup_single x). apply Proper_is_sup=>//. by symmetry.
+  move: (is_sup_single x). apply Proper_is_sup=>//. reflexivity.
 Qed.
 
 Inductive sup_closure P: X -> Prop :=
@@ -1423,11 +1429,17 @@ End Failed_CS_level_inheritance_attempts.
 
 Class lower {X: PO} (h k: X) := Lower: h <= k.
 Infix "<<" := lower (at level 70).
-#[export] Instance PreOrder_lower X: PreOrder (@lower X) := PreOrder_leq. 
+#[export] Instance PreOrder_lower X: PreOrder (@lower X) := PreOrder_leq.
+Lemma lower_trans {X: PO} (k h l: X) (kh: k<<h) (hl: h<<l): k<<l.
+Proof. etransitivity; eassumption. Qed.
 Ltac solve_lower :=
   solve [ reflexivity | assumption |
-          match goal with H: ?h << ?l |- ?k << ?l => transitivity h; [reflexivity|exact H] end].
+          match goal with H: ?h << ?l |- ?k << ?l => exact: (lower_trans k h l I H) end].
 #[export] Hint Extern 0 (lower _ _) => solve_lower: typeclass_instances.
+
+Goal forall l, sA<<l -> sE <<l.
+  intros l L. solve_lower. 
+Qed.
 
 (* TOTHINK: should we move this theory directly to GPOs ? *)
 
@@ -1860,13 +1872,18 @@ Compute fun P: (nat -> nat -> Prop) -> Prop => inf P. (* nice thanks to indexed 
 Compute fun P: nat -> nat -> Prop => P⊔P.
 Compute fun P: nat -> nat -> Prop => P⊓P.
 
+Lemma lower_trans_sup k h l (kh: k<<suplevel h) (hl: h<<l): k<<suplevel l.
+Proof. rewrite ->kh. by apply suplevel_mon. Qed.
+Lemma lower_trans_inf k h l (kh: k<<inflevel h) (hl: h<<l): k<<inflevel l.
+Proof. rewrite ->kh. by apply inflevel_mon. Qed.
 Ltac solve_lower ::=
   solve [ reflexivity | assumption |
           match goal with
-          | H: ?h << ?l |- ?k << ?l => transitivity h; [reflexivity|exact H]
-          | H: ?h << ?l |- ?k << suplevel ?l => transitivity (suplevel h); [reflexivity|exact (suplevel_mon _ _ H)]
-          | H: ?h << ?l |- ?k << inflevel ?l => transitivity (inflevel h); [reflexivity|exact (inflevel_mon _ _ H)]
-          end].
+          | H: ?h << ?l |- ?k << ?l => exact: (lower_trans k h l I H)
+          | H: ?h << ?l |- ?k << suplevel ?l => exact: (lower_trans_sup k h l I H)
+          | H: ?h << ?l |- ?k << inflevel ?l => exact: (lower_trans_inf k h l I H)
+          end
+    ].
 
 Lemma sup_top {l} {X: GPO l} {L: lA<<l}: sup top ≡[X] top.
 Proof.
@@ -1875,7 +1892,37 @@ Proof.
 Admitted.
 
 Lemma inf_top {l} {X: GPO l} {L: lA<<l}: inf top ≡[X] bot.
-Proof. Fail move: (@sup_top l (dual_gpo' X)). Abort. (* TODO *)
+Proof.
+  Set Printing All.
+  set (t := @top _ _ _).
+  cbn in t. 
+  pose proof (@sup_top _ (dual_gpo X)) as H.
+  set (t' := @top _ _ _) in H.
+  cbn in t'.
+  cbn in H.
+  Check unify (suplevel (dual_level l)) (inflevel l).
+  Check unify 
+    (@eqv (@GPO.to_Setoid (dual_level l) (@dual_gpo l X)))
+    (@eqv (@GPO.to_Setoid l X)).
+  set A := IPO.dual (@GPO.to_IPO l X).
+  set B := @GPO.to_SPO (dual_level l) (@dual_gpo l X).
+  Fail Check unify A B.
+  cbn in B. cbn in A.
+  Fail Check unify
+    ((@isup (inflevel l) (@GPO.to_SPO (dual_level l) (@dual_gpo l X))
+       (lower_trans_sup sA lA (dual_level l) I _) (@GPO.sort l X) t' id))
+    (@iinf (inflevel l) (@GPO.to_IPO l X) (lower_trans_inf sA lA l I L)
+       (Setoid.sort (@IPO.to_Setoid (inflevel l) (@GPO.to_IPO l X))) t
+       id).
+  (* problem is only dependency on << proof *)
+  Check unify
+    ((@isup (inflevel l) (@GPO.to_SPO (dual_level l) (@dual_gpo l X))
+       (lower_trans_sup sA lA (dual_level l) I _) (@GPO.sort l X) t' id))
+    (@iinf (inflevel l) (@GPO.to_IPO l X) (lower_trans_inf sA lA l I L)
+       (Setoid.sort (@IPO.to_Setoid (inflevel l) (@GPO.to_IPO l X))) t
+       id).
+Abort.
+
 
 
 (** * chain construction *)
@@ -2149,7 +2196,7 @@ Module BourbakiWitt.
  (** there is at most one prefixpoint, which must be a top element  *)
  Lemma prefixpoint_top x: next x <= x -> is_sup top x.
  Proof.
-   move=>H y. split; auto=>xy z _. rewrite -xy. clear y xy.
+   move=>H y. split. 2: exact. move=>xy z _. rewrite -xy. clear y xy.
    revert z. apply: tower. apply (sup_closed_leq (const x)).
    move=>y yx. case: (total_chain_strong x y); auto=>xy.
    have E: y≡x by apply antisym. by rewrite E.
@@ -2286,7 +2333,7 @@ Section b.
  (** there is at most one prefixpoint, which must be a top element  *)
  Lemma prefixpoint_top x: next x <= x -> is_sup top x.
  Proof.
-   move=>H y. split; auto=>xy z _. rewrite -xy. clear y xy.
+   move=>H y. split. 2: exact. move=>xy z _. rewrite -xy. clear y xy.
    revert z. apply: tower. apply (sup_closed_leq (const x)).
    by move=>y ->.
  Qed.
@@ -2344,7 +2391,7 @@ Section b.
  Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
  Proof.
    move=>x H. have E: x≡lfp.
-   apply: is_inf_eqv. apply H. apply is_least_fixpoint. by rewrite /cobicovered.
+   apply: is_inf_eqv. apply H. apply is_least_fixpoint. split; reflexivity.
    rewrite E; clear.
    apply Csup with (C f)=>//. apply is_sup_csup. 
  Qed.
@@ -2417,7 +2464,7 @@ Section s.
  Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
  Proof.
    move=>x H. have E: x≡lfp.
-   apply: is_inf_eqv. apply H. apply is_least_fixpoint. by rewrite /cobicovered.
+   apply: is_inf_eqv. apply H. apply is_least_fixpoint. split; reflexivity. 
    rewrite E; clear.
    apply Csup with (C f)=>//. apply lfp_is_sup_C. 
  Qed.

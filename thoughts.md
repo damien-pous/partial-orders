@@ -18,6 +18,8 @@ merge Setoid and PO ??
 
 distributive, Heyting, Boolean
 
+setoid_congruence tactic
+lattice tactics
 more on adjunctions
 
 cast_setoid
