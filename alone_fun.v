@@ -1,4 +1,5 @@
 Require Import Setoid Morphisms Basics.
+Require Import StrictProp. 
 Require Import ssreflect ssrfun ssrbool .
 Require Eqdep_dec Classical.
 
@@ -35,6 +36,23 @@ Proof. split. move=>H; split; apply H; cbv; auto. by move=>[??]?[->|->]. Qed.
 
 Notation unify M N := (eq_refl: M = N).
 
+(* TEMP, to avoid warning about Definitional UIP *)
+Definition sUnit : SProp := forall X: SProp, X -> X.
+Definition stt: sUnit := fun X x => x.
+Lemma sUnit_sind: forall P : sUnit -> SProp, P stt -> forall s : sUnit, P s.
+Proof. intros P H s. apply s, H. Qed.
+
+
+Definition is_true' (b:bool) : SProp := if b then sUnit else sEmpty.
+Definition is_true'_eq_true b : is_true' b -> true = b
+  := match b with
+     | true => fun _ => eq_refl
+     | false => sEmpty_ind _
+     end.
+Definition eq_true_is_true' b (H:true=b) : is_true' b
+  := match H in _ = x return is_true' x with eq_refl => stt end.
+Lemma is_true'_leq: forall b c, implb b c -> is_true' b -> is_true' c. 
+Proof. by move=>[][]//=_ []. Qed.
 
 (** * setoids *)
 
@@ -373,6 +391,7 @@ Canonical Structure unit_po := PO.cast unit (discrete_po _).
 Program Canonical Structure bool_po := PO.build bool implb _ _.
 Next Obligation. split. by case. move=>[][][]//=. Qed.
 Next Obligation. case: x; case: y=>//=; intuition discriminate. Qed.
+  
 
 Program Canonical Structure nat_po := PO.build nat Peano.le _ _.
 Admit Obligations.
@@ -1048,18 +1067,20 @@ Definition sEC: slevel := Some pEC.
 Definition sFC: slevel := Some pFC. 
 Definition sED: slevel := Some pED. 
 Definition sA: slevel := None.
-Definition slevel_fun (l: slevel) k: bool :=
+Definition slevel_fun (l: slevel) k :=
   match l,k with
   | None,_ => true
   | Some p,k => p k
   end.
-Coercion slevel_fun: slevel >-> Funclass.
 Lemma slevel_mon: Proper (leq ==> leq) slevel_fun.
 Proof.
-  case=>[p|]; case=>[q|]//=. 
+  case=>[p|]; case=>[q|]//=.
   move=>pq; case=>//; by apply plevel_mon.
   move=>_; case=>//; by case: p.
 Qed.
+Definition slevel_fun' (l: slevel): K -> SProp := fun k => is_true' (slevel_fun l k).
+Coercion slevel_fun': slevel >-> Funclass.
+
 Definition slevel_of k: slevel :=
   match k with
   | kE => sE
@@ -1074,7 +1095,9 @@ Lemma has_slevel (k: K) (l: slevel): slevel_of k <= l -> l k.
 Proof.
   move=>H. move: (has_slevel_of k).
   move: (slevel_mon _ _ H k).
-  by case (slevel_of k k).
+  rewrite /slevel_fun'. 
+  case (slevel_fun (slevel_of k) k); cbn. 2: by move=>? [].
+  move=>E _. by apply eq_true_is_true'. 
 Qed.
 
 Section s.
@@ -1121,7 +1144,7 @@ Module sreduce.
   Variable f: forall k, option (T k).
   Coercion option_bool {A} (x: option A) := match x with None => false | Some _ => true end.
   Ltac discriminate_levels :=
-    (discriminate ||
+    (by move=>[] ||
        lazymatch goal with |- context [f ?k] => (* idtac k; *) case: (f k)=>[/=_|]; discriminate_levels end).
   Hypothesis H: forall h k: K, h <= k -> T k -> T h.
   Hypothesis H': T kB -> T kD -> T kA. 
@@ -1193,7 +1216,7 @@ Module SPO.
  Notation reduced_build l T f := (build l T (sreduce.reduce f)).
  Program Definition weaken (h l: slevel) (X: type l) (hl: h<=l): type h :=
    build h X (fun k hk => mix X k _).
- Next Obligation. apply slevel_mon in hl. specialize (hl k). by destruct (h k). Qed.
+ Next Obligation. move: hk. apply is_true'_leq, slevel_mon, hl. Qed.
 End SPO.
 Notation SPO := SPO.type.
 Canonical SPO.to_PO.
@@ -1208,7 +1231,7 @@ Definition gsup_spec {l} {X: SPO l} {k kl}: forall (x: args k X), is_sup (setof 
 Lemma leq_gsup {l} {X: SPO l} k kl x (y: X): setof k x y -> y <= gsup k kl x.
 Proof. apply leq_is_sup, gsup_spec. Qed.
 
-Lemma discriminate {P: Type}: false -> P.
+Lemma discriminate {P: Type}: sEmpty -> P.
 Proof. by []. Qed.
 
 Program Canonical Structure bool_spo := 
@@ -1329,14 +1352,13 @@ Section s.
  Canonical Structure mon_spo: SPO l :=
    SPO.cast (X-mon->Y) (sub_spo (@po_morphism_as_sig X Y) sup_closed'_monotone).
 End s.
-Print Canonical Projections.
 
 Module Failed_CS_level_inheritance_attempts.
   
-Definition bot {X: SPO sE}: X := @gsup _ X kE isT tt. 
+Definition bot {X: SPO sE}: X := @gsup _ X kE stt tt. 
 Fail Check bot: nat. 
 
-Definition bot' {X: SPO sF}: X := @gsup _ X kE isT tt. 
+Definition bot' {X: SPO sF}: X := @gsup _ X kE stt tt. 
 Check bot': nat. 
 
 Module A. 
@@ -1353,7 +1375,7 @@ Canonical Structure coercion l (coe: coercer l) (X: SPO (ck coe)): SPO' l :=
   Eval hnf in
   {| coe := coe; get := SPO.weaken _ X (ckl coe) |}.
 
-Definition bot {X: SPO' sE}: X := @gsup _ (get X) kE isT tt. 
+Definition bot {X: SPO' sE}: X := @gsup _ (get X) kE stt tt. 
 Fail Check bot: nat. 
 Check @bot (@coercion _ cEF nat_spo): nat.
 Check @bot (@coercion _ _ _): nat. 
@@ -1371,8 +1393,7 @@ Definition SPO' l := SPO l.
 Coercion sort' l (X: SPO' l): Type := X.
 Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (ck coe) :=
   Eval hnf in @SPO.pack (ck coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ckl coe))).
-Print Canonical Projections. 
-Definition bot {X: SPO' sE}: X := @gsup _ X kE isT tt. 
+Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
 Fail Check bot: nat. 
 Check @bot (@coercion _ nat_spo cEF): nat.
 Check @bot (@coercion _ _ _): nat.
@@ -1450,7 +1471,7 @@ Module C.
   Coercion sort' l (X: SPO' l): Type := X.
   Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (k l coe) :=
     Eval hnf in @SPO.pack (k l coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ck l coe))).
-  Definition bot {X: SPO' sE}: X := @gsup _ X kE isT tt. 
+  Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
   Fail Check bot: nat. 
   Check @bot (@coercion _ nat_spo cEF): nat.
   Check @bot (@coercion _ _ cEF): nat.
@@ -1462,19 +1483,21 @@ End C.
 
 End Failed_CS_level_inheritance_attempts.
 
-Class lower {X: PO} (h k: X) := Lower: h <= k.
+Class lower {X: PO} (h k: X): Prop := Lower: h <= k.
 Infix "<<" := lower (at level 70).
-#[export] Instance PreOrder_lower X: PreOrder (@lower X) := PreOrder_leq.
+#[export] Instance PreOrder_lower {X}: PreOrder (@lower X).
+Proof. apply PreOrder_leq. Qed.
 Lemma lower_trans {X: PO} (k h l: X) (kh: k<<h) (hl: h<<l): k<<l.
 Proof. etransitivity; eassumption. Qed.
 Ltac solve_lower :=
   solve [ reflexivity | assumption |
-          match goal with H: ?h << ?l |- ?k << ?l => exact: (lower_trans k h l I H) end].
+          match goal with H: ?h << ?l |- ?k << ?l => exact: (@lower_trans _ k h l I H) end].
 #[export] Hint Extern 0 (lower _ _) => solve_lower: typeclass_instances.
 
 Goal forall l, sA<<l -> sE <<l.
   intros l L. solve_lower. 
 Qed.
+
 
 (* TOTHINK: should we move this theory directly to GPOs ? *)
 
@@ -1569,7 +1592,7 @@ Module IPO.
  Notation reduced_build l T f := (build l T (sreduce.reduce (f: forall k, option (ginf_ops _ k)))).
  Program Definition weaken (h l: slevel) (X: type l) (hl: h<=l): type h :=
    build h X (fun k hk => mix X k _).
- Next Obligation. apply slevel_mon in hl. specialize (hl k). by destruct (h k). Qed.
+ Next Obligation. move: hk. apply is_true'_leq, slevel_mon, hl. Qed.
  Definition dual l (X: type l): SPO l := SPO.pack (mix X). 
  Definition dual' l (X: SPO l): type l := @pack _ _ _ (PO.dual_mixin (SPO.po_mix X)) (SPO.mix X).
 End IPO.
@@ -1734,17 +1757,17 @@ Definition level := option (plevel * plevel).
 Definition suplevel: level -> slevel := option_map fst.
 Definition inflevel: level -> slevel := option_map snd.
 Definition dual_level: level -> level := option_map (fun p => (snd p,fst p)).
-Definition level_fun (l: level) k: bool :=
+Definition level_fun (l: level) k: SProp :=
   match k with
   | inl k => suplevel l k
   | inr k => inflevel l k
   end.
 Coercion level_fun: level >-> Funclass.
-Lemma level_mon: Proper (leq ==> leq) level_fun.
-Proof.
-  case=>[[p q]|]; case=>[[p' q']|]=>//=H[k|k]/=;
-    try apply implybT; apply plevel_mon=>//=; apply H.
-Qed.
+(* Lemma level_mon: Proper (leq ==> leq) level_fun. *)
+(* Proof. *)
+(*   case=>[[p q]|]; case=>[[p' q']|]=>//=H[k|k]/=; *)
+(*     try apply implybT; apply plevel_mon=>//=; apply H. *)
+(* Qed. *)
 Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
 Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
 Goal forall l, dual_level l ° inr = l ° inl. Fail reflexivity. Abort. 
@@ -1754,7 +1777,7 @@ End IDEAL.
 Module EXTENDEDPAIRS.
 Record level := mk_level { suplevel: slevel; inflevel: slevel; more: bool}.
 Definition dual_level (l: level) := mk_level (inflevel l) (suplevel l) (more l).
-Definition level_fun (l: level) k: bool :=
+Definition level_fun (l: level) k: SProp :=
   match k with
   | inl k => suplevel l k
   | inr k => inflevel l k
@@ -1791,7 +1814,7 @@ Module WORKING.
   
   Definition dual_level (l: level) := mk_level (inflevel l) (suplevel l) (symmetry (merge_tops l)).
   
-  Definition level_fun (l: level) k: bool :=
+  Definition level_fun (l: level) k: SProp :=
     match k with
     | inl k => suplevel l k
     | inr k => inflevel l k
@@ -1805,6 +1828,13 @@ Module WORKING.
   Goal forall l, (lA << l) = (lA << dual_level l).
     intro. cbn.  Fail reflexivity. (* dommage *)
   Abort.
+  #[export] Instance lower_dual {h k} {H: dual_level h << k}: h << dual_level k.
+  Proof.
+    revert H.
+    case: h=>[[hs|] [hi|] hE]; try solve [intuition discriminate]; 
+    case: k=>[[ks|] [ki|] kE]; try solve [intuition discriminate].
+    cbn; simpl. tauto.
+  Qed.   
   Program Definition lSI p q := mk_level (Some p) (Some q) _.
   Next Obligation. split; discriminate. Qed.
   Definition merge_slevels p q :=
@@ -1922,20 +1952,8 @@ Admitted.
 
 Lemma inf_top {l} {X: GPO l} {L: lA<<l}: inf top ≡[X] bot.
 Proof.
-  pose proof (@sup_top _ (dual_gpo X)).
-  set E := unify (sup top ≡[dual X] top) (inf top ≡[X] bot).
-  cbn in *.
-  Check unify (@Setoid.eqv _ (Setoid.mix (@GPO.to_Setoid (dual_level l) (@dual_gpo l X)))
-    (@isup (inflevel l) (@GPO.to_SPO (dual_level l) (@dual_gpo l X))
-       _ (@GPO.sort _ X) (fun _ : @GPO.sort _ X => True)
-       (fun x : @GPO.sort _ X => x))
-    (@top (suplevel l) (@GPO.to_IPO (dual_level l) (@dual_gpo l X))
-       _))
- (@Setoid.eqv _ (Setoid.mix (@GPO.to_Setoid l X))
-    (@iinf (inflevel l) (@GPO.to_IPO l X) (lower_trans_inf sA lA l I L) (@GPO.sort _ X)
-       (fun _ : @GPO.sort _ X => True) (fun x : @GPO.sort _ X => x))
-    (@bot (suplevel l) (@GPO.to_SPO l X) (lower_trans_sup sE lA l I L))).
-Abort.
+  apply: (@sup_top _ (dual_gpo X)).
+Qed.
 
 
 
