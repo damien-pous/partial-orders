@@ -161,7 +161,16 @@ Next Obligation.
   by move=>[?|][y|][?|]??//=; transitivity y. 
 Qed.
   
-(* TODO: lists *)
+Fixpoint list_eqv {X: Setoid} (h k: list X) :=
+  match h,k with cons x h,cons y k => x≡y /\ list_eqv h k | nil,nil => True | _,_ => False end.
+Program Canonical Structure list_setoid (X: Setoid) :=
+  Setoid.build (list X) list_eqv _.
+Next Obligation.
+  constructor.
+  - by elim=>//.
+  - by elim=>[|x h IH][|y k]//=[? ?]; split; auto. 
+  - elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto. 
+Qed.
 
 Program Canonical Structure dprod_setoid A (X: A -> Setoid) :=
   Setoid.build (forall a, X a) (fun f g => forall a, f a ≡ g a) _.
@@ -441,6 +450,20 @@ Next Obligation.
   cbn. rewrite 2!eqv_of_leq. intuition.
 Qed.
 
+Fixpoint leq_list {X: PO} (h k: list X) :=
+  match h,k with cons x h,cons y k => x<=y /\ leq_list h k | nil,_ => True | _,_ => False end.
+Program Canonical Structure list_po (X: PO) :=
+  PO.build (list X) leq_list _ _.
+Next Obligation.
+  constructor.
+  by elim=>//=.
+  by elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto.
+Qed.
+Next Obligation.
+  revert y. elim: x=>[|x h IH][|y k]; cbn; try tauto.
+  rewrite eqv_of_leq. setoid_rewrite IH. tauto. 
+Qed.
+
 (* with [None] as top element *)
 Definition leq_option (X: PO) (p q: option X) :=
   match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
@@ -455,8 +478,40 @@ Next Obligation.
   case:x=>[?|]; case:y=>[?|]; cbn; rewrite ?eqv_of_leq; tauto. 
 Qed.
 
+Definition parallel_sum := sum. 
+Definition leq_parallel_sum {X Y: PO} (p q: X+Y) :=
+  match p,q with
+  | inl x,inl y | inr x,inr y => x<=y
+  | _,_ => False
+  end.
+Program Canonical Structure parallel_sum_po (X Y: PO) :=
+  PO.build (parallel_sum X Y) leq_parallel_sum _ _.
+Next Obligation.
+  constructor.
+  by case=>//=.
+  by case=>?; case=>y; case=>?//=; transitivity y.
+Qed.
+Next Obligation.
+  case:x=>x; case:y=>y; cbn; rewrite ?eqv_of_leq; tauto. 
+Qed.
 
-(* TODO: parallel and sequential sums, lists *)
+Definition sequential_sum := sum. 
+Definition leq_sequential_sum {X Y: PO} (p q: X+Y) :=
+  match p,q with
+  | inl x,inl y | inr x,inr y => x<=y
+  | inl _,inr _ => True
+  | _,_ => False
+  end.
+Program Canonical Structure sequential_sum_po (X Y: PO) :=
+  PO.build (sequential_sum X Y) leq_sequential_sum _ _.
+Next Obligation.
+  constructor.
+  by case=>//=.
+  by case=>?; case=>y; case=>?//=; transitivity y.
+Qed.
+Next Obligation.
+  case:x=>x; case:y=>y; cbn; rewrite ?eqv_of_leq; tauto. 
+Qed.
 
 Program Canonical Structure dprod_po A (X: A -> PO) :=
   Eval cbn in PO.build (forall a, X a) (fun f g: forall a, X a => forall a, f a <= g a) _ _.
@@ -895,6 +950,27 @@ Proof.
     -- by apply Pf. 
 Qed.
 
+(** sups are computed pointwise in products
+TOTHINK: get it as as special case of the above lemmas, with [A=bool]?      
+ *)
+Lemma prod_sup {X Y: PO} (P: (X*Y)->Prop) (p: X*Y):
+  (is_sup (image fst P) (fst p) /\ is_sup (image snd P) (snd p)) <-> is_sup P p.
+Proof.
+  destruct p as [x y]. split.
+  - move=>[H1 H2] [u v]. cbn. rewrite (H1 u) (H2 v).
+    split. move=>[F1 F2] [i j] Hij. split. apply F1. by eexists; eauto. apply F2. by eexists; eauto.
+    move=>H. by split=>t [[i j] [Hij ->]]; apply H.
+  - move=>H. split=>/=z.
+    -- split=>E. move=>_ [[u v] [Huv ->]]/=. 
+       rewrite <-E. apply (leq_is_sup H _ Huv).
+       apply <- (H (z,y))=>[[u v] Puv]. split. apply E. by eexists; eauto. cbn.
+       apply (leq_is_sup H _ Puv).
+    -- split=>E. move=>_ [[u v] [Huv ->]]/=. 
+       rewrite <-E. apply (leq_is_sup H _ Huv).
+       apply <- (H (x,z))=>[[u v] Puv]. split; last first. apply E. by eexists; eauto. cbn.
+       apply (leq_is_sup H _ Puv).
+Qed.
+
 (** sups can be computed as expected in sub-spaces *)
 Lemma kern_sup {A} {X: PO} (f: A -> X) (P: A->Prop) (a: A):
   is_sup (image f P) (f a) -> is_sup (X:=kern_po X f) P a.
@@ -1279,6 +1355,20 @@ Next Obligation. firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto. Qed.
 Next Obligation. destruct x as [I [P f]]; cbv. firstorder subst; eauto. Qed.
 
+Canonical Structure fst_mon {X Y: PO}: (prod X Y)-mon->X :=
+  PO.build_morphism fst (fun p q pq => proj1 pq).
+Canonical Structure snd_mon {X Y: PO}: (prod X Y)-mon->Y :=
+  PO.build_morphism snd (fun p q pq => proj2 pq).
+
+Program Canonical Structure prod_spo {l} (X Y: SPO l) :=
+  SPO.build l (X*Y) (fun k kl => exist _ (fun F => (gsup k kl (map_args fst k F), gsup k kl (map_args snd k F))) _).
+(* alternatively, via [dprod_sup] below, with [A=bool] *)
+Next Obligation.
+  apply prod_sup; split; (eapply Proper_is_sup; [apply eqv_covered|reflexivity|apply gsup_spec]).
+  all: by rewrite setof_map_args. 
+Qed.
+
+
 Definition app {A} {X: A -> PO} a: (forall a, X a)-mon->X a :=
   PO.build_morphism (fun f => f a) (fun f g fg => fg a).
 
@@ -1575,6 +1665,19 @@ Qed.
 Corollary sup_dsup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop):
   sup P ≡ dsup (sup_closure P) (directed_sup_closure (P:=P)).
 Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is_sup_sup. Qed.
+
+
+(** more SPO instances *)
+
+(*
+  option (l -> sE+l)
+
+  lex_prod? (E,_->E; B,E->B; C,C->C; D,D->D; A,A->A)
+  sequential_sum? (E,_->E; B,B->B; others need emptyness checking)
+  parallel_sum? no
+
+  list  (E,B->B)
+ *)
 
 
 
