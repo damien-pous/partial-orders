@@ -112,6 +112,14 @@ Definition dual (X: Type) := X.
 Canonical Structure dual_setoid (X: Setoid) := Setoid.cast (dual X) X.
 Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): dual X -eqv-> Y :=
   Setoid.build_morphism f body_eqv.
+Ltac dual0 t :=
+  match type of t with
+  | forall X: ?T, _ =>
+      match goal with
+      | X: T |- _ => apply: (t (dual X))
+      end
+  end.
+Ltac dual t := dual0 t.
 
 Definition eq_setoid X := Setoid.build X eq eq_equivalence.
 Canonical Structure unit_setoid := eq_setoid unit.
@@ -792,27 +800,28 @@ Section s.
 Context {X: PO}.
 Implicit Types x y: X.
 
+
 Lemma leq_from_below x y: (forall z, z <= x -> z <= y) -> x <= y.
-Proof. apply (leq_from_above (y: dual X)). Qed.
+Proof. dual @leq_from_above. Qed.
 Lemma from_below x y: (forall z, z <= x <-> z <= y) -> x ≡ y.
-Proof. apply (from_above (x: dual X)). Qed.
+Proof. dual @from_above. Qed.
 
 Definition is_inf (P: X -> Prop) x := forall z, z <= x <-> forall y, P y -> z <= y.
 Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
-Proof. apply: (leq_is_sup (x:=x: dual X)). Qed.
+Proof. dual @leq_is_sup. Qed.
 Definition cocovered (P Q: X -> Prop) := covered (P: dual X -> _) (Q: dual X -> _).
 Definition cobicovered (P Q: X -> Prop) := bicovered (P: dual X -> _) (Q: dual X -> _).
 Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
-Proof. apply: (@is_sup_leq _ (P: dual X -> Prop)). Qed.
+Proof. dual @is_sup_leq. Qed.
 Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
-Proof. apply: (@is_sup_eqv _ (P: dual X -> Prop)). Qed.
+Proof. dual @is_sup_eqv. Qed.
 Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
-Proof. apply (supU (P:=P: dual X -> Prop)). Qed.
+Proof. dual @supU. Qed.
 
 Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> is_inf Q <= P.
 
 Lemma inf_closed_impl (P Q: X -> Prop): downward_closed P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).
-Proof. apply (sup_closed_impl (X:=dual_po X)). Qed.
+Proof. dual @sup_closed_impl. Qed.
 
 Lemma inf_closed_leq (f: X -mon-> X): inf_closed (fun x => f x <= x).
 Proof. apply (sup_closed_leq (dual_po_morphism f)). Qed.
@@ -1604,14 +1613,25 @@ Canonical IPO.to_Setoid.
 #[reversible] Coercion IPO.sort: IPO >-> Sortclass.
 Canonical IPO.dual.
 Canonical IPO.dual'. 
-Tactic Notation "spo_dual" constr(L) := apply: (L _ (IPO.dual _)).
+
+Ltac dual1 t :=
+  match type of t with
+  | forall l, forall X: SPO l, _ =>
+      match goal with
+      | X: IPO ?l |- _ => apply: (t l (IPO.dual X))
+      end
+  | forall l, forall X: IPO l, _ =>
+      match goal with
+      | X: SPO ?l |- _ => apply: (t l (IPO.dual' X))
+      end
+  end.
+Ltac dual t ::= dual1 t || dual0 t.
+
 Definition ginf {l} {X: IPO l}: forall k kl, args k (dual X) -> X := @gsup l (IPO.dual X).
 Lemma ginf_spec {l} {X: IPO l} {k kl}: forall (x: args k (dual X)), is_inf (X:=X) (setof k x) (ginf k kl x).
 Proof. apply: gsup_spec. Qed.
 Lemma geq_ginf {l} {X: IPO l} k kl (x: args k (dual X)) (y: X): setof k x y -> ginf k kl x <= y.
 Proof. apply: leq_gsup. Qed.
-
-
 
 Program Canonical Structure bool_ipo :=
   IPO.build sF bool
@@ -1655,9 +1675,9 @@ Section sub.
  Context {l} {X: IPO l}.
  Definition inf_closed' (P: X -> Prop) := sup_closed' (X:=IPO.dual X) P. 
  Lemma inf_closed_inf_closed': inf_closed (X:=X) <= inf_closed'.
- Proof. spo_dual @sup_closed_sup_closed'. Qed.
+ Proof. dual @sup_closed_sup_closed'. Qed.
  #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed'.
- Proof. spo_dual @sup_closed'_eqv. Qed.
+ Proof. dual @sup_closed'_eqv. Qed.
  Definition sig_ipo P (Pinf: inf_closed' P): IPO l :=
    IPO.cast (sig P) (IPO.dual' (sig_spo Pinf)). 
 End sub.
@@ -1713,38 +1733,38 @@ Proof. apply: ginf_spec. Qed.
 Lemma is_inf_iinf {l} {X: IPO l} {L: sA<<l} I P (f: I -> X): is_inf (image f P) (iinf P f).
 Proof. apply: ginf_spec. Qed.
 Lemma is_inf_inf {l} {X: IPO l} {L: sA<<l} (P: X -> Prop): is_inf P (inf P).
-Proof. spo_dual @is_sup_sup. Qed.
+Proof. dual @is_sup_sup. Qed.
 
 Lemma geq_cinf {l} {X: IPO l} {L: sEC<<l}: forall (P: X -> Prop) C x, P x -> cinf P C <= x. 
-Proof. spo_dual @leq_csup. Qed.
+Proof. dual @leq_csup. Qed.
 Lemma geq_dinf {l} {X: IPO l} {L: sED<<l}: forall (P: X -> Prop) D x, P x -> dinf P D <= x. 
-Proof. spo_dual @leq_dsup. Qed.
+Proof. dual @leq_dsup. Qed.
 Lemma geq_iinf {l} {X: IPO l} {L: sA<<l}: forall I (P: I -> Prop) (f: I -> X) i, P i -> iinf P f <= f i. 
-Proof. spo_dual @leq_isup. Qed.
+Proof. dual @leq_isup. Qed.
 Lemma geq_inf {l} {X: IPO l} {L: sA<<l}: forall (P: X -> Prop) x, P x -> inf P <= x. 
-Proof. spo_dual @leq_sup. Qed.
+Proof. dual @leq_sup. Qed.
 
 
 Lemma cap_spec {l} {X: IPO l} {L: sB<<l} (x y z: X): z <= x ⊓ y <-> z <= x /\ z <= y.
-Proof. spo_dual @cup_spec. Qed.
+Proof. dual @cup_spec. Qed.
 
 Lemma capA {l} {X: IPO l} {L: sB<<l} (x y z: X): x ⊓ (y ⊓ z) ≡ x ⊓ y ⊓ z. 
-Proof. spo_dual @cupA. Qed.
+Proof. dual @cupA. Qed.
 
 Lemma cinf_inf {l} {X: IPO l} {L: sA<<l} P C: cinf P C ≡[X] inf P.
-Proof. spo_dual @csup_sup. Qed.
+Proof. dual @csup_sup. Qed.
 Lemma dinf_inf {l} {X: IPO l} {L: sA<<l} P D: dinf P D ≡[X] inf P.
-Proof. spo_dual @dsup_sup. Qed.
+Proof. dual @dsup_sup. Qed.
 
 Lemma cinf_bot {l} {X: IPO l} {L: sEC<<l} C: cinf bot C ≡[X] top.
-Proof. spo_dual @csup_bot. Qed.
+Proof. dual @csup_bot. Qed.
 Lemma dinf_bot {l} {X: IPO l} {L: sED<<l} D: dinf bot D ≡[X] top.
-Proof. spo_dual @dsup_bot. Qed.
+Proof. dual @dsup_bot. Qed.
 Lemma inf_bot {l} {X: IPO l} {L: sA<<l}: inf bot ≡[X] top.
-Proof. spo_dual @sup_bot. Qed.
+Proof. dual @sup_bot. Qed.
 
 Lemma inf_pair {l} {X: IPO l} {L: sA<<l} (x y: X): inf (pair x y) ≡ x ⊓ y.
-Proof. spo_dual @sup_pair. Qed.
+Proof. dual @sup_pair. Qed.
 
 (* TODO: etc *)
 
@@ -1882,6 +1902,15 @@ Canonical GPO.to_Setoid.
 Canonical Structure dual_gpo l (X: GPO l): GPO (dual_level l) :=
   @GPO.pack (dual_level l) (dual X) (GPO.setoid_mix X) (PO.dual_mixin (GPO.po_mix X)) (GPO.i_mix X) (GPO.s_mix X).
 
+Ltac dual2 t :=
+  match type of t with
+  | forall l, forall X: GPO l, _ =>
+      match goal with
+      | X: GPO ?l |- _ => apply: (t _ (@dual_gpo l X))
+      end
+  end.
+Ltac dual t ::= dual2 t || dual1 t || dual0 t.
+
 Canonical Structure bool_gpo :=
   GPO.from_ISPO (lSI pF pF) bool. 
 
@@ -1951,9 +1980,7 @@ Proof.
 Admitted.
 
 Lemma inf_top {l} {X: GPO l} {L: lA<<l}: inf top ≡[X] bot.
-Proof.
-  apply: (@sup_top _ (dual_gpo X)).
-Qed.
+Proof. dual2 @sup_top. Qed.
 
 
 
