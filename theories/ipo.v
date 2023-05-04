@@ -172,6 +172,12 @@ Lemma geq_inf {l} {X: IPO l} {L: sA<<l}: forall (P: X -> Prop) x, P x -> inf P <
 Proof. dual @leq_sup. Qed.
 
 
+Lemma top_spec {l} {X: IPO l} {L: sE<<l} (z: X): z <= top <-> True.
+Proof. dual @bot_spec. Qed.
+Lemma leq_top {l} {X: IPO l} {L: sE<<l} (z: X): z <= top.
+Proof. dual @leq_bot. Qed.
+#[export] Hint Extern 0 (_ <= top)=> apply: leq_top: core.
+
 Lemma cap_spec {l} {X: IPO l} {L: sB<<l} (x y z: X): z <= x ⊓ y <-> z <= x /\ z <= y.
 Proof. dual @cup_spec. Qed.
 

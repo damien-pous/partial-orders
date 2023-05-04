@@ -483,6 +483,11 @@ Proof. move=>Pi. by apply leq_gsup=>/=; auto. Qed.
 Lemma leq_sup {l} {X: SPO l} {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P. 
 Proof. apply: leq_isup. Qed.
 
+Lemma bot_spec {l} {X: SPO l} {L: sE<<l} (z: X): bot <= z <-> True.
+Proof. rewrite is_sup_bot. firstorder. Qed.
+Lemma leq_bot {l} {X: SPO l} {L: sE<<l} (z: X): bot <= z.
+Proof. by apply bot_spec. Qed.
+#[export] Hint Extern 0 (bot <= _)=> apply: leq_bot: core.
 
 Lemma cup_spec {l} {X: SPO l} {L: sB<<l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
 Proof. rewrite is_sup_cup /pair; intuition subst; auto. Qed.

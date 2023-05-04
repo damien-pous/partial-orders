@@ -170,10 +170,7 @@ Ltac solve_lower ::=
     ].
 
 Lemma sup_top {l} {X: GPO l} {L: lA<<l}: sup top ≡[X] top.
-Proof.
-  apply: antisym. admit.
-  by apply: leq_sup. 
-Admitted.
+Proof. apply: antisym=>//. by apply: leq_sup. Qed.
 
 Lemma inf_top {l} {X: GPO l} {L: lA<<l}: inf top ≡[X] bot.
 Proof. dual2 @sup_top. Qed.
