@@ -1,10 +1,12 @@
 # FILES
 
-orders.v    with HB
-alone.v     without HB
-alone_fun.v without HB, SPO,IPO,GPO duality, etc
-split.v     split operations/laws
-split_tc.v  idem, with TC for laws
+theories/po.v 
+  without HB, SPO,IPO,GPO duality, etc
+
+attic/orders.v    with HB
+attic/alone.v     without HB
+attic/split.v     split operations/laws
+attic/split_tc.v  idem, with TC for laws
 
 # TODO
 

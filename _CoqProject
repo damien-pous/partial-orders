@@ -1,9 +1,11 @@
 -arg -w -arg -undo-batch-mode
 
--R . PartialOrders
+-R theories/ PartialOrders
 
-alone.v
-alone_fun.v
-orders.v
-split.v
-split_tc.v
+theories/po.v
+
+# previous attempts, to be removed at some point, left here to ensure they copmile
+attic/alone.v
+attic/orders.v
+attic/split.v
+attic/split_tc.v
