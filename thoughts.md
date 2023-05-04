@@ -1,12 +1,20 @@
 # FILES
 
-theories/po.v 
-  without HB, SPO,IPO,GPO duality, etc
+- theories/preliminaries.v   elementary helpers
+- theories/setoid.v          setoids
+- theories/po.v              partial orders
+- theories/spo.v             partial orders with (some) supremums
+- theories/ipo.v             partial orders with (some) infimums
+- theories/gpo.v             partial orders with (some) supremums & infimums 
+- theories/chain.v           study of the chain of a function (BourbakiWitt/Pataraia)
+- theories/adjunctions.v     adjunctions
 
-attic/orders.v    with HB
-attic/alone.v     without HB
-attic/split.v     split operations/laws
-attic/split_tc.v  idem, with TC for laws
+old attempts
+- attic/orders.v    with HB
+- attic/alone.v     without HB
+- attic/split.v     split operations/laws
+- attic/split_tc.v  idem, with TC for laws
+- attic/level_attempts.v  unsuccessful experiments with levels
 
 # TODO
 

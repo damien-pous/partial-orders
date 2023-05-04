@@ -1,10 +1,27 @@
 -arg -w -arg -undo-batch-mode
 
+# end-user library
 -R theories/ PartialOrders
-
+theories/preliminaries.v
+theories/setoid.v
 theories/po.v
+theories/adjunctions.v
+theories/spo.v
+theories/ipo.v
+theories/gpo.v
+theories/chain.v
 
-# previous attempts, to be removed at some point, left here to ensure they copmile
+# tests & sanity checks
+-R tests/ PartialOrdersTests
+tests/sanity_setoid.v
+tests/sanity_po.v
+tests/sanity_spo.v
+tests/sanity_ipo.v
+tests/sanity_gpo.v
+tests/sanity.v
+
+# previous attempts/variations, to be removed at some point, left here to ensure they compile
+attic/level_attempts.v
 attic/alone.v
 attic/orders.v
 attic/split.v
