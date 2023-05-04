@@ -36,13 +36,6 @@ Proof. split. move=>H; split; apply H; cbv; auto. by move=>[??]?[->|->]. Qed.
 
 Notation unify M N := (eq_refl: M = N).
 
-(* TEMP, to avoid warning about Definitional UIP *)
-Definition sUnit : SProp := forall X: SProp, X -> X.
-Definition stt: sUnit := fun X x => x.
-Lemma sUnit_sind: forall P : sUnit -> SProp, P stt -> forall s : sUnit, P s.
-Proof. intros P H s. apply s, H. Qed.
-
-
 Definition is_true' (b:bool) : SProp := if b then sUnit else sEmpty.
 Definition is_true'_eq_true b : is_true' b -> true = b
   := match b with
