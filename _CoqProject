@@ -9,6 +9,7 @@ theories/adjunctions.v
 theories/spo.v
 theories/ipo.v
 theories/gpo.v
+theories/nat.v
 theories/chain.v
 
 # tests & sanity checks

@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Classical.
-Require Export gpo.
+Require Import ipo.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -174,11 +174,9 @@ Module BourbakiWitt.
  (** direct proof??? *)
  Lemma next_leq: Proper (leq ==> leq) next. 
  Proof.
-   move=>x y. revert y. apply: tower. (* by move=>u v uv <-. *)
-   - admit.
-   - move=>y IH xy.
+   move=>x y. revert y. apply: tower.
+   (* ?? *)
  Abort.
-
  
  (** the chain is totally ordered, and [next] acts as a successor
      (proved twice for now, cf comments in the proof)
@@ -530,7 +528,7 @@ Section s.
    exact (is_extensive_fixpoint (chain_postfixpoint f)).
  Qed.
 
- (* note: we could also prove that [C f] admits a supremum and is thus trivially directed, 
+ (* note: we could also prove that [C f] has a supremum and is thus trivially directed, 
     so that we could define [lfp] as [dsup (C f) _], uniformly with the definitions in [Bourbakiwitt'.lfp]
 
     we proceed more directly, and prove a posteriori that [lfp] as defined above is indeed the sup of [C f] *)

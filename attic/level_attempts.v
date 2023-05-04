@@ -8,10 +8,10 @@ Set Primitive Projections.
 Module Failed_CS_level_inheritance_attempts.
   
 Definition bot {X: SPO sE}: X := @gsup _ X kE stt tt. 
-Fail Check bot: nat. 
+Fail Check bot: bool. 
 
 Definition bot' {X: SPO sF}: X := @gsup _ X kE stt tt. 
-Check bot': nat. 
+Check bot': bool. 
 
 Module A. 
 Structure coercer (l: slevel) := c {
@@ -29,8 +29,8 @@ Canonical Structure coercion l (coe: coercer l) (X: SPO (ck coe)): SPO' l :=
 
 Definition bot {X: SPO' sE}: X := @gsup _ (get X) kE stt tt. 
 Fail Check bot: nat. 
-Check @bot (@coercion _ cEF nat_spo): nat.
-Check @bot (@coercion _ _ _): nat. 
+Check @bot (@coercion _ cEF bool_spo): bool.
+Check @bot (@coercion _ _ _): bool. 
 End A.
 
 Module B. 
@@ -46,9 +46,9 @@ Coercion sort' l (X: SPO' l): Type := X.
 Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (ck coe) :=
   Eval hnf in @SPO.pack (ck coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ckl coe))).
 Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
-Fail Check bot: nat. 
-Check @bot (@coercion _ nat_spo cEF): nat.
-Check @bot (@coercion _ _ _): nat.
+Fail Check bot: bool. 
+Check @bot (@coercion _ bool_spo cEF): bool.
+Check @bot (@coercion _ _ _): bool.
 Check forall X: SPO' sF, forall (x: X), bot ≡ x. 
 Check forall X: SPO' sE, forall (x: X), bot ≡ x. 
 End B.
@@ -124,11 +124,11 @@ Module C.
   Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (k l coe) :=
     Eval hnf in @SPO.pack (k l coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ck l coe))).
   Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
-  Fail Check bot: nat. 
-  Check @bot (@coercion _ nat_spo cEF): nat.
-  Check @bot (@coercion _ _ cEF): nat.
-  Fail Check @bot (@coercion _ nat_spo _): nat.
-  Fail Check @bot (@coercion _ _ _): nat.
+  Fail Check bot: bool. 
+  Check @bot (@coercion _ bool_spo cEF): bool.
+  Check @bot (@coercion _ _ cEF): bool.
+  Fail Check @bot (@coercion _ bool_spo _): bool.
+  Fail Check @bot (@coercion _ _ _): bool.
   Check forall X: SPO' sE, forall (x: X), bot ≡ x.
   Fail Check forall X: SPO' sF, forall (x: X), bot ≡ x. 
 End C.

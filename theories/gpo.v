@@ -115,9 +115,6 @@ Ltac dual t ::= dual2 t || dual1 t || dual0 t.
 Canonical Structure bool_gpo :=
   GPO.from_ISPO (lSI pF pF) bool. 
 
-Canonical Structure nat_gpo :=
-  GPO.from_ISPO (lSI pF pB) nat. 
-
 Canonical Structure dprod_gpo {A l} (X: A -> GPO l) :=
   GPO.from_ISPO l (forall a, X a).
 

@@ -75,7 +75,6 @@ Ltac dual t := dual0 t.
 Definition eq_setoid X := Setoid.build X eq eq_equivalence.
 Canonical Structure unit_setoid := eq_setoid unit.
 Canonical Structure bool_setoid := eq_setoid bool.
-Canonical Structure nat_setoid := eq_setoid nat.
 
 (* Program Canonical Structure irrelevant_setoid (P: Prop) := *)
 (*   Setoid.build P (fun _ _ => True) _. *)

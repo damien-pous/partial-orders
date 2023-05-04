@@ -312,15 +312,6 @@ Next Obligation.
   apply Bool.andb_true_iff.
 Qed.
 
-Program Canonical Structure nat_spo :=
-  SPO.build sF nat
-    (fun k => match k with
-           | kE => fun _ => exist _ (fun _ => 0) _
-           | kB => fun _ => exist _ (fun '(x,y) => Peano.max x y) _
-           | kC | kD | kA  => discriminate
-           end).
-Admit Obligations.
-
 Program Canonical Structure Prop_spo :=
   SPO.reduced_build sA Prop
     (fun k => match k with

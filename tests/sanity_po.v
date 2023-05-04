@@ -5,7 +5,7 @@ Goal nat -> True <= True.
   move=>n x.                     (* requires Eval hnf/cbn in [Prop_po] *)
 Abort.
 
-Goal nat -> (5,4) <= (6,5) -> True.
+Goal nat -> (true,false) <= (false,true) -> True.
   move=>n [/=a b].
 Abort.
 
@@ -76,20 +76,20 @@ Goal forall f g: nat -> Prop, f ≡ g -> f <= g.
 Abort.
 
 
-Check nat: Setoid. 
-Check nat: PO. 
+Check bool: Setoid. 
+Check bool: PO. 
 
-Eval cbn in (5,3) <= (5,2). 
-Eval cbn in ((5,3): lex_prod _ _) <= (6,2). 
-Eval cbn in ((5,2): lex_prod _ (dual _)) <= (6,3). 
+Eval cbn in (true,false) <= (false,true). 
+Eval cbn in ((true,false): lex_prod _ _) <= (false,true). 
+Eval cbn in ((true,false): lex_prod _ (dual _)) <= (false,true). 
 
-Goal forall (x: nat * (bool -> nat) * {y: nat | y=5}), x <= x.
+Goal forall (x: bool * (bool -> bool) * {y: bool | y=true}), x <= x.
   intros [[x f] [p ?]]. cbv.
 Abort.
-Goal forall (x: nat * sig (fun b: bool=> b=true)), x <= x.
+Goal forall (x: bool * sig (fun b: bool=> b=true)), x <= x.
 Abort.
 (* need irrelevant po *)
-Fail Check forall (x: nat * forall b: bool, nat * True), x <= x.
+Fail Check forall (x: bool * forall b: bool, bool * True), x <= x.
 
 Check fun X: PO => dual X: PO. 
 Check fun (X: PO) (x: dual X) => x <= x. 
@@ -127,8 +127,8 @@ Section s.
   Variable X: Setoid.
   Variable Y: PO.
   Check forall f g: X -eqv-> X, f ° g ≡ id.
-  Check forall f g: nat -eqv-> nat, f ° g ≡ id.
-  Check forall f g: nat -mon-> nat, f ° g ≡ id.
+  Check forall f g: bool -eqv-> bool, f ° g ≡ id.
+  Check forall f g: bool -mon-> bool, f ° g ≡ id.
   Check forall f g: X -eqv-> Y, forall h: Y-eqv->X, f ° h ° g ≡ g.
   Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ° h ° g ≡ g.
   Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ° h ° g <= g.

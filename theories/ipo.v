@@ -74,14 +74,6 @@ Next Obligation.
   apply Bool.andb_true_iff.
 Qed.
 
-Program Canonical Structure nat_ipo :=
-  IPO.build sB nat
-    (fun k => match k with
-           | kB => fun _ => exist _ (fun '(x,y) => Peano.min x y) _
-           | kE | kC | kD | kA  => discriminate
-           end).
-Admit Obligations.
-
 Program Canonical Structure Prop_ipo :=
   IPO.reduced_build sA Prop
     (fun k => match k with

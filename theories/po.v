@@ -173,10 +173,6 @@ Canonical Structure unit_po := PO.cast unit (discrete_po _).
 Program Canonical Structure bool_po := PO.build bool implb _ _.
 Next Obligation. split. by case. move=>[][][]//=. Qed.
 Next Obligation. case: x; case: y=>//=; intuition discriminate. Qed.
-  
-
-Program Canonical Structure nat_po := PO.build nat Peano.le _ _.
-Admit Obligations.
 
 Program Canonical Structure Prop_po := Eval cbn in PO.build Prop impl _ _.
 Next Obligation. split; cbv; tauto. Qed.

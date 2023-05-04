@@ -8,6 +8,7 @@
 - theories/gpo.v             partial orders with (some) supremums & infimums 
 - theories/chain.v           study of the chain of a function (BourbakiWitt/Pataraia)
 - theories/adjunctions.v     adjunctions
+- theories/nat.v             the partial order of natural numbers (with min, max, 0)
 
 old attempts
 - attic/orders.v    with HB
