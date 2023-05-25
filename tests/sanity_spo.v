@@ -8,8 +8,12 @@ Qed.
 (* Set Debug "unification". *)
 (* Set Printing All. *)
 Time Goal
-  let T := ((bool -> Prop): PO) in
-  let X := ((T-mon->T): SPO sA) in
+  let T := ((bool -> bool -> bool -> bool -> Prop)) in
+  let T' := (T: PO ) in
+  let T'' := (T: SPO sA) in
+  (* let X := ((T-mon->T): SPO sA) in (* slow *) *)
+  (* let X := ((T'-mon->T'): SPO sA) in (* slow *) *)
+  let X := ((T''-mon->T''): SPO sA) in (* fast *)
   True.
 intros.
 simpl in *.
