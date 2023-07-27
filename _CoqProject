@@ -3,6 +3,7 @@
 # end-user library
 -R theories/ PartialOrders
 theories/preliminaries.v
+theories/hb.v
 theories/setoid.v
 theories/po.v
 theories/adjunctions.v
@@ -24,6 +25,5 @@ tests/sanity.v
 # previous attempts/variations, to be removed at some point, left here to ensure they compile
 attic/level_attempts.v
 attic/alone.v
-attic/orders.v
 attic/split.v
 attic/split_tc.v
