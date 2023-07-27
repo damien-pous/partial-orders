@@ -58,7 +58,7 @@ HB.structure Definition Setoid_morphism (X Y: Setoid.type) := { f of Setoid_morp
 
 (** ** notations *)
 Infix "≡" := eqv (at level 70).
-Notation "x ≡[ X ] y" := ((x: X) ≡ (y: X)) (at level 70).
+Notation "x ≡[ X ] y" := (@eqv X x y) (at level 70, only parsing).
 Notation "X '-eqv->' Y" := (Setoid_morphism.type X Y) (at level 99, Y at level 200).
   
 (** ** properties *)
@@ -79,7 +79,7 @@ Section trivial.
  Definition trivial_Setoid := Setoid_of_TYPE.Build X Equivalence_trivial_eqv.
 End trivial.
 HB.instance Definition unit_Setoid := trivial_Setoid unit. 
-(* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P.  *)
+(* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P. *)
 
 HB.instance Definition Prop_Setoid := Setoid_of_TYPE.Build Prop iff_equivalence. 
 
@@ -159,11 +159,16 @@ Program Definition comp_Setoid_morphism {X Y Z} (f: Y -eqv-> Z) (g: X -eqv-> Y) 
 Next Obligation. move=>x y xy. by do 2apply morphism_eqv. Qed. 
 HB.instance Definition _ {X Y Z} f g := @comp_Setoid_morphism X Y Z f g.
 
-HB.instance Definition _ {X Y: Setoid.type} := kern_Setoid _ (fun f: X-eqv->Y => f: X -> Y). 
+HB.instance Definition _ {X Y: Setoid.type} := kern_Setoid _ (fun f: X-eqv->Y => f: X -> Y).
+
+Check forall X: Setoid.type, forall f: X -eqv-> prod nat X, f ≡ f.
+
 Canonical Structure SETOIDS :=
   precat (fun A B: Setoid.type => A -eqv-> B) (@types_id) (@types_comp).
-Notation meqv := (@eqv (Setoid_morphism_type__canonical__orders_Setoid _ _)). 
+Notation meqv := (@eqv (Setoid_morphism_type__canonical__orders_Setoid _ _)).
 Infix "⩧" := (meqv) (at level 70).
+
+Check forall X: Setoid.type, forall f: X -eqv-> X, f ° f ≡ f.
 
 
 Check forall (X: Setoid.type) (f: X -eqv-> X), id ° f ≡ id. 
@@ -292,11 +297,11 @@ HB.structure Definition PartialOrder_morphism (X Y: PartialOrder.type) := { f of
 
 (** ** notations *)
 Infix "<=" := leq (at level 70).
-Notation "x <=[ X ] y" := ((x: X) <= (y: X)) (at level 70).
+Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 
 Definition lt {X: PartialOrder.type} (x y: X) := x<=y /\ ~y<=x.
 Infix "<" := lt (at level 70).
-Notation "x <[ X ] y" := ((x: X) < (y: X)) (at level 70).
+Notation "x <[ X ] y" := (@lt X x y) (at level 70, only parsing).
 
 Notation "X '-mon->' Y" := (PartialOrder_morphism.type X Y) (at level 99, Y at level 200).
 
@@ -789,6 +794,53 @@ Next Obligation. Admitted.
 Next Obligation. Admitted.
 Next Obligation. Admitted.
 HB.instance Definition _ {A} {X: A -> Lattice.type} := @dprod_Lattice A X.
+
+(* Program Definition mon_setoid_cup {X: Setoid.type} {Y: Lattice.type} (f g: X-eqv->Y) :=  *)
+(*   Setoid_morphism_of_FUN.Build X Y (fun x => cup (f x) (g x)) _. *)
+
+Definition mon_cup {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) :=
+  fun x => cup (f x) (g x).
+
+Program Definition mon_cup' {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) := Setoid_morphism_of_FUN.Build X Y (mon_cup f g) _.
+Next Obligation. move=>x y xy. Admitted.
+HB.instance Definition _ {X Y} f g := @mon_cup' X Y f g.
+
+Program Definition mon_cup'' {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) := PartialOrder_of_Setoid_morphism.Build X Y (mon_cup f g) _.
+Next Obligation. move=>x y xy. Admitted. 
+HB.instance Definition _ {X Y} f g := @mon_cup'' X Y f g.
+
+Definition mon_cap {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) :=
+  fun x => cap (f x) (g x).
+
+Program Definition mon_cap' {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) := Setoid_morphism_of_FUN.Build X Y (mon_cap f g) _.
+Next Obligation. move=>x y xy. Admitted.
+HB.instance Definition _ {X Y} f g := @mon_cap' X Y f g.
+
+Program Definition mon_cap'' {X: PartialOrder.type} {Y: Lattice.type} (f g: X-mon->Y) := PartialOrder_of_Setoid_morphism.Build X Y (mon_cap f g) _.
+Next Obligation. move=>x y xy. Admitted. 
+HB.instance Definition _ {X Y} f g := @mon_cap'' X Y f g.
+
+Program Definition mon_Lattice {X: PartialOrder.type} {Y: Lattice.type} :=
+  Lattice_of_PartialOrder.Build
+    (X-mon->Y) (const bot) (const top) mon_cup mon_cap _ _ _ _. 
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+HB.instance Definition _ {X Y} := @mon_Lattice X Y.
+
+Time Goal
+  let T := ((bool -> bool -> bool -> bool -> Prop)) in
+  let T' := (T: PartialOrder.type) in
+  let T'' := (T: Lattice.type) in
+  let X := ((T-mon->T): Lattice.type) in (* fast *)
+  let X' := ((T'-mon->T'): Lattice.type) in (* fast *)
+  let X'' := ((T''-mon->T''): Lattice.type) in (* fast *)
+  True.
+intros.
+cbn in *.
+Abort.
+
 
 
 (** * dCPOs *)
