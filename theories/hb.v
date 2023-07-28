@@ -1,3 +1,4 @@
+Require Import Arith.           (* TMP *)
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Export Setoid Morphisms Basics.
@@ -11,6 +12,8 @@ Set Primitive Projections.
 
 Notation types_id := Datatypes.id.
 Notation types_comp := preliminaries.comp.
+
+#[export] Hint Extern 0 => reflexivity: core.
 
 (** * setoids *)
 
@@ -56,9 +59,9 @@ HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 #[export] Existing Instance Equivalence_eqv.
 #[export] Existing Instance extensional.
 Lemma eqv_refl {X: Setoid.type} (x: X): x ≡ x.
-Proof. reflexivity. Defined.
+Proof. reflexivity. Qed.
 Lemma eqv_sym {X: Setoid.type} (x y: X): x ≡ y -> y ≡ x.
-Proof. apply symmetry. Defined.
+Proof. apply symmetry. Qed.
 #[export] Hint Extern 0 (_ ≡ _)=> exact: (eqv_refl _) || apply: eqv_sym; assumption: core.
 
 (** ** duality *)
@@ -74,25 +77,38 @@ HB.instance Definition _ {X Y} f := @dual_extensional X Y f.
 
 (** ** instances *)
 
-(** types for which [eq] is the right equality *)
+(** discrete setoids, for types where [eq] is fine *)
 Definition eq_Setoid X := isSetoid.Build X eq_equivalence.
 HB.instance Definition bool_Setoid := eq_Setoid bool.
 HB.instance Definition nat_Setoid := eq_Setoid nat.
 
-(** irrelevant types - with at most one element *)
+(** trivial setoids, for proof irrelevant types *)
 Section trivial.
  Variable (X: Type).
  Definition eqv_trivial: relation X := fun _ _ => True.
- Lemma Equivalence_eqv_trivial: Equivalence eqv_trivial.
- Proof. by constructor. Qed.
- Definition trivial_Setoid := isSetoid.Build X Equivalence_eqv_trivial.
+ Program Definition trivial_Setoid := isSetoid.Build X _.
 End trivial.
 Arguments eqv_trivial {_} _ _/. 
 HB.instance Definition unit_Setoid := trivial_Setoid unit. 
 (* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P. *)
 
-(** extensional propositions *)
+(** setoid of extensional propositions *)
 HB.instance Definition Prop_Setoid := isSetoid.Build Prop iff_equivalence. 
+
+(** (dependent) function space *)
+Section dprod.
+ Variables (A: Type) (X: A -> Setoid.type).
+ Definition eqv_dprod: relation (forall a, X a) := fun f g => forall a, f a ≡ g a.
+ Lemma Equivalence_eqv_dprod: Equivalence eqv_dprod.
+ Proof.
+   constructor.
+   - by move=>??. 
+   - by move=>????; symmetry. 
+   - by move=>??????; etransitivity; eauto.
+ Qed.
+ HB.instance Definition dprod_Setoid := isSetoid.Build _ Equivalence_eqv_dprod.  
+End dprod.
+Arguments eqv_dprod {_ _} _ _/. 
 
 (** direct sum and product *)
 Section sumprod.
@@ -120,24 +136,33 @@ End sumprod.
 Arguments eqv_prod {_ _} _ _/. 
 Arguments eqv_sum {_ _}_ _/. 
 
-(** dependent product space *)
-Section dprod.
- Variables (A: Type) (X: A -> Setoid.type).
- Definition eqv_dprod: relation (forall a, X a) := fun f g => forall a, f a ≡ g a.
- Lemma Equivalence_eqv_dprod: Equivalence eqv_dprod.
+(** option & list setoids *)
+Section optionlist.
+ Variables (X: Setoid.type).
+ Definition eqv_option (p q: option X) :=
+  match p,q with Some p,Some q => p≡q | None,None => True | _,_ => False end.
+ Lemma Equivalence_eqv_option: Equivalence eqv_option.
  Proof.
    constructor.
-   - by move=>??. 
-   - by move=>????; symmetry. 
-   - by move=>??????; etransitivity; eauto.
+   by move=>[?|]//=. 
+   by move=>[?|][?|]//=. 
+   by move=>[?|][y|][?|]??//=; transitivity y. 
  Qed.
- HB.instance Definition dprod_Setoid := isSetoid.Build _ Equivalence_eqv_dprod.  
-End dprod.
-Arguments eqv_dprod {_ _} _ _/. 
+ HB.instance Definition option_Setoid := isSetoid.Build _ Equivalence_eqv_option.
 
-#[export] Instance const_eqv {X} {Y: Setoid.type}:
-  Proper (eqv ==> eqv) (@const X Y).
-Proof. move=>/=y y' yy x. apply yy. Qed.
+ Fixpoint eqv_list (h k: list X) :=
+   match h,k with cons x h,cons y k => x≡y /\ eqv_list h k | nil,nil => True | _,_ => False end.
+ Lemma Equivalence_eqv_list: Equivalence eqv_list.
+ Proof.
+   constructor.
+   - by elim=>//.
+   - by elim=>[|x h IH][|y k]//=[? ?]; split; auto. 
+   - elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto. 
+ Qed.
+ HB.instance Definition list_Setoid := isSetoid.Build _ Equivalence_eqv_list.
+End optionlist.
+Arguments eqv_option [_] _ _/.
+Arguments eqv_list [_] _ _/.
 
 (** constructing setoids via functions into other setoids *)
 Section kernel.
@@ -155,7 +180,7 @@ Section kernel.
 End kernel.
 Arguments eqv_kern [_] _ _ _ _/.
 
-(** [sig] setoids as special case *)
+(** sub-setoids as a special case *)
 HB.instance Definition sig_Setoid (X: Setoid.type) (P: X -> Prop) :=
   kern_Setoid _ (@proj1_sig X P).
 
@@ -163,10 +188,20 @@ HB.instance Definition sig_Setoid (X: Setoid.type) (P: X -> Prop) :=
 HB.instance Definition _ {X Y: Setoid.type} :=
   kern_Setoid _ (fun f: X-eqv->Y => f: X -> Y).
 
-(* TOTHINK: useful as an instance? *)
-Lemma precomp_eqv {X Y Z: Setoid.type}:
+(** extensionality of the constant function construction *)
+#[export] Instance const_eqv {X} {Y: Setoid.type}:
+  Proper (eqv ==> eqv) (@const X Y).
+Proof. move=>/=y y' yy x. apply yy. Qed.
+#[export] Instance const_eqv' {X} {Y: Setoid.type}:
+  Proper (eqv ==> @eqv (X-eqv->Y)) (@const X Y) := const_eqv.
+
+(** extensionality of functional composition,
+    provided the outer function is extensive *)
+Lemma types_comp_eqv {X Y Z: Setoid.type}:
   Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@types_comp X Y Z).
-Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
+Proof.
+  move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'.
+Qed.
 
 
 (** SANITY *)
@@ -185,6 +220,13 @@ Check forall X: Setoid.type, forall f: X -eqv-> prod nat X, f ≡ f.
 (*   move=>[a a'] [b b']/=. cbn. *)
 (* Abort. *)
 (* Check forall (x: nat * forall b: bool, nat + (b=true)), x ≡ x. *)
+Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ f ° const x ≡[X->X] const (g y) /\ const x ≡[X->X] const y.
+Proof.
+  intros X f g x y fg xy. repeat split.
+  rewrite xy. by apply fg.
+  2: by rewrite xy. 
+  Fail rewrite fg.            (* dommage *)
+Abort.  
 
 
 (** * categories *)
@@ -209,23 +251,84 @@ Program Canonical Structure SETOIDS :=
     hom X Y := X -eqv-> Y;
     comp := @types_comp;
     id := @types_id;
+    comp_eqv := @types_comp_eqv;
   |}.
-Next Obligation. apply: precomp_eqv. Qed.
 
-
-(* SANITY *)
-Check forall X: Setoid.type, forall f: X -eqv-> X, f ° f ≡ f.
-Check forall (X: Setoid.type) (f: X -eqv-> X), id ° f ≡ id. 
-Check forall (X: Setoid.type) (f: X -eqv-> X), f ≡ id.
-Check fun X: Setoid.type => (id: X -eqv-> X). 
-Check forall (X: Setoid.type) (f: X -eqv-> X), id ≡ f. 
-
-Goal forall X: Setoid.type, forall f g h: X-eqv->X, f ≡ g -> f ° g ≡ h.
+(* SANITY SETOID *)
+Check forall X (f: X -eqv-> X), f ° f ≡ f.
+Check forall X (f: X -eqv-> X), id ° f ≡ id. 
+Check forall X (f: X -eqv-> X), f ≡ id.
+Check fun X => (id: X -eqv-> X). 
+Check forall X (f: X -eqv-> X), id ≡ f. 
+Goal forall X, forall f g h: X-eqv->X, f ≡ g -> f ° g ≡ h.
 Proof. intros * H. rewrite H. rewrite -H. Abort.
-Goal forall (X: Setoid.type) (f: X -eqv-> X) (x y: X), x≡y -> f (f x) ≡ f (f x).
+Goal forall X (f: X -eqv-> X) (x y: X), x≡y -> f (f x) ≡ f (f x).
 Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
-Goal forall (X: Setoid.type) (f: X -eqv-> X) (x y: X), x≡y -> (f ° f) x ≡ f (f x).
+Goal forall X (f: X -eqv-> X) (x y: X), x≡y -> (f ° f) x ≡ f (f x).
 Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
+Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ f ° const x ≡[X-eqv->X] const (g y) /\ const x ≡[X->X] const y.
+Proof.
+  intros X f g x y fg xy. repeat split.
+  Fail rewrite fg.              (* fair enough *)
+  rewrite xy. by apply fg.
+  2: by rewrite xy.
+  rewrite fg.
+  by rewrite xy.                (* thanks to [const_eqv'] *)
+Abort.  
+Goal forall X: Setoid.type, forall f g: X-eqv->X, f ≡ g -> f ° g ≡ g ° g.
+Proof. by move=>X f g ->. Abort.
+
+Check fun f: bool -eqv-> bool => f ≡ id. 
+Check fun f: bool -eqv-> bool => f ≡ types_id. 
+Check fun f: bool -eqv-> bool => id ≡ f. 
+Fail Check fun f: bool -eqv-> bool => types_id ≡ f. 
+Check fun f: bool -eqv-> bool => @types_id bool ≡ f. 
+Check fun f: bool -eqv-> bool => f ≡ Datatypes.id. 
+Fail Check fun f: bool -eqv-> bool => Datatypes.id ≡ f. 
+Check fun f: bool -eqv-> bool => @Datatypes.id bool ≡ f. 
+Fail Check fun f: bool -eqv-> bool => id ≡[bool->bool] f. (* fair enough *)
+Check fun f: bool -eqv-> bool => f ≡[bool->bool] types_id. 
+Check fun f: bool -eqv-> bool => f ° f. 
+Check fun f: bool -eqv-> bool => f ° id ° f. 
+
+Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
+Proof. intros * H. rewrite H -H. Abort.
+
+Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡ h.
+Proof. intros * H. rewrite H -H. Abort. 
+
+Check bool: Setoid.type. 
+Check (bool * (unit -> dual bool) * sig (fun b: bool=> b=true)  (* * True *))%type: Setoid.type. 
+Check (bool -> bool -> Prop): Setoid.type. 
+Check (bool -eqv-> bool -eqv-> Prop): Setoid.type. 
+
+Goal forall f: nat -> Prop, f ≡ f.
+  move=>f x.
+Abort.
+Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
+  intros * ->.
+Abort.
+Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> types_comp f g ≡ h.
+  Fail intros * ->.              (* fair enough *)
+Abort.
+Goal forall f g: nat -> Prop, f ≡ g -> f ≡ g.
+  intros * ->.
+Abort.
+
+Section s.
+  Variable X: Setoid.type.
+  Check forall f g: X -eqv-> X, f ° g ≡ id.
+  Check forall f g: bool -eqv-> bool, f ° g ≡ id.
+End s.
+
+Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> f (f x) ≡ f (f x).
+Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
+
+Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> (f ° f) x ≡ f (f x).
+Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
+
+(* /SANITY SETOID *)
+
 
 
 (** * partial orders *)
@@ -240,14 +343,6 @@ HB.mixin Record isPO X of Setoid X := {
 HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
-
-(* SANITY *)
-Goal forall (X: PO.type) (x: nat -> X), x ≡ x.
-  intros * n.  
-Abort.
-Goal forall A (X: A -> PO.type) (x: forall a, X a), x ≡ x. 
-  intros * a.
-Abort.
 
 (** ** morphisms *)
 
@@ -297,14 +392,17 @@ Program Definition po_const {X Y: PO.type} (y: Y) :=
 Next Obligation. move=>/=_ _ _. apply PreOrder_leq. Qed.
 HB.instance Definition _ {X Y} y := @po_const X Y y.
 
-
-
-
 (* SANITY *)
+Goal forall (X: PO.type) (x: nat -> X), x ≡ x.
+  intros * n.  
+Abort.
+Goal forall A (X: A -> PO.type) (x: forall a, X a), x ≡ x. 
+  intros * a.
+Abort.
 Check fun X: PO.type => @types_id X: X-mon->X. 
 Check fun (X: PO.type) (f g: X -mon-> X) => types_comp f g: X -mon->X. 
 Check fun (X: PO.type) (f g: X -mon-> X) => f: X -eqv->X. 
-
+(* /SANITY *)
 
 
 (** ** immediate properties *)
@@ -369,7 +467,7 @@ HB.instance Definition T_PO := isPO_from_PreOrder.Build _ HTleq.
 Check fun t: T => t ≡ t. 
 *)
 
-(** discrete partial orders *)
+(** discrete partial order on top of a setoid *)
 Section discrete.
   HB.declare Context X of Setoid X.
   Program Definition discrete_PO := isPO.Build X (leq:=eqv) _ _.
@@ -378,26 +476,24 @@ End discrete.
 (* TOFIX: why do we need to specify [unit_Setoid]? *)
 HB.instance Definition unit_PO := discrete_PO unit_Setoid. 
 
-(** Booleans *)
+(** Booleans with [false ≦ true] *)
 Lemma impl_PreOrder: PreOrder impl. 
 Proof. split; cbv; tauto. Qed.
 HB.instance Definition Prop_PO := isPO.Build Prop impl_PreOrder (fun _ _ => reflexivity _).
 
-(** Propositions *)
+(** propositions ordered by implication *)
 Lemma bool_PreOrder: PreOrder Bool.le.
-Admitted.
-Lemma bool_eqv_of_leq (a b: bool): a=b <-> Bool.le a b /\ Bool.le b a.
-Admitted.
+Proof. split. by case. move=>[][][]//=. Qed.
+Lemma bool_eqv_of_leq: forall a b: bool, a=b <-> Bool.le a b /\ Bool.le b a.
+Proof. case; case=>//=; intuition discriminate. Qed.
 HB.instance Definition bool_PO := isPO.Build bool bool_PreOrder bool_eqv_of_leq.
 
 (** natural numbers *)
-Lemma nat_PreOrder: PreOrder Peano.le.
-Admitted.
 Lemma nat_eqv_of_leq (a b: nat): a=b <-> Peano.le a b /\ Peano.le b a.
-Admitted.
+Proof. split. now intros <-. intros. now apply Nat.le_antisymm. Qed.
 HB.instance Definition nat_PO := isPO.Build nat PeanoNat.Nat.le_preorder nat_eqv_of_leq.
 
-(** dependent product space *)
+(** (dependent) function space, ordered pointwise *)
 Section dprod.
  Variables (A: Type) (X: A -> PO.type).
  Definition leq_dprod: relation (forall a, X a) := fun f g => forall a, f a <= g a.
@@ -417,11 +513,124 @@ Section dprod.
 End dprod.
 Arguments leq_dprod {_ _} _ _/. 
 
-#[export] Instance const_leq {X} {Y: PO.type}:
-  Proper (leq ==> leq) (@const X Y).
-Proof. move=>/=y y' yy x. apply yy. Qed.
+(** products and sums of partial orders *)
+Section sumproducts.
+ Variables X Y: PO.type.
 
-(** constructing partial orders out of functions into partial orders *)
+ (** direct product *)
+ Definition leq_prod: relation (X*Y) :=
+   fun p q => fst p <= fst q /\ snd p <= snd q.
+ Lemma PreOrder_leq_prod: PreOrder leq_prod.
+ Proof.
+   constructor=>//.
+   by move=>???[??][]; split; etransitivity; eassumption.
+ Qed.
+ Lemma eqv_of_leq_prod p q: p ≡ q <-> leq_prod p q /\ leq_prod q p.
+ Proof.
+   unfold eqv, leq_prod=>/=. rewrite 2!eqv_of_leq. tauto. 
+ Qed.
+ HB.instance Definition prod_PO :=
+   isPO.Build (prod X Y) PreOrder_leq_prod eqv_of_leq_prod.
+
+ (** lexicographic product *)
+ Definition lex_prod := prod.
+ Definition leq_lex_prod: relation (X*Y) :=
+   fun p q => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q).
+ Lemma PreOrder_leq_lex_prod: PreOrder leq_lex_prod.
+ Proof.
+   constructor=>//. unfold leq_lex_prod. 
+   move=>[x x'][y y'][z z']/=.
+   intuition solve [transitivity y; auto|transitivity y'; auto].
+ Qed.
+ Lemma eqv_of_leq_lex_prod p q: p ≡ q <-> leq_lex_prod p q /\ leq_lex_prod q p.
+ Proof.
+   unfold eqv, leq_lex_prod=>/=. rewrite 2!eqv_of_leq. intuition. 
+ Qed.
+ HB.instance Definition lex_prod_PO :=
+   isPO.Build (lex_prod X Y) PreOrder_leq_lex_prod eqv_of_leq_lex_prod.
+
+ (** direct sum (called "parallel" by opposition with the sequential operation below) *)
+ Definition leq_parallel_sum: relation (X+Y) :=
+   fun p q => match p,q with
+           | inl x,inl y | inr x,inr y => x<=y
+           | _,_ => False
+           end.
+ Lemma PreOrder_leq_parallel_sum: PreOrder leq_parallel_sum.
+ Proof.
+   constructor.
+    by case=>//=.
+    by case=>?; case=>y; case=>?//=; transitivity y.
+ Qed.
+ Lemma eqv_of_leq_parallel_sum: forall p q, p ≡ q <-> leq_parallel_sum p q /\ leq_parallel_sum q p.
+ Proof.
+   case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
+ Qed.
+ HB.instance Definition parallel_sum_PO :=
+   isPO.Build (sum X Y) PreOrder_leq_parallel_sum eqv_of_leq_parallel_sum.
+
+ (** sequential sum *)
+ Definition sequential_sum := sum. 
+ Definition leq_sequential_sum: relation (X+Y) :=
+   fun p q => match p,q with
+           | inl x,inl y | inr x,inr y => x<=y
+           | inl _,inr _ => True
+           | _,_ => False
+           end.
+ Lemma PreOrder_leq_sequential_sum: PreOrder leq_sequential_sum.
+ Proof.
+   constructor.
+    by case=>//=.
+    by case=>?; case=>y; case=>?//=; transitivity y.
+ Qed.
+ Lemma eqv_of_leq_sequential_sum: forall p q, p ≡ q <-> leq_sequential_sum p q /\ leq_sequential_sum q p.
+ Proof.
+   case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
+ Qed.
+ HB.instance Definition sequential_sum_PO :=
+   isPO.Build (sequential_sum X Y) PreOrder_leq_sequential_sum eqv_of_leq_sequential_sum.
+End sumproducts. 
+Arguments leq_prod [_ _] _ _/.
+Arguments leq_lex_prod [_ _] _ _/.
+Arguments leq_parallel_sum [_ _] _ _/.
+Arguments leq_sequential_sum [_ _] _ _/.
+  
+(** option & list partial orders *)
+Section optionlist.
+ Variables (X: PO.type).
+
+ (** [option] type, adding [None] as top element *)
+ Definition leq_option (p q: option X) :=
+  match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
+ Lemma PreOrder_leq_option: PreOrder leq_option.
+ Proof.
+   constructor.
+   by move=>[?|]//=. 
+   by move=>[?|][y|][?|]??//=; transitivity y. 
+ Qed.
+ Lemma eqv_of_leq_option: forall p q, p ≡ q <-> leq_option p q /\ leq_option q p.
+ Proof. case=>[?|]; case=>[?|]; cbn; rewrite ?eqv_of_leq; tauto. Qed.
+ HB.instance Definition option_PO := isPO.Build (option X) PreOrder_leq_option eqv_of_leq_option.
+
+ (** lists ordered lexicographically *)
+ Fixpoint leq_list (h k: list X) :=
+   match h,k with cons x h,cons y k => x<=y /\ leq_list h k | nil,_ => True | _,_ => False end.
+ Lemma PreOrder_leq_list: PreOrder leq_list.
+ Proof.
+   constructor.
+   - by elim=>//.
+   - by elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto.
+ Qed.
+ Lemma eqv_of_leq_list: forall p q, p ≡ q <-> leq_list p q /\ leq_list q p.
+ Proof.
+   elim=>[|x h IH][|y k]; cbn; try tauto.
+   rewrite eqv_of_leq. setoid_rewrite IH. tauto.
+ Qed.
+ HB.instance Definition list_PO := isPO.Build (list X) PreOrder_leq_list eqv_of_leq_list.
+End optionlist.
+Arguments leq_option [_] _ _/.
+Arguments leq_list [_] _ _/.
+
+(** constructing a partial order via a function into another partial order *)
 Section kernel.
  Variables (A: Type) (X: PO.type) (f: A -> X).
  Definition leq_kern: relation A := fun x y => f x <= f y.
@@ -441,21 +650,29 @@ Section kernel.
 End kernel.
 Arguments leq_kern [_] _ _ _ _/.
 
-(** [sig] partial orders as special cases *)
+(** sub partial orders as a special case *)
 HB.instance Definition sig_PO (X: PO.type) (P: X -> Prop) :=
   kern_PO X (@proj1_sig X P).
 
-(** extensional functions as special cases (already a setoid) *)
+(** extensional functions as a special case (already a setoid) *)
 HB.instance Definition _ {X: Setoid.type} {Y: PO.type} := kern_PO _ (fun f: X-eqv->Y => f: X -> Y).
 
-(** monotone functions as special cases *)
+(** monotone functions as a special case *)
 HB.instance Definition _ {X Y: PO.type} := kern_Setoid _ (fun f: X-mon->Y => f: X -> Y).
 HB.instance Definition _ {X Y: PO.type} := kern_PO _ (fun f: X-mon->Y => f: X -> Y).
 
-(* TOHINK: useful as an instance? *)
-Lemma precomp_leq {X Y Z: PO.type}:
+(* TOHINK: useful as instances? *)
+Lemma types_comp_leq {X} {Y Z: PO.type}:
   Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
+Lemma types_comp_leq_eqv {X} {Y: Setoid.type} {Z: PO.type}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
+Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
+
+#[export] Instance const_leq {X} {Y: PO.type}:
+  Proper (leq ==> leq) (@const X Y).
+Proof. move=>/=y y' yy x. apply yy. Qed.
+#[export] Instance const_leq' {X} {Y: PO.type}:
+  Proper (leq ==> @leq (X-mon->Y)) (@const X Y) := const_leq.
 
 (** the category of partial orders and monotone functions *)
 Program Canonical Structure POS :=
@@ -464,17 +681,20 @@ Program Canonical Structure POS :=
     hom X Y := X -mon-> Y;
     comp := @types_comp;
     id := @types_id;
+    comp_eqv := @types_comp_eqv;    
   |}.
-Next Obligation. apply: precomp_eqv. Qed.
 (* notation to help typechecking morphisms comparisons *)
 Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing). 
 
-(* this instance of [precomp_leq] needs to be explicited to be useful for setoid-rewriting *)
+(* this instance of [types_comp_leq] needs to be explicited to be useful for setoid-rewriting *)
 #[export] Instance comp_leq {X Y Z: PO.type}:
-  Proper (leq ==> leq ==> leq) (@comp POS X Y Z) := precomp_leq.
+  Proper (leq ==> leq ==> leq) (@comp POS X Y Z) := types_comp_leq.
+(* idem for this one? *)
+#[export] Instance setoid_comp_leq {X: Setoid.type} {Y Z: PO.type}:
+  Proper (leq ==> eqv ==> leq) (@comp SETOIDS X Y Z) := types_comp_leq_eqv.
 
 
-(* SANITY *)
+(* SANITY PO *)
 
 Check forall (X: PO.type) (f: X -mon-> X), id ° f <= id. 
 Check forall (X: PO.type) (f: X -eqv-> X), f <= id.
@@ -499,7 +719,7 @@ Proof.
 Abort.
 
 
-(** ** properties *)
+(** ** theory *)
 
 Definition lt {X: PO.type} (x y: X) := x<=y /\ ~y<=x.
 Infix "<" := lt (at level 70).
@@ -557,8 +777,14 @@ Lemma Proper_or: Proper (iff ==> iff ==> iff) or.
 Proof. cbv. tauto. Qed.
 
 
-Section s.
+Notation downward_closed := (Proper (leq ==> impl)). 
+Notation upward_closed := (Proper (leq --> impl)). 
+
+Section props.
 Context {X: PO.type}.
+Implicit Types x y z: X. 
+Implicit Types P Q: X -> Prop.
+
 Definition covered: relation (X -> Prop) := fun P Q => forall x, P x -> exists y, Q y /\ x <= y.
 #[export] Instance PreOrder_covered: PreOrder covered.
 Proof.
@@ -584,14 +810,11 @@ Lemma leq_covered P Q: P <= Q -> covered P Q.
 Proof. move=>H x Px. exists x; split=>//. by apply H. Qed.
 Lemma eqv_covered f g: f ≡ g -> bicovered f g.
 Proof. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
-End s.
 
-Section s.
-Context {X: PO.type}.
-Definition is_sup (P: X -> Prop) x := forall z, x <= z <-> forall y, P y -> y <= z.
+(* TOTHINK: infer [is_sup] using typeclasses? *)
+Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
 
-(* infer [is_sup] using typeclasses? *)
-Lemma leq_sup P x: is_sup P x -> forall y, P y -> y <= x.
+Lemma leq_is_sup P x: is_sup P x -> forall y, P y -> y <= x.
 Proof. move=>H y Py. by apply H. Qed.
 
 Lemma is_sup_leq P p Q q: is_sup P p -> is_sup Q q -> covered P Q -> p<=q.
@@ -604,7 +827,7 @@ Lemma is_sup_eqv P p Q q: is_sup P p -> is_sup Q q -> bicovered P Q -> p≡q.
 Proof. rewrite eqv_of_leq=>??[??]. eauto using is_sup_leq. Qed.
 
 Lemma supU (P: X -> Prop) x y: is_sup P x -> is_sup P y -> x ≡ y.
-Proof. intros; eapply is_sup_eqv; eauto. reflexivity. Qed.
+Proof. intros; eapply is_sup_eqv; eauto. Qed.
 
 Lemma is_sup_single x: is_sup (eq x) x.
 Proof. intro. by firstorder subst. Qed.
@@ -641,36 +864,63 @@ Proof.
   move=>H. suff E: Proper (eqv ==> leq) P.
    by move=>x y xy; apply: antisym; apply E=>//; symmetry. 
   move=>x y xy Px. apply (H (eq x)). by move=>?<-. 
-  move: (is_sup_single x). apply Proper_is_sup=>//. reflexivity.
+  move: (is_sup_single x). by apply Proper_is_sup. 
 Qed.
 
-Definition downward_closed (P: X -> Prop) := Proper (leq ==> leq) P. 
+Inductive sup_closure P: X -> Prop :=
+| sc_inj: P <= sup_closure P
+| sc_sup: sup_closed (sup_closure P).
 
-Definition directed (P: X -> Prop) :=
+Lemma is_sup_closure P: is_sup (sup_closure P) ≡ is_sup P.
+Proof.
+  move=>x. 
+  apply: Proper_forall=>z.
+  apply: Proper_iff=>//{x}.
+  split=>H x Px.
+  - by apply H, sc_inj.
+  - elim: Px=>//Q QP IH y Hy. by apply Hy, IH. 
+Qed.
+
+(** greateast (post-)fixpoints of monotone functions, essentially Knaster-Tarski *)
+Definition is_gfp (f: X -> X) := is_sup (fun x => x <= f x). 
+Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
+Proof.
+  move=>H. symmetry; apply: antisym'.
+  apply H=>y Hy. rewrite Hy. apply f. by apply H.
+  move=>P. apply H=>//. by apply f.
+Qed.
+
+Definition directed P :=
   forall x y, P x -> P y -> exists z, P z /\ x <= z /\ y <= z.
+Lemma directed_empty: directed empty.
+Proof. by []. Qed.
 
-Definition chain (P: X -> Prop) :=
+Definition chain P :=
   forall x y, P x -> P y -> x <= y \/ y <= x.
+Lemma chain_empty: chain empty.
+Proof. by []. Qed.
 
 Lemma chain_directed P: chain P -> directed P.
 Proof. move=>H x y Px Py; by case:(H _ _ Px Py); eauto. Qed.
 
-End s.
+End props.
 
-Section s.
+Section dual_props.
 Context {X: PO.type}.
-Implicit Types x y: X.
+Implicit Types x y z: X. 
+Implicit Types P Q: X -> Prop.
 
 Lemma leq_from_below x y: (forall z, z <= x -> z <= y) -> x <= y.
 Proof. apply (leq_from_above (y: dual X)). Qed.
 Lemma from_below x y: (forall z, z <= x <-> z <= y) -> x ≡ y.
 Proof. apply (from_above (x: dual X)). Qed.
 
-Definition is_inf (P: X -> Prop) x := forall z, z <= x <-> forall y, P y -> z <= y.
-Lemma geq_inf P x: is_inf P x -> forall y, P y -> x <= y.
-Proof. apply: (leq_sup (x:=x: dual X)). Qed.
-Definition cocovered (P Q: X -> Prop) := covered (P: dual X -> _) (Q: dual X -> _).
-Definition cobicovered (P Q: X -> Prop) := bicovered (P: dual X -> _) (Q: dual X -> _).
+Definition cocovered P := covered (P: dual X -> Prop).
+Definition cobicovered P Q := bicovered (P: dual X -> Prop) Q.
+
+Definition is_inf P x := forall z, z <= x <-> forall y, P y -> z <= y.
+Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
+Proof. apply: (leq_is_sup (x:=x: dual X)). Qed.
 Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
 Proof. apply: (@is_sup_leq _ (P: dual X -> Prop)). Qed.
 Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
@@ -679,14 +929,36 @@ Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
 Proof. apply (supU (P:=P: dual X -> Prop)). Qed.
 
 Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
-
 Lemma inf_closed_impl (P Q: X -> Prop): Proper (leq ==> leq) P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).
 Proof. apply (sup_closed_impl (P:=P: dual X->Prop)). Qed.
 
 Lemma inf_closed_leq (f: X -mon-> X): inf_closed (fun x => f x <= x).
-Proof. apply (sup_closed_leq (dualf f)). Qed.
+Proof. exact (sup_closed_leq (dualf f)). Qed.
 
-End s.
+Definition inf_closure P: X -> Prop := sup_closure (P: dual X -> Prop).
+Lemma is_inf_closure P: is_inf (inf_closure P) ≡ is_inf P.
+Proof. exact (is_sup_closure (P: dual X -> Prop)). Qed.
+
+Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
+Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
+Proof. apply (gfp_fixpoint (dualf f)). Qed.
+
+Definition codirected P :=
+  forall x y, P x -> P y -> exists z, P z /\ z <= x /\ z <= y.
+
+Lemma codirected_empty: codirected empty.
+Proof. by []. Qed.
+
+Lemma chain_cochain P: chain P ≡ chain (P: dual X -> Prop).
+Proof. by apply: antisym=>H x y Px Py; rewrite or_comm; apply H. Qed.
+
+Lemma chain_codirected P: chain P -> codirected P.
+Proof. 
+  rewrite chain_cochain. 
+  apply (chain_directed (P:=P: dual X -> Prop)).
+Qed. 
+
+End dual_props.
 
 
 Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
@@ -694,6 +966,9 @@ Definition image_id {X: Type} (P: X -> Prop): image types_id P ≡ P.
 Proof. cbv. by firstorder subst. Qed.
 Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (types_comp f g) P ≡ image f (image g P).
 Proof. cbv. firstorder subst; eauto. Qed.
+Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
+Proof. by exists x. Qed.
+#[export] Hint Resolve in_image: core. 
 Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
   image f P <= Q <-> forall x, P x -> Q (f x).
 Proof.
@@ -717,9 +992,16 @@ Proof.
 Qed.  
 End s.
 
-(** sups must be computed pointwise in function spaces *)
-(** not clear we can prove it without using decidability of equality on [A] *)
-Lemma dprod_sup {A} {X: A -> PO.type}
+(** sups can be computed pointwise in function spaces *)
+Lemma dprod_sup {A} {X: A -> PO.type} (P: (forall a, X a)->Prop) (f: forall a, X a):
+  (forall a, is_sup (image (fun h => h a) P) (f a)) -> is_sup P f.
+Proof.
+  move=>H g; split=>fg.
+  - move=>h Ph. rewrite -fg=>a. apply H=>//. by exists h.
+  - move=>a. apply H=>_ [h [Ph ->]]. by apply fg. 
+Qed.
+(** actually they *must* be computed pointwise, but not clear we can prove it without using decidability of equality on [A] *)
+Lemma dprod_sup' {A} {X: A -> PO.type}
       (A_dec: forall a b: A, {a=b} + {a<>b})
       (P: (forall a, X a)->Prop) (f: forall a, X a):
   is_sup P f -> forall a, is_sup (image (fun h => h a) P) (f a).
@@ -744,17 +1026,53 @@ Proof.
     -- by apply Pf. 
 Qed.
 
+(** sups are computed pointwise in products
+TOTHINK: get it as as special case of the above lemmas, with [A=bool]?      
+ *)
+Lemma prod_sup {X Y: PO.type} (P: (X*Y)->Prop) (p: X*Y):
+  (is_sup (image fst P) (fst p) /\ is_sup (image snd P) (snd p)) <-> is_sup P p.
+Proof.
+  destruct p as [x y]. split.
+  - move=>/=[H1 H2] [u v]. unfold leq=>/=. rewrite (H1 u) (H2 v)/=.
+    split. move=>[F1 F2] [i j] Hij. split. apply F1. by eexists; eauto. apply F2. by eexists; eauto.
+    move=>H. by split=>t [[i j] [Hij ->]]; apply H.
+  - move=>H. split=>/=z.
+    -- split=>E. move=>_ [[u v] [Huv ->]]/=. 
+       rewrite <-E. apply (leq_is_sup H _ Huv).
+       apply <- (H (z,y))=>[[u v] Puv]. split. apply E. by eexists; eauto. cbn.
+       apply (leq_is_sup H _ Puv).
+    -- split=>E. move=>_ [[u v] [Huv ->]]/=. 
+       rewrite <-E. apply (leq_is_sup H _ Huv).
+       apply <- (H (x,z))=>[[u v] Puv]. split; last first. apply E. by eexists; eauto. cbn.
+       apply (leq_is_sup H _ Puv).
+Qed.
 
-(** adjunctions *)
+(** sups can be computed as expected in sub-spaces *)
+Section ks.
+  Context {A} {X: PO.type} (f: A -> X) (P: A->Prop) (a: A).
+  (* TOFIX: how to provide the partial order on A more easily? *)
+  #[local] HB.instance Definition _ := kern_Setoid X f. 
+  #[local] HB.instance Definition _ := kern_PO X f. 
+  Lemma kern_sup:
+    is_sup (image f P) (f a) -> is_sup P a.
+  Proof.
+    move=>H b; split=>ab.
+    -- move=>c Pc. rewrite -ab. by apply H; auto. 
+    -- apply H=>_ [c [Pc ->]]. by apply ab.
+  Qed.
+End ks.
+
+
+(** *  adjunctions *)
 Section s.
   Context {X Y: PO.type}.
   Variables (f: X -> Y) (g: Y -> X).
   Class adjunction := adj: forall x y, f x <= y <-> x <= g y.
   
-  #[export] Instance left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
+  #[local] Instance left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
   Proof. intros x y xy. apply adj. rewrite xy. by apply adj. Qed.
   
-  #[export] Instance right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
+  #[local] Instance right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
   Proof. intros x y xy. apply adj. rewrite -xy. by apply adj. Qed.
   
   Lemma left_adjoint_sup (A: adjunction) P x: is_sup P x -> is_sup (image f P) (f x).
@@ -776,20 +1094,6 @@ Proof. rewrite /adjunction/= => y x. symmetry. by apply adj. Qed.
 
 Lemma right_adjoint_inf `(A: adjunction) P y: is_inf P y -> is_inf (image g P) (g y).
 Proof. apply (left_adjoint_sup (dual_adjunction A)). Qed. 
-
-(** least (pre-)fixpoints of monotone functions *)
-Section d.
- Context {X: PO.type}.
- Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
- Variable f: X -mon-> X.
- (** essentially Knaster-Tarski *)
- Proposition lfp_fixpoint x: is_lfp f x -> f x ≡ x.
- Proof.   
-   move=>H. apply: antisym'.
-   apply H=>y Hy. rewrite -Hy. apply f. by apply H.
-   move=>P. apply H=>//. by apply f.
- Qed.
-End d.   
 
 (** * lattices *)
 
@@ -876,7 +1180,7 @@ HB.mixin Record isdCPO X of PO X := {
 HB.structure Definition dCPO := { X of isdCPO X & }.
 
 Lemma leq_dsup {X: dCPO.type} (P: X -> Prop) D: forall y, P y -> y <= dsup P D.
-Proof. apply leq_sup, dsup_spec. Qed.
+Proof. apply leq_is_sup, dsup_spec. Qed.
 
 Program Definition dprod_dCPO {A} (X: A -> dCPO.type) :=
   isdCPO.Build (forall a, X a) (fun F DF a => dsup (image (fun f => f a) F) _) _.
@@ -902,7 +1206,7 @@ HB.mixin Record isCPO X of PO X := {
 HB.structure Definition CPO := { X of isCPO X & }.
 
 Lemma leq_csup {X: CPO.type} (P: X -> Prop) C: forall y, P y -> y <= csup P C.
-Proof. apply leq_sup, csup_spec. Qed.
+Proof. apply leq_is_sup, csup_spec. Qed.
 
 Program Definition dprod_CPO {A} (X: A -> CPO.type) :=
   isCPO.Build (forall a, X a) (fun F CF a => csup (image (fun f => f a) F) _) _.
