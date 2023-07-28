@@ -4,6 +4,7 @@
 -R theories/ PartialOrders
 theories/preliminaries.v
 theories/hb.v
+theories/hb_chain.v
 theories/setoid.v
 theories/po.v
 theories/adjunctions.v
