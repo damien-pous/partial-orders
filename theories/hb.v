@@ -28,6 +28,7 @@ HB.structure Definition Setoid :=
 Infix "≡" := eqv (at level 70).
 Notation "x ≡[ X ] y" := (@eqv X x y) (at level 70, only parsing).
 
+
 (** ** morphisms *)
 
 HB.mixin Record isExtensional (X Y: Setoid.type) (f: X -> Y) := {
@@ -83,12 +84,8 @@ HB.instance Definition bool_Setoid := eq_Setoid bool.
 HB.instance Definition nat_Setoid := eq_Setoid nat.
 
 (** trivial setoids, for proof irrelevant types *)
-Section trivial.
- Variable (X: Type).
- Definition eqv_trivial: relation X := fun _ _ => True.
- Program Definition trivial_Setoid := isSetoid.Build X _.
-End trivial.
-Arguments eqv_trivial {_} _ _/. 
+Program Definition trivial_Setoid (X: Type) := isSetoid.Build X (eqv := fun _ _ => True) _.
+Next Obligation. split; firstorder. Qed.
 HB.instance Definition unit_Setoid := trivial_Setoid unit. 
 (* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P. *)
 
@@ -108,7 +105,11 @@ Section dprod.
  Qed.
  HB.instance Definition dprod_Setoid := isSetoid.Build _ Equivalence_eqv_dprod.  
 End dprod.
-Arguments eqv_dprod {_ _} _ _/. 
+Arguments eqv_dprod {_ _} _ _/.
+Definition app {A} {X: A -> Type} (a: A): (forall a, X a) -> X a := fun f => f a.
+Definition setoid_app {A} {X: A -> Setoid.type} (a: A) :=
+  isExtensional.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
+HB.instance Definition _ A X a := @setoid_app A X a.
 
 (** direct sum and product *)
 Section sumprod.
@@ -120,7 +121,12 @@ Section sumprod.
    - by move=>??[]; split; symmetry. 
    - by move=>???[??][]; split; etransitivity; eassumption.
  Qed.
- HB.instance Definition prod_Setoid := isSetoid.Build _ Equivalence_eqv_prod.
+ HB.instance Definition prod_Setoid :=
+   isSetoid.Build _ Equivalence_eqv_prod.
+ HB.instance Definition _ :=
+   isExtensional.Build (prod X Y) X fst (fun p q pq => proj1 pq).
+ HB.instance Definition _ :=
+   isExtensional.Build (prod X Y) Y snd (fun p q pq => proj2 pq).
 
  Definition eqv_sum: relation (X+Y) :=
    fun x y => match x,y with inl x,inl y | inr x,inr y => x ≡ y | _,_ => False end.
@@ -131,7 +137,12 @@ Section sumprod.
    - by move=>[?|?][?|?]//=; symmetry. 
    - by move=>[?|?][?|?][?|?]//=; etransitivity; eassumption.
  Qed.
- HB.instance Definition sum_Setoid := isSetoid.Build _ Equivalence_eqv_sum.
+ HB.instance Definition sum_Setoid :=
+   isSetoid.Build _ Equivalence_eqv_sum.
+ HB.instance Definition _ :=
+   isExtensional.Build X (sum X Y) inl (fun p q pq => pq).
+ HB.instance Definition _ :=
+   isExtensional.Build Y (sum X Y) inr (fun p q pq => pq).
 End sumprod.
 Arguments eqv_prod {_ _} _ _/. 
 Arguments eqv_sum {_ _}_ _/. 
@@ -183,6 +194,8 @@ Arguments eqv_kern [_] _ _ _ _/.
 (** sub-setoids as a special case *)
 HB.instance Definition sig_Setoid (X: Setoid.type) (P: X -> Prop) :=
   kern_Setoid _ (@proj1_sig X P).
+HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
+  isExtensional.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
 
 (** extensional functions as special case *)
 HB.instance Definition _ {X Y: Setoid.type} :=
@@ -230,7 +243,7 @@ Abort.
 
 
 (** * categories *)
-Structure CATEGORY := {
+#[universes(polymorphic=yes)] Structure CATEGORY := {
     ob: Type;
     hom:> ob -> ob -> Setoid.type;
 #[canonical=no] id: forall {A}, hom A A;
@@ -518,6 +531,9 @@ Section dprod.
  HB.instance Definition dprod_PO := isPO.Build (forall a, X a) PO_axm_dprod.
 End dprod.
 Arguments leq_dprod {_ _} _ _/. 
+Definition po_app {A} {X: A -> PO.type} (a: A) :=
+  isMonotone.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
+HB.instance Definition _ A X a := @po_app A X a.
 
 (** products and sums of partial orders *)
 Section sumproducts.
@@ -533,6 +549,10 @@ Section sumproducts.
    unfold eqv, leq_prod=>??/=. rewrite 2!eqv_of_leq. tauto. 
  Qed.
  HB.instance Definition prod_PO := isPO.Build (prod X Y) PO_axm_prod.
+ HB.instance Definition _ :=
+   isMonotone.Build (prod X Y) X fst (fun p q pq => proj1 pq).
+ HB.instance Definition _ :=
+   isMonotone.Build (prod X Y) Y snd (fun p q pq => proj2 pq).
 
  (** lexicographic product *)
  Definition lex_prod := prod.
@@ -560,7 +580,12 @@ Section sumproducts.
    by case=>?; case=>y; case=>?//=; transitivity y.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
- HB.instance Definition parallel_sum_PO := isPO.Build (sum X Y) PO_axm_parallel_sum.
+ HB.instance Definition parallel_sum_PO :=
+   isPO.Build (sum X Y) PO_axm_parallel_sum.
+ HB.instance Definition _ :=
+   isMonotone.Build X (sum X Y) inl (fun p q pq => pq).
+ HB.instance Definition _ :=
+   isMonotone.Build Y (sum X Y) inr (fun p q pq => pq).
 
  (** sequential sum *)
  Definition sequential_sum := sum. 
@@ -589,6 +614,8 @@ Section optionlist.
  Variables (X: PO.type).
 
  (** [option] type, adding [None] as top element *)
+ (* TODO: propose the other variant;
+    do it via sequential_sum and unit? *)
  Definition leq_option (p q: option X) :=
   match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
  Lemma PO_axm_option: PO_axm leq_option.
@@ -638,6 +665,8 @@ Arguments leq_kern [_] _ _ _ _/.
 (** sub partial orders as a special case *)
 HB.instance Definition sig_PO (X: PO.type) (P: X -> Prop) :=
   kern_PO X (@proj1_sig X P).
+HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
+  isMonotone.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
 
 (** extensional functions as a special case (already a setoid) *)
 HB.instance Definition _ {X: Setoid.type} {Y: PO.type} := kern_PO _ (fun f: X-eqv->Y => f: X -> Y).
@@ -761,6 +790,11 @@ Proof. cbv. tauto. Qed.
 Lemma Proper_or: Proper (iff ==> iff ==> iff) or. 
 Proof. cbv. tauto. Qed.
 
+Lemma Proper_flip A B (R: relation A) (S: relation B): Proper (flip R ==> S) ≡ Proper (R ==> flip S).
+Proof. move=>f. apply: antisym=>Hf x y xy; by apply Hf. Qed.
+Lemma Proper_half X Y: Proper (@eqv X ==> @leq Y) <= Proper (@eqv X ==> @eqv Y).
+Proof. move=>f H x y xy. apply: antisym; apply H=>//. Qed.
+
 
 Notation downward_closed := (Proper (leq ==> impl)). 
 Notation upward_closed := (Proper (leq --> impl)). 
@@ -791,10 +825,10 @@ Qed.
 #[export] Instance PO_covered: PartialOrder bicovered covered.
 Proof. by []. Qed.
 (* TOTHINK: declare [subrelation] instances? *)
-Lemma leq_covered P Q: P <= Q -> covered P Q.
-Proof. move=>H x Px. exists x; split=>//. by apply H. Qed.
-Lemma eqv_covered f g: f ≡ g -> bicovered f g.
-Proof. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
+#[export] Instance leq_covered: subrelation leq covered.
+Proof. move=>P Q H x Px. exists x; split=>//. by apply H. Qed.
+#[export] Instance eqv_covered: subrelation eqv bicovered.
+Proof. move=>P Q. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
 (* TOTHINK: infer [is_sup] using typeclasses? *)
 Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
@@ -894,6 +928,8 @@ Section dual_props.
 Context {X: PO.type}.
 Implicit Types x y z: X. 
 Implicit Types P Q: X -> Prop.
+
+(* TODO: Ltac dual *)
 
 Lemma leq_from_below x y: (forall z, z <= x -> z <= y) -> x <= y.
 Proof. apply (leq_from_above (y: dual X)). Qed.
