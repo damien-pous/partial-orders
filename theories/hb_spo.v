@@ -8,7 +8,7 @@ Unset Printing Implicit Defensive.
 Local Unset Transparent Obligations.
 Set Primitive Projections.
 
-(** * partial orders with suprema *)
+(** * levels & suprema types *)
 
 (*
 E: empty
@@ -36,13 +36,13 @@ Definition leq_K h k :=
   | kD,kD => True
   | _,_ => False
   end.
-Lemma PO_axm_K: PO_axm leq_K.
+Lemma po_K: po_axm leq_K.
 Proof.
   split. 
   - split. by case. by do 3 (case=>//). 
   - (case; case=>//=); intuition discriminate.
 Qed.
-HB.instance Definition K_PO := isPO.Build K PO_axm_K. 
+HB.instance Definition _ := isPO.Build K po_K. 
 
 Inductive sigset (X: Type) := idx: forall I: Type, (I->Prop) -> (I->X) -> sigset X.
 Definition sig2set {X}: sigset X -> (X -> Prop) := fun '(idx P f) => image f P.
@@ -110,13 +110,13 @@ Definition leq_plevel h k :=
   | pED,pED => True
   | _,_ => False
   end.
-Lemma PO_axm_plevel: PO_axm leq_plevel.
+Lemma po_plevel: po_axm leq_plevel.
 Proof.
   split. 
   - split. by case. by do 3 (case=>//). 
   - (case; case=>//=); intuition discriminate.
 Qed.
-HB.instance Definition plevel_PO := isPO.Build plevel PO_axm_plevel. 
+HB.instance Definition _ := isPO.Build plevel po_plevel. 
 
 Definition plevel_fun (l: plevel) k: bool :=
   match k,l with
@@ -218,7 +218,6 @@ Ltac solve_lower :=
           match goal with H: ?h << ?l |- ?k << ?l => exact: (@lower_trans _ k h l I H) end].
 #[export] Hint Extern 0 (lower _ _) => solve_lower: typeclass_instances.
 
-
 (** generic supremum operation, given any type [A] that can be interpreted as subsets of [X] *)
 Section s.
 Context (X: PO.type). 
@@ -268,20 +267,21 @@ Definition sup_from_cup_and_dsup: gsup_op kB -> gsup_op kD -> sup_op.
 Defined.
 End s.
 
+(** * partial orders with suprema *)
 
 (** ** class *)
 
-Notation SPO_ops l X := (forall k, l k -> gsup_op X k).
+Notation spo_ops l X := (forall k, l k -> gsup_op X k).
 HB.mixin Record isSPO (l: slevel) X of PO X := {
-    #[canonical=no] specified_gsup: SPO_ops l (X: PO.type)
+    #[canonical=no] SPO_ops: spo_ops l (X: PO.type)
 }.
 HB.structure Definition SPO (l: slevel) := { X of isSPO l X & }.
 
 Definition gsup {l} {X: SPO.type l} k kl: args k X -> X :=
-  proj1_sig (specified_gsup k kl).
+  proj1_sig (SPO_ops k kl).
 Definition gsup_spec {l} {X: SPO.type l} {k kl}:
   forall x: args k X, is_sup (setof k x) (gsup k kl x) :=
-  proj2_sig (specified_gsup k kl).
+  proj2_sig (SPO_ops k kl).
 Lemma leq_gsup {l} {X: SPO.type l} k kl x (y: X):
   setof k x y -> y <= gsup k kl x.
 Proof. apply leq_is_sup, gsup_spec. Qed.
@@ -289,16 +289,16 @@ Proof. apply leq_is_sup, gsup_spec. Qed.
 (** ** instances *)
 
 (** unit *)
-Program Definition SPO_ops_unit: SPO_ops sA unit := fun k _ => exist _ (fun _ => tt) _.
+Program Definition spo_unit: spo_ops sA unit := fun k _ => exist _ (fun _ => tt) _.
 Next Obligation.
   have E: forall P: unit -> Prop, (forall x, P x) <-> P tt by move=>P; split=>//?[]. 
   case=>/=. rewrite E/=. cbn. tauto.
 Qed.
-HB.instance Definition _ := isSPO.Build sA unit SPO_ops_unit. 
+HB.instance Definition _ := isSPO.Build sA unit spo_unit. 
 
 (** sup-semilattice of Booleans
     (infinite suprema are not available constructively) *)
-Program Definition SPO_ops_bool: SPO_ops sF bool := 
+Program Definition spo_bool: spo_ops sF bool := 
   fun k => match k with
         | kE => fun _ => exist _ (fun _ => false) _
         | kB => fun _ => exist _ (fun '(x,y) => orb x y) _
@@ -309,11 +309,11 @@ Next Obligation.
   move=>c/=. rewrite forall_pair. cbn.
   rewrite !Bool.le_implb Bool.implb_orb_distrib_l Bool.andb_true_iff//.
 Qed.
-HB.instance Definition _ := isSPO.Build sF bool SPO_ops_bool. 
+HB.instance Definition _ := isSPO.Build sF bool spo_bool. 
 
 (** complete sup-semilattice of Propositions
     (infinite suprema are available via impredicativity) *)
-Definition SPO_ops_Prop: SPO_ops sA Prop.
+Definition spo_Prop: spo_ops sA Prop.
   unshelve refine (
   let isup: gsup_op Prop kA := exist _ (fun '(idx P f) => exists2 i, P i & f i) _ in
   let sup:= sup_from_isup isup in
@@ -328,10 +328,10 @@ Definition SPO_ops_Prop: SPO_ops sA Prop.
         end).
   all: abstract by try clear isup sup; move=>[]; cbv; firstorder subst; eauto.
 Defined.
-HB.instance Definition _ := isSPO.Build sA Prop SPO_ops_Prop. 
+HB.instance Definition _ := isSPO.Build sA Prop spo_Prop. 
 
 (** SPOs on (dependent) function space *)
-Program Definition SPO_ops_dprod {A l} {X: A -> SPO.type l}: SPO_ops l (forall a, X a) :=
+Program Definition spo_dprod {A l} {X: A -> SPO.type l}: spo_ops l (forall a, X a) :=
   fun k kl => exist _ (fun F a => gsup k kl (map_args (app a) k F)) _.
 Next Obligation.
   apply dprod_sup=>a'. eapply Proper_is_sup.
@@ -339,12 +339,12 @@ Next Obligation.
   apply eqv_covered. by rewrite setof_map_args. 
 Qed.
 HB.instance Definition _ A l (X: A -> SPO.type l) :=
-  isSPO.Build l (forall a, X a) (@SPO_ops_dprod A l X). 
+  isSPO.Build l (forall a, X a) (@spo_dprod A l X). 
 
 (** direct product of SPOs *)
 Section prod.
  Context {l} {X Y: SPO.type l}.
- Program Definition SPO_ops_prod: SPO_ops l (prod X Y) :=
+ Program Definition spo_prod: spo_ops l (prod X Y) :=
   fun k kl => exist _ (fun F => (gsup k kl (map_args fst k F), gsup k kl (map_args snd k F))) _.
 (* alternatively, via [dprod_sup] below, with [A=bool] *)
  Next Obligation.
@@ -352,7 +352,7 @@ Section prod.
    all: by rewrite setof_map_args. 
  Qed.
  HB.instance Definition _ :=
-   isSPO.Build l (prod X Y) SPO_ops_prod. 
+   isSPO.Build l (prod X Y) spo_prod. 
 End prod.
 
 (* TODO: option (with None above or below) *)
@@ -366,7 +366,7 @@ Section sub.
  Proof. move=>P H k kl x Hx. apply: H. apply Hx. apply gsup_spec. Qed.
  #[export] Instance sup_closed'_eqv: Proper (eqv==>eqv) sup_closed'.
  Proof. apply Proper_half=>P Q H HP k kl x E. apply H. apply HP. by rewrite H. Qed.
- Program Definition SPO_ops_sig P (Psup: sup_closed' P): SPO_ops l (sig P) := 
+ Program Definition spo_sig P (Psup: sup_closed' P): spo_ops l (sig P) := 
    fun k kl => exist _ (fun F => exist _ (gsup k kl (map_args (@proj1_sig X P) k F)) _) _. 
  Next Obligation.
    apply: Psup. rewrite setof_map_args. 
@@ -378,7 +378,7 @@ Section sub.
    apply eqv_covered. by rewrite setof_map_args. 
  Qed.
  (* TOTHINK: how to present this in a useful way? *)
- Definition sig_spo P Psup := SPO.pack_ (isSPO.Build l (sig P) (SPO_ops_sig Psup)). 
+ Definition sig_spo P Psup := SPO.pack_ (isSPO.Build l (sig P) (spo_sig Psup)). 
 End sub.
 Arguments sig_spo [_ _ _] _. 
 
@@ -392,14 +392,14 @@ Section c.
  #[local] HB.instance Definition _ := kern_PO X r.
  #[local] HB.instance Definition _ := isExtensional.Build _ _ r (fun x y xy => xy). 
  #[local] HB.instance Definition _ := isMonotone.Build _ _ r (fun x y xy => xy). 
- Program Definition SPO_ops_retract: SPO_ops l A := 
+ Program Definition spo_retract: spo_ops l A := 
    fun k kl => exist _ (fun x => i (gsup k kl (map_args r k x))) _.
  Next Obligation.
    apply kern_sup. eapply Proper_is_sup. 2: apply: ri. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args.
  Qed.
  (* TOTHINK: how to present this in a useful way? *)
- Definition retract_spo := SPO.pack_ (isSPO.Build l A SPO_ops_retract). 
+ Definition retract_spo := SPO.pack_ (isSPO.Build l A spo_retract). 
 End c.
 Arguments retract_spo [_ _] _ [_ _]. 
 
@@ -431,8 +431,8 @@ Section s.
    apply setof_map_args. by exists f.
  Qed.
  (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
- #[local] HB.instance Definition _ := isSPO.Build l (sig _) (SPO_ops_sig sup_closed'_extensional).
- HB.instance Definition _ := isSPO.Build l (X-eqv->Y) (SPO_ops_retract setoid_morphism_as_sig). 
+ #[local] HB.instance Definition _ := isSPO.Build l (sig _) (spo_sig sup_closed'_extensional).
+ HB.instance Definition _ := isSPO.Build l (X-eqv->Y) (spo_retract setoid_morphism_as_sig). 
 End s.
 
 (** the SPO of monotone functions *)
@@ -452,8 +452,8 @@ Section s.
    apply setof_map_args. by exists f.
  Qed.
  (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
- #[local] HB.instance Definition _ := isSPO.Build l (sig _) (SPO_ops_sig sup_closed'_monotone).
- HB.instance Definition _ := isSPO.Build l (X-mon->Y) (SPO_ops_retract po_morphism_as_sig). 
+ #[local] HB.instance Definition _ := isSPO.Build l (sig _) (spo_sig sup_closed'_monotone).
+ HB.instance Definition _ := isSPO.Build l (X-mon->Y) (spo_retract po_morphism_as_sig). 
 End s.
 
 (** ** theory  *)
@@ -586,3 +586,4 @@ Module sreduce.
     abstract_reduce _ f reducer (fun cup dsup => isup_from_sup (sup_from_cup_and_dsup cup dsup)). 
   End s.
 End sreduce.
+

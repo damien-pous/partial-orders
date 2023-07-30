@@ -69,19 +69,19 @@ Proof. apply symmetry. Qed.
 (** trivial for setoids, but required for subsequent layers *)
 
 Definition dual (X: Type) := X.
-HB.instance Definition dual_Setoid {X: Setoid.type} := isSetoid.Build (dual X) Equivalence_eqv.
+HB.instance Definition _ {X: Setoid.type} := isSetoid.Build (dual X) Equivalence_eqv.
 
 Definition dualf {X Y: Type} (f: X -> Y): dual X -> dual Y := f.
-Program Definition dual_extensional {X Y} (f: X -eqv-> Y)
+Program Definition setoid_dualf {X Y} (f: X -eqv-> Y)
   := isExtensional.Build (dual X) (dual Y) (dualf f) extensional.
-HB.instance Definition _ {X Y} f := @dual_extensional X Y f.
+HB.instance Definition _ {X Y} f := @setoid_dualf X Y f.
 
 (** ** instances *)
 
 (** discrete setoids, for types where [eq] is fine *)
 Definition eq_Setoid X := isSetoid.Build X eq_equivalence.
-HB.instance Definition bool_Setoid := eq_Setoid bool.
-HB.instance Definition nat_Setoid := eq_Setoid nat.
+HB.instance Definition _ := eq_Setoid bool.
+HB.instance Definition _ := eq_Setoid nat.
 
 (** trivial setoids, for proof irrelevant types *)
 Program Definition trivial_Setoid (X: Type) := isSetoid.Build X (eqv := fun _ _ => True) _.
@@ -90,20 +90,20 @@ HB.instance Definition unit_Setoid := trivial_Setoid unit.
 (* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P. *)
 
 (** setoid of extensional propositions *)
-HB.instance Definition Prop_Setoid := isSetoid.Build Prop iff_equivalence. 
+HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
 
 (** (dependent) function space *)
 Section dprod.
  Variables (A: Type) (X: A -> Setoid.type).
  Definition eqv_dprod: relation (forall a, X a) := fun f g => forall a, f a ≡ g a.
- Lemma Equivalence_eqv_dprod: Equivalence eqv_dprod.
+ Lemma setoid_dprod: Equivalence eqv_dprod.
  Proof.
    constructor.
    - by move=>??. 
    - by move=>????; symmetry. 
    - by move=>??????; etransitivity; eauto.
  Qed.
- HB.instance Definition dprod_Setoid := isSetoid.Build _ Equivalence_eqv_dprod.  
+ HB.instance Definition _ := isSetoid.Build (forall a, X a) setoid_dprod.  
 End dprod.
 Arguments eqv_dprod {_ _} _ _/.
 Definition app {A} {X: A -> Type} (a: A): (forall a, X a) -> X a := fun f => f a.
@@ -115,14 +115,14 @@ HB.instance Definition _ A X a := @setoid_app A X a.
 Section sumprod.
  Variables (X Y: Setoid.type).
  Definition eqv_prod: relation (X*Y) := fun x y => fst x ≡ fst y /\ snd x ≡ snd y.
- Lemma Equivalence_eqv_prod: Equivalence eqv_prod.
+ Lemma setoid_prod: Equivalence eqv_prod.
  Proof.
    constructor=>//.
    - by move=>??[]; split; symmetry. 
    - by move=>???[??][]; split; etransitivity; eassumption.
  Qed.
- HB.instance Definition prod_Setoid :=
-   isSetoid.Build _ Equivalence_eqv_prod.
+ HB.instance Definition _ :=
+   isSetoid.Build _ setoid_prod.
  HB.instance Definition _ :=
    isExtensional.Build (prod X Y) X fst (fun p q pq => proj1 pq).
  HB.instance Definition _ :=
@@ -130,15 +130,15 @@ Section sumprod.
 
  Definition eqv_sum: relation (X+Y) :=
    fun x y => match x,y with inl x,inl y | inr x,inr y => x ≡ y | _,_ => False end.
- Lemma Equivalence_eqv_sum: Equivalence eqv_sum.
+ Lemma setoid_sum: Equivalence eqv_sum.
  Proof.
    constructor.
    - by move=>[]//=. 
    - by move=>[?|?][?|?]//=; symmetry. 
    - by move=>[?|?][?|?][?|?]//=; etransitivity; eassumption.
  Qed.
- HB.instance Definition sum_Setoid :=
-   isSetoid.Build _ Equivalence_eqv_sum.
+ HB.instance Definition _ :=
+   isSetoid.Build _ setoid_sum.
  HB.instance Definition _ :=
    isExtensional.Build X (sum X Y) inl (fun p q pq => pq).
  HB.instance Definition _ :=
@@ -152,25 +152,25 @@ Section optionlist.
  Variables (X: Setoid.type).
  Definition eqv_option (p q: option X) :=
   match p,q with Some p,Some q => p≡q | None,None => True | _,_ => False end.
- Lemma Equivalence_eqv_option: Equivalence eqv_option.
+ Lemma setoid_option: Equivalence eqv_option.
  Proof.
    constructor.
    by move=>[?|]//=. 
    by move=>[?|][?|]//=. 
    by move=>[?|][y|][?|]??//=; transitivity y. 
  Qed.
- HB.instance Definition option_Setoid := isSetoid.Build _ Equivalence_eqv_option.
+ HB.instance Definition _ := isSetoid.Build _ setoid_option.
 
  Fixpoint eqv_list (h k: list X) :=
    match h,k with cons x h,cons y k => x≡y /\ eqv_list h k | nil,nil => True | _,_ => False end.
- Lemma Equivalence_eqv_list: Equivalence eqv_list.
+ Lemma setoid_list: Equivalence eqv_list.
  Proof.
    constructor.
    - by elim=>//.
    - by elim=>[|x h IH][|y k]//=[? ?]; split; auto. 
    - elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto. 
  Qed.
- HB.instance Definition list_Setoid := isSetoid.Build _ Equivalence_eqv_list.
+ HB.instance Definition _ := isSetoid.Build _ setoid_list.
 End optionlist.
 Arguments eqv_option [_] _ _/.
 Arguments eqv_list [_] _ _/.
@@ -179,7 +179,7 @@ Arguments eqv_list [_] _ _/.
 Section kernel.
  Variables (A: Type) (X: Setoid.type) (f: A -> X).
  Definition eqv_kern: relation A := fun x y => f x ≡ f y.
- Lemma Equivalence_eqv_kern: Equivalence eqv_kern.
+ Lemma setoid_kern: Equivalence eqv_kern.
  Proof.
    rewrite /eqv_kern.
    constructor.
@@ -187,12 +187,12 @@ Section kernel.
    - by move=>???; symmetry. 
    - by move=>?????; etransitivity; eauto.
  Qed.
- Definition kern_Setoid := isSetoid.Build _ Equivalence_eqv_kern.  
+ Definition kern_Setoid := isSetoid.Build _ setoid_kern.  
 End kernel.
 Arguments eqv_kern [_] _ _ _ _/.
 
 (** sub-setoids as a special case *)
-HB.instance Definition sig_Setoid (X: Setoid.type) (P: X -> Prop) :=
+HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   kern_Setoid _ (@proj1_sig X P).
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   isExtensional.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
@@ -348,20 +348,20 @@ Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.
 
 (** ** class *)
 
-Definition PO_axm {X: Setoid.type} (leq: relation X) :=
+Definition po_axm {X: Setoid.type} (leq: relation X) :=
   PreOrder leq /\ forall x y, eqv x y <-> (leq x y /\ leq y x).
 HB.mixin Record isPO X of Setoid X := {
     #[canonical=no] leq: relation X;
-    #[canonical=no] po_axm: PO_axm leq;
+    #[canonical=no] PO_axm: po_axm leq;
 }.
 HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 
 #[export] Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
-Proof. apply po_axm. Qed.
+Proof. apply PO_axm. Qed.
 Lemma eqv_of_leq {X: PO.type} (x y: X): x ≡ y <-> x <= y /\ y <= x. 
-Proof. apply po_axm. Qed.
+Proof. apply PO_axm. Qed.
 
 
 (** ** morphisms *)
@@ -388,8 +388,7 @@ HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
   }.
 (** inheritance: setoid morphisms are po morphisms *)
 HB.builders Context X Y f (F : isMonotone X Y f).
-  HB.instance
-  Definition to_SetoidMorphism :=
+  HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
 HB.end.
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
@@ -441,15 +440,14 @@ Proof. reflexivity. Defined.
 
 Section dual.
  Context {X: PO.type}.
- Lemma dual_eqv_of_leq (x y: dual X): x ≡ y <-> y <= x /\ x <= y.
- Proof. cbn. rewrite eqv_of_leq. tauto. Qed.
- HB.instance Definition dual_PO :=
-   isPO.Build (dual X) (conj (flip_PreOrder _) dual_eqv_of_leq).
+ Lemma po_dual: po_axm (flip (@leq X)).
+ Proof. split. by typeclasses eauto. by move=>??/=; rewrite eqv_of_leq; tauto. Qed.
+ HB.instance Definition _ := isPO.Build (dual X) po_dual.
 End dual.
-Program Definition dual_monotone {X Y} (f: X -mon-> Y)
+Program Definition po_dualf {X Y} (f: X -mon-> Y)
   := isMonotone.Build (dual X) (dual Y) (dualf f) _.
 Next Obligation. move=>x y. apply f. Qed.
-HB.instance Definition _ {X Y} f := @dual_monotone X Y f.
+HB.instance Definition _ {X Y} f := @po_dualf X Y f.
 
 (** ** instances *)
 
@@ -471,20 +469,12 @@ HB.builders Context X (PO: isPO_from_PreOrder X).
     - split; transitivity y; tauto.
   Qed.
   HB.instance
-  Definition to_Setoid :=
+  Definition _ :=
     isSetoid.Build X Equivalence_leq_kernel. 
   HB.instance
-  Definition to_PO :=
+  Definition _ :=
     isPO.Build X (conj PreOrder_leq (fun _ _ => reflexivity _)).
 HB.end.
-
-(*
-Variable T: Type.
-Variable Tleq: relation T.
-Variable HTleq: PreOrder Tleq.
-HB.instance Definition T_PO := isPO_from_PreOrder.Build _ HTleq. 
-Check fun t: T => t ≡ t. 
-*)
 
 (** discrete partial order on top of a setoid *)
 Section discrete.
@@ -493,34 +483,34 @@ Section discrete.
   Next Obligation. split. typeclasses eauto. intuition. Qed.
 End discrete.
 (* TOFIX: why do we need to specify [unit_Setoid]? *)
-HB.instance Definition unit_PO := discrete_PO unit_Setoid. 
+HB.instance Definition _ := discrete_PO unit_Setoid. 
 
 (** propositions ordered by implication *)
-Lemma PO_axm_Prop: PO_axm impl. 
+Lemma po_Prop: po_axm impl. 
 Proof. split=>//. split; cbv; tauto. Qed.
-HB.instance Definition Prop_PO := isPO.Build Prop PO_axm_Prop.
+HB.instance Definition _ := isPO.Build Prop po_Prop.
 
 (** Booleans with [false ≦ true] *)
-Lemma PO_axm_bool: PO_axm Bool.le.
+Lemma po_bool: po_axm Bool.le.
 Proof.
   split. split. by case. move=>[][][]//=.
   case; case=>//=; intuition discriminate.
 Qed.
-HB.instance Definition bool_PO := isPO.Build bool PO_axm_bool.
+HB.instance Definition _ := isPO.Build bool po_bool.
 
 (** natural numbers *)
-Lemma PO_axm_nat: PO_axm Peano.le.
+Lemma po_nat: po_axm Peano.le.
 Proof.
   split. apply PeanoNat.Nat.le_preorder .
   split. now intros <-. intros. now apply Nat.le_antisymm.
 Qed.
-HB.instance Definition nat_PO := isPO.Build nat PO_axm_nat.
+HB.instance Definition _ := isPO.Build nat po_nat.
 
 (** (dependent) function space, ordered pointwise *)
 Section dprod.
  Variables (A: Type) (X: A -> PO.type).
  Definition leq_dprod: relation (forall a, X a) := fun f g => forall a, f a <= g a.
- Lemma PO_axm_dprod: PO_axm leq_dprod.
+ Lemma po_dprod: po_axm leq_dprod.
  Proof.
    split. split.
    - by move=>??. 
@@ -528,7 +518,7 @@ Section dprod.
    - cbn. rewrite /leq_dprod /eqv_dprod /=.
      setoid_rewrite eqv_of_leq. firstorder. 
  Qed.
- HB.instance Definition dprod_PO := isPO.Build (forall a, X a) PO_axm_dprod.
+ HB.instance Definition _ := isPO.Build (forall a, X a) po_dprod.
 End dprod.
 Arguments leq_dprod {_ _} _ _/. 
 Definition po_app {A} {X: A -> PO.type} (a: A) :=
@@ -542,13 +532,13 @@ Section sumprod.
  (** direct product *)
  Definition leq_prod: relation (X*Y) :=
    fun p q => fst p <= fst q /\ snd p <= snd q.
- Lemma PO_axm_prod: PO_axm leq_prod.
+ Lemma po_prod: po_axm leq_prod.
  Proof.
    split. constructor=>//.
    by move=>???[??][]; split; etransitivity; eassumption.
    unfold eqv, leq_prod=>??/=. rewrite 2!eqv_of_leq. tauto. 
  Qed.
- HB.instance Definition prod_PO := isPO.Build (prod X Y) PO_axm_prod.
+ HB.instance Definition _ := isPO.Build (prod X Y) po_prod.
  HB.instance Definition _ :=
    isMonotone.Build (prod X Y) X fst (fun p q pq => proj1 pq).
  HB.instance Definition _ :=
@@ -560,14 +550,14 @@ Section sumprod.
  Definition lex_prod X Y := prod X Y. 
  Definition leq_lex_prod: relation (X*Y) :=
    fun p q => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q).
- Lemma PO_axm_lex_prod: PO_axm leq_lex_prod.
+ Lemma po_lex_prod: po_axm leq_lex_prod.
  Proof.
    split. constructor=>//. unfold leq_lex_prod.
    move=>[x x'][y y'][z z']/=.
    intuition solve [transitivity y; auto|transitivity y'; auto].
    unfold eqv, leq_lex_prod=>??/=. rewrite 2!eqv_of_leq. intuition.
  Qed.
- HB.instance Definition lex_prod_PO := isPO.Build (lex_prod X Y) PO_axm_lex_prod.
+ HB.instance Definition _ := isPO.Build (lex_prod X Y) po_lex_prod.
 
  (** direct sum (called "parallel" by opposition with the sequential operation below) *)
  Definition leq_parallel_sum: relation (X+Y) :=
@@ -575,15 +565,15 @@ Section sumprod.
            | inl x,inl y | inr x,inr y => x<=y
            | _,_ => False
            end.
- Lemma PO_axm_parallel_sum: PO_axm leq_parallel_sum.
+ Lemma po_parallel_sum: po_axm leq_parallel_sum.
  Proof.
    split. constructor.
    by case=>//=.
    by case=>?; case=>y; case=>?//=; transitivity y.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
- HB.instance Definition parallel_sum_PO :=
-   isPO.Build (sum X Y) PO_axm_parallel_sum.
+ HB.instance Definition _ :=
+   isPO.Build (sum X Y) po_parallel_sum.
  HB.instance Definition _ :=
    isMonotone.Build X (sum X Y) inl (fun p q pq => pq).
  HB.instance Definition _ :=
@@ -597,14 +587,14 @@ Section sumprod.
            | inl _,inr _ => True
            | _,_ => False
            end.
- Lemma PO_axm_sequential_sum: PO_axm leq_sequential_sum.
+ Lemma po_sequential_sum: po_axm leq_sequential_sum.
  Proof.
    split. constructor.
    by case=>//=.
    by case=>?; case=>y; case=>?//=; transitivity y.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
- HB.instance Definition sequential_sum_PO := isPO.Build (sequential_sum X Y) PO_axm_sequential_sum.
+ HB.instance Definition _ := isPO.Build (sequential_sum X Y) po_sequential_sum.
 End sumprod. 
 Arguments leq_prod [_ _] _ _/.
 (* Arguments leq_lex_prod [_ _] _ _/. *)
@@ -620,19 +610,19 @@ Section optionlist.
     do it via sequential_sum and unit? *)
  Definition leq_option (p q: option X) :=
   match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
- Lemma PO_axm_option: PO_axm leq_option.
+ Lemma po_option: po_axm leq_option.
  Proof.
    split. constructor.
    by move=>[?|]//=. 
    by move=>[?|][y|][?|]??//=; transitivity y. 
    case=>[?|]; case=>[?|]; cbn; rewrite ?eqv_of_leq; tauto.
  Qed.
- HB.instance Definition option_PO := isPO.Build (option X) PO_axm_option.
+ HB.instance Definition _ := isPO.Build (option X) po_option.
 
  (** lists ordered lexicographically *)
  Fixpoint leq_list (h k: list X) :=
    match h,k with cons x h,cons y k => x<=y /\ leq_list h k | nil,_ => True | _,_ => False end.
- Lemma PO_axm_list: PO_axm leq_list.
+ Lemma po_list: po_axm leq_list.
  Proof.
    split. constructor.
    - by elim=>//.
@@ -640,7 +630,7 @@ Section optionlist.
    - elim=>[|x h IH][|y k]; cbn; try tauto.
      rewrite eqv_of_leq. setoid_rewrite IH. tauto.
  Qed.
- HB.instance Definition list_PO := isPO.Build (list X) PO_axm_list.
+ HB.instance Definition _ := isPO.Build (list X) po_list.
 End optionlist.
 Arguments leq_option [_] _ _/.
 Arguments leq_list [_] _ _/.
@@ -651,7 +641,7 @@ Section kernel.
  Definition leq_kern: relation A := fun x y => f x <= f y.
  (* local, just so that the definitions below typecheck *)
  #[local] HB.instance Definition _ := kern_Setoid X f.
- Lemma PO_axm_kern: PO_axm leq_kern.
+ Lemma po_kern: po_axm leq_kern.
  Proof.
    split.
    - rewrite /leq_kern.
@@ -660,12 +650,12 @@ Section kernel.
      -- by move=>?????; etransitivity; eauto.
    - cbn=>??. apply eqv_of_leq.
  Qed.
- Definition kern_PO := isPO.Build A PO_axm_kern.  
+ Definition kern_PO := isPO.Build A po_kern.  
 End kernel.
 Arguments leq_kern [_] _ _ _ _/.
 
 (** sub partial orders as a special case *)
-HB.instance Definition sig_PO (X: PO.type) (P: X -> Prop) :=
+HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   kern_PO X (@proj1_sig X P).
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   isMonotone.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
@@ -703,7 +693,7 @@ Program Canonical Structure POS :=
 Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing). 
 
 (* this instance of [types_comp_leq] needs to be explicited to be useful for setoid-rewriting *)
-#[export] Instance comp_leq {X Y Z: PO.type}:
+#[export] Instance po_comp_leq {X Y Z: PO.type}:
   Proper (leq ==> leq ==> leq) (@comp POS X Y Z) := types_comp_leq.
 (* idem for this one? *)
 #[export] Instance setoid_comp_leq {X: Setoid.type} {Y Z: PO.type}:
@@ -902,7 +892,8 @@ Proof.
   - elim: Px=>//Q QP IH y Hy. by apply Hy, IH. 
 Qed.
 
-(** greateast (post-)fixpoints of monotone functions, essentially Knaster-Tarski *)
+(** greateast (post-)fixpoints of monotone functions,
+    essentially Knaster-Tarski, also known as Lambek lemma in category theory *)
 Definition is_gfp (f: X -> X) := is_sup (fun x => x <= f x). 
 Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
 Proof.
