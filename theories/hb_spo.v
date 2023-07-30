@@ -271,7 +271,7 @@ End s.
 
 (** ** class *)
 
-Notation spo_ops l X := (forall k, l k -> gsup_op X k).
+Definition spo_ops (l: slevel) X := (forall k, l k -> gsup_op X k).
 HB.mixin Record isSPO (l: slevel) X of PO X := {
     #[canonical=no] SPO_ops: spo_ops l (X: PO.type)
 }.
@@ -459,80 +459,83 @@ End s.
 (** ** theory  *)
 
 
-(* TOTHINK: should we move this theory directly to GPOs ? *)
-
-Definition bot {l} {X: SPO.type l} {L: sE<<l}: X := gsup kE (has_slevel kE l L) tt.
-Definition cup {l} {X: SPO.type l} {L: sB<<l} (x y: X): X := gsup kB (has_slevel kB l L) (x,y).
-Definition csup {l} {X: SPO.type l} {L: sEC<<l} (P: X -> Prop) (C: chain P): X := gsup kC (has_slevel kC l L) (exist _ P C).
-Definition dsup {l} {X: SPO.type l} {L: sED<<l} (P: X -> Prop) (D: directed P): X := gsup kD (has_slevel kD l L) (exist _ P D). 
-Definition isup {l} {X: SPO.type l} {L: sA<<l} {I} (P: I -> Prop) (f: I -> X): X := gsup kA (has_slevel kA l L) (idx P f). 
-Notation sup P := (isup P (fun x => x)).
-
-Infix "⊔" := cup (left associativity, at level 50). 
+Section s.
+Context {l} {X: SPO.type l}.
+Definition bot {L: sE<<l}: X := gsup kE (has_slevel kE l L) tt.
+Definition cup {L: sB<<l} (x y: X): X := gsup kB (has_slevel kB l L) (x,y).
+Definition csup {L: sEC<<l} (P: X -> Prop) (C: chain P): X := gsup kC (has_slevel kC l L) (exist _ P C).
+Definition dsup {L: sED<<l} (P: X -> Prop) (D: directed P): X := gsup kD (has_slevel kD l L) (exist _ P D). 
+Definition isup {L: sA<<l} {I} (P: I -> Prop) (f: I -> X): X := gsup kA (has_slevel kA l L) (idx P f).
+End s.
 Arguments csup {_ _ _}. 
 Arguments dsup {_ _ _}. 
+Notation sup P := (isup P (fun x => x)).
+Infix "⊔" := cup (left associativity, at level 50). 
 
-Lemma is_sup_bot {l} {X: SPO.type l} {L: sE<<l}: @is_sup X bot bot.
+Section s.
+Context {l} {X: SPO.type l}.
+Lemma is_sup_bot {L: sE<<l}: @is_sup X bot bot.
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_cup {l} {X: SPO.type l} {L: sB<<l} (x y: X): is_sup (pair x y) (x ⊔ y).
+Lemma is_sup_cup {L: sB<<l} (x y: X): is_sup (pair x y) (x ⊔ y).
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_csup {l} {X: SPO.type l} {L: sEC<<l} (P: X -> Prop) C: is_sup P (csup P C).
+Lemma is_sup_csup {L: sEC<<l} (P: X -> Prop) C: is_sup P (csup P C).
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_dsup {l} {X: SPO.type l} {L: sED<<l} (P: X -> Prop) D: is_sup P (dsup P D).
+Lemma is_sup_dsup {L: sED<<l} (P: X -> Prop) D: is_sup P (dsup P D).
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_isup {l} {X: SPO.type l} {L: sA<<l} I P (f: I -> X): is_sup (image f P) (isup P f).
+Lemma is_sup_isup {L: sA<<l} I P (f: I -> X): is_sup (image f P) (isup P f).
 Proof. apply: gsup_spec. Qed.
-Lemma is_sup_sup {l} {X: SPO.type l} {L: sA<<l} (P: X -> Prop): is_sup P (sup P).
+Lemma is_sup_sup {L: sA<<l} (P: X -> Prop): is_sup P (sup P).
 Proof. rewrite -{1}(image_id P). apply: is_sup_isup. Qed.
 
-Lemma leq_csup {l} {X: SPO.type l} {L: sEC<<l} (P: X -> Prop) C x: P x -> x <= csup P C. 
+Lemma leq_csup {L: sEC<<l} (P: X -> Prop) C x: P x -> x <= csup P C. 
 Proof. move=>Px. by apply: leq_gsup. Qed.
-Lemma leq_dsup {l} {X: SPO.type l} {L: sED<<l} (P: X -> Prop) D x: P x -> x <= dsup P D. 
+Lemma leq_dsup {L: sED<<l} (P: X -> Prop) D x: P x -> x <= dsup P D. 
 Proof. move=>Px. by apply leq_gsup. Qed.
-Lemma leq_isup {l} {X: SPO.type l} {L: sA<<l} I (P: I -> Prop) (f: I -> X) i: P i -> f i <= isup P f. 
+Lemma leq_isup {L: sA<<l} I (P: I -> Prop) (f: I -> X) i: P i -> f i <= isup P f. 
 Proof. move=>Pi. by apply leq_gsup=>/=; auto. Qed.
-Lemma leq_sup {l} {X: SPO.type l} {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P. 
+Lemma leq_sup {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P. 
 Proof. apply: leq_isup. Qed.
 
-Lemma bot_spec {l} {X: SPO.type l} {L: sE<<l} (z: X): bot <= z <-> True.
+Lemma bot_spec {L: sE<<l} (z: X): bot <= z <-> True.
 Proof. rewrite is_sup_bot. cbn. firstorder. Qed.
-Lemma leq_bot {l} {X: SPO.type l} {L: sE<<l} (z: X): bot <= z.
+Lemma geq_bot {L: sE<<l} (z: X): bot <= z.
 Proof. by apply bot_spec. Qed.
-#[export] Hint Extern 0 (bot <= _)=> apply: leq_bot: core.
 
-Lemma cup_spec {l} {X: SPO.type l} {L: sB<<l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
+Lemma cup_spec {L: sB<<l} (x y z: X): x ⊔ y <= z <-> x <= z /\ y <= z.
 Proof. rewrite is_sup_cup /pair; intuition subst; auto. Qed.
 
-Lemma cupA {l} {X: SPO.type l} {L: sB<<l} (x y z: X): x ⊔ (y ⊔ z) ≡ x ⊔ y ⊔ z. 
+Lemma cupA {L: sB<<l} (x y z: X): x ⊔ (y ⊔ z) ≡ x ⊔ y ⊔ z. 
 Proof. apply: from_above=>t. rewrite 4!cup_spec. tauto. Qed.
 (* TODO: etc... *)
 
-Lemma csup_sup {l} {X: SPO.type l} {L: sA<<l} P C: csup P C ≡[X] sup P.
+Lemma csup_sup {L: sA<<l} P C: csup P C ≡[X] sup P.
 Proof. apply: supU. apply is_sup_csup. apply is_sup_sup. Qed.
-Lemma dsup_sup {l} {X: SPO.type l} {L: sA<<l} P D: dsup P D ≡[X] sup P.
+Lemma dsup_sup {L: sA<<l} P D: dsup P D ≡[X] sup P.
 Proof. apply: supU. apply is_sup_dsup. apply is_sup_sup. Qed.
 
-Lemma csup_bot {l} {X: SPO.type l} {L: sEC<<l} C: csup bot C ≡[X] bot.
+Lemma csup_bot {L: sEC<<l} C: csup bot C ≡[X] bot.
 Proof. apply: supU. apply is_sup_csup. apply is_sup_bot. Qed.
-Lemma dsup_bot {l} {X: SPO.type l} {L: sED<<l} D: dsup bot D ≡[X] bot.
+Lemma dsup_bot {L: sED<<l} D: dsup bot D ≡[X] bot.
 Proof. apply: supU. apply is_sup_dsup. apply is_sup_bot. Qed.
-Lemma sup_bot {l} {X: SPO.type l} {L: sA<<l}: sup bot ≡[X] bot.
+Lemma sup_bot {L: sA<<l}: sup bot ≡[X] bot.
 Proof. apply: supU. apply is_sup_sup. apply is_sup_bot. Qed.
 
-Lemma sup_pair {l} {X: SPO.type l} {L: sA<<l} (x y: X): sup (pair x y) ≡ x ⊔ y.
+Lemma sup_pair {L: sA<<l} (x y: X): sup (pair x y) ≡ x ⊔ y.
 Proof. apply: supU. apply is_sup_sup. apply is_sup_cup. Qed.
 
-Lemma directed_sup_closure {l} {X: SPO.type l} {L: sB<<l} (P: X -> Prop): directed (sup_closure P).
+Lemma directed_sup_closure {L: sB<<l} (P: X -> Prop): directed (sup_closure P).
 Proof.
   (* TODO: use in [sup_from_cup_and_dsup] *)
   move=>x y Px Py. exists (x⊔y); split. 2: by apply cup_spec.
   apply sc_sup with (pair x y). 2: apply is_sup_cup.
   by move=>z [->|->].
 Qed.
-Corollary sup_dsup {l} {X: SPO.type l} {L: sA<<l} (P: X -> Prop):
+Corollary sup_dsup {L: sA<<l} (P: X -> Prop):
   sup P ≡ dsup (sup_closure P) (directed_sup_closure (P:=P)).
 Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is_sup_sup. Qed.
 
+End s.
+#[export] Hint Extern 0 (bot <= _)=> apply: geq_bot: core.
 
 
 (** ** optimised constructor *)
@@ -586,4 +589,255 @@ Module sreduce.
     abstract_reduce _ f reducer (fun cup dsup => isup_from_sup (sup_from_cup_and_dsup cup dsup)). 
   End s.
 End sreduce.
+
+(** * partial orders with infima *)
+
+(** generic infimum operation, given any type [A] that can be interpreted as subsets of [X] *)
+Section s.
+Context (X: PO.type). 
+Definition gginf_op := @ggsup_op (dual X).
+Definition ginf_op := @gsup_op (dual X).
+Definition inf_op := @sup_op (dual X).
+
+(** helpers to deduce some infrema out of other ones *)
+Definition gginf_from: forall {A B} {Aset: A -> X -> Prop} {Bset: B -> X -> Prop},
+  gginf_op Aset -> forall f: B -> A, types_comp Aset f ≡ Bset -> gginf_op Bset
+  := @ggsup_from (dual X).
+Arguments gginf_from {_ _ _ _}.
+Definition inf_from_iinf: ginf_op kA -> inf_op := @sup_from_isup (dual X).
+Definition cinf_from_inf: inf_op -> ginf_op kC := @csup_from_sup (dual X).
+Definition dinf_from_inf: inf_op -> ginf_op kD := @dsup_from_sup (dual X).
+Definition cinf_from_dinf: ginf_op kD -> ginf_op kC := @csup_from_dsup (dual X).
+Definition top_from_cinf: ginf_op kC -> ginf_op kE := @bot_from_csup (dual X).
+Definition top_from_dinf: ginf_op kD -> ginf_op kE := @bot_from_dsup (dual X).
+Definition top_from_inf: inf_op -> ginf_op kE := @bot_from_sup (dual X).
+Definition cap_from_inf: inf_op -> ginf_op kB := @cup_from_sup (dual X). 
+Definition iinf_from_inf: inf_op -> ginf_op kA := @isup_from_sup (dual X).
+Definition inf_from_cap_and_dinf: ginf_op kB -> ginf_op kD -> inf_op := @sup_from_cup_and_dsup (dual X).
+End s.
+
+
+(** ** class *)
+
+Definition ipo_ops (l: slevel) X := (forall k, l k -> ginf_op X k).
+HB.mixin Record isIPO (l: slevel) X of PO X := {
+    #[canonical=no] IPO_ops: ipo_ops l (X: PO.type)
+}.
+HB.structure Definition IPO (l: slevel) := { X of isIPO l X & }.
+
+(** ** duality  *)
+HB.instance Definition _ l (X: IPO.type l) := isSPO.Build l (dual X) (@IPO_ops l X).
+HB.instance Definition _ l (X: SPO.type l) := isIPO.Build l (dual X) (@SPO_ops l X).
+
+Ltac dual1 t :=
+  match type of t with
+  | forall l, forall X: SPO.type l, _ =>
+      match goal with
+      | X: IPO.type ?l |- _ => apply: (t _ (dual X))
+      end
+  | forall l, forall X: IPO.type l, _ =>
+      match goal with
+      | X: SPO.type ?l |- _ => apply: (t _ (dual X))
+      end
+  end.
+Ltac dual t ::= dual1 t || dual0 t.
+
+Section s.
+Context {l} {X: IPO.type l}.
+Definition ginf: forall k kl, args k (dual X) -> X := @gsup l (dual X). 
+Lemma ginf_spec {k kl} (x: args k (dual X)): is_inf (X:=X) (setof k x) (ginf k kl x).
+Proof. dual @gsup_spec. Qed.
+Lemma geq_ginf k kl (x: args k (dual X)) (y: X): setof k x y -> ginf k kl x <= y.
+Proof. dual @leq_gsup. Qed.
+End s.
+
+
+(** ** instances *)
+
+(** unit trivial lattice *)
+Program Definition ipo_unit: ipo_ops sA unit := fun k _ => exist _ (fun _ => tt) _.
+Next Obligation.
+  have E: forall P: unit -> Prop, (forall x, P x) <-> P tt by move=>P; split=>//?[]. 
+  case=>/=. rewrite E/=. cbn. tauto.
+Qed.
+HB.instance Definition _ := isIPO.Build sA unit ipo_unit. 
+
+(** inf-semilattice of Booleans
+    (infinite infima are not available constructively) *)
+Program Definition ipo_bool: ipo_ops sF bool := 
+  fun k => match k with
+        | kE => fun _ => exist _ (fun _ => true) _
+        | kB => fun _ => exist _ (fun '(x,y) => andb x y) _
+        | kC | kD | kA  => sEmpty_rect _
+        end.
+Next Obligation. by case. Qed.
+Next Obligation. 
+  move=>c/=. rewrite forall_pair. cbn.
+  rewrite !Bool.le_implb Bool.implb_andb_distrib_r Bool.andb_true_iff//.
+Qed.
+HB.instance Definition _ := isSPO.Build sF bool spo_bool. 
+
+(** complete inf-semilattice of Propositions
+    (infinite suprema are available via impredicativity) *)
+Definition ipo_Prop: ipo_ops sA Prop.
+  unshelve refine (
+  let iinf: ginf_op Prop kA := @exist ((sigset Prop)->Prop) _ (fun '(idx P f) => forall i, P i -> f i) _ in
+  let inf:= inf_from_iinf iinf in
+  fun k _ => match k return ginf_op Prop k with
+        | kE => exist _ (fun _ => True) _
+        | kB => exist _ (fun '(p,q) => p/\q) _
+        | kC => cinf_from_inf inf
+        | kD => dinf_from_inf inf
+        | kA => iinf
+          end).
+  abstract by move=>[I P f]; cbv; firstorder subst; apply H; eauto. 
+  abstract by clear; cbv; firstorder. 
+  abstract by cbv; clear=>[][]; firstorder subst; auto; eapply H; eauto.
+Defined.
+HB.instance Definition _ := isSPO.Build sA Prop spo_Prop. 
+
+(** IPOs on (dependent) function space *)
+Definition ipo_dprod {A l} {X: A -> IPO.type l}: ipo_ops l (forall a, X a) :=
+  @spo_dprod A l (fun a => dual (X a)). 
+HB.instance Definition _ A l (X: A -> IPO.type l) :=
+  isIPO.Build l (forall a, X a) (@ipo_dprod A l X). 
+
+(** direct product of IPOs *)
+Definition ipo_prod {l} {X Y: IPO.type l}: ipo_ops l (prod X Y) :=
+  @spo_prod l (dual X) (dual Y). 
+ HB.instance Definition _ l (X Y: IPO.type l) := isIPO.Build l (prod X Y) (@ipo_prod l X Y). 
+
+(* TODO: option (with None above or below) *)
+
+(** sub-IPOs *)
+Section sub.
+ Context {l} {X: IPO.type l}.
+ Definition inf_closed' (P: X -> Prop) :=
+   forall k: K, forall kl: l k, forall x: args k (dual X), setof k x <= P ->  P (ginf k kl x).
+ Lemma inf_closed_inf_closed': inf_closed <= inf_closed'.
+ Proof. apply (@sup_closed_sup_closed' _ (dual X)). Qed.
+ #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed' := @sup_closed'_eqv _ (dual X).
+ Definition ipo_sig: forall P, inf_closed' P -> ipo_ops l (sig P) := @spo_sig l (dual X). 
+ Definition sig_ipo P Pinf := IPO.pack_ (isIPO.Build l (sig P) (ipo_sig Pinf)). 
+End sub.
+Arguments sig_ipo [_ _ _] _. 
+
+(** IPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
+Section c.
+ Context {A: Type} {l} (X: IPO.type l).
+ Variable r: A->X.               (* retraction *)
+ Variable i: X->A.               (* section *)
+ Hypothesis ri: types_comp r i ≡ types_id.
+ #[local] HB.instance Definition _ := kern_Setoid X r.
+ #[local] HB.instance Definition _ := kern_PO X r.
+ (* #[local] HB.instance Definition _ := isExtensional.Build _ _ r (fun x y xy => xy).  *)
+ (* #[local] HB.instance Definition _ := isMonotone.Build _ _ r (fun x y xy => xy).  *)
+ Definition ipo_retract: ipo_ops l A := @spo_retract A l (dual X) r i ri.  
+ Definition retract_ipo := IPO.pack_ (isIPO.Build l A ipo_retract). 
+End c.
+Arguments retract_ipo [_ _] _ [_ _]. 
+
+(** altogether, we get general sub-IPOs  *)
+Section c.
+ Context {A: Type} {l} {X: IPO.type l} (P: X -> Prop).
+ Variable r: A->sig P.
+ Variable i: sig P->A.
+ Hypothesis ri: types_comp r i ≡ types_id. 
+ Hypothesis Pinf: inf_closed' P.
+ (* TOTHINK: how to present this in a useful way? *)
+ Definition sub_ipo := retract_ipo (sig_ipo Pinf) ri. 
+End c. 
+
+(** the IPO of extensional functions *)
+Section s.
+ Context {X: Setoid.type} {l} {Y: IPO.type l}.
+ Lemma inf_closed'_extensional: inf_closed' (Proper (@eqv X ==> @eqv Y)).
+ Proof. apply (@sup_closed'_extensional X l (dual Y)). Qed.
+ (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
+ #[local] HB.instance Definition _ := isIPO.Build l (sig _) (ipo_sig inf_closed'_extensional).
+ HB.instance Definition _ := isIPO.Build l (X-eqv->Y) (ipo_retract setoid_morphism_as_sig). 
+End s.
+
+(** the IPO of monotone functions *)
+Section s.
+ Context {X: PO.type} {l} {Y: IPO.type l}.
+ Lemma inf_closed'_monotone: inf_closed' (Proper (@leq X ==> @leq Y)).
+ Proof.
+   rewrite Proper_flip.
+   apply (@sup_closed'_monotone (dual X) l (dual Y)).
+ Qed.
+ #[local] HB.instance Definition _ := isIPO.Build l (sig _) (ipo_sig inf_closed'_monotone).
+ HB.instance Definition _ := isIPO.Build l (X-mon->Y) (ipo_retract po_morphism_as_sig). 
+End s.
+
+(** ** theory *)
+
+Section s.
+Context {l} {X: IPO.type l}.
+Definition top {L}: X := @bot l (dual X) L. 
+Definition cap {L}: X -> X -> X := @cup l (dual X) L.
+Definition cinf {L}: forall (P: X -> Prop) (C: chain (X:=dual X) P), X := @csup l (dual X) L.
+Definition dinf {L}: forall (P: X -> Prop) (C: codirected P), X := @dsup l (dual X) L.
+Definition iinf {L} {I}: forall (P: I -> Prop) (f: I -> X), X := @isup l (dual X) L I.
+End s.
+Arguments cinf {_ _ _}. 
+Arguments dinf {_ _ _}. 
+Notation inf P := (iinf P types_id). 
+Infix "⊓" := cap (left associativity, at level 50). 
+
+Section s.
+Context {l} {X: IPO.type l}.
+
+Lemma is_inf_top {L: sE<<l}: @is_inf X bot top.
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_cap {L: sB<<l} (x y: X): is_inf (pair x y) (x ⊓ y).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_cinf {L: sEC<<l} (P: X -> Prop) C: is_inf P (cinf P C).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_dinf {L: sED<<l} (P: X -> Prop) D: is_inf P (dinf P D).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_iinf {L: sA<<l} I P (f: I -> X): is_inf (image f P) (iinf P f).
+Proof. apply: ginf_spec. Qed.
+Lemma is_inf_inf {L: sA<<l} (P: X -> Prop): is_inf P (inf P).
+Proof. dual @is_sup_sup. Qed.
+
+Lemma geq_cinf {L: sEC<<l}: forall (P: X -> Prop) C x, P x -> cinf P C <= x. 
+Proof. dual @leq_csup. Qed.
+Lemma geq_dinf {L: sED<<l}: forall (P: X -> Prop) D x, P x -> dinf P D <= x. 
+Proof. dual @leq_dsup. Qed.
+Lemma geq_iinf {L: sA<<l}: forall I (P: I -> Prop) (f: I -> X) i, P i -> iinf P f <= f i. 
+Proof. dual @leq_isup. Qed.
+Lemma geq_inf {L: sA<<l}: forall (P: X -> Prop) x, P x -> inf P <= x. 
+Proof. dual @leq_sup. Qed.
+
+Lemma top_spec {L: sE<<l} (z: X): z <= top <-> True.
+Proof. dual @bot_spec. Qed.
+Lemma leq_top {L: sE<<l} (z: X): z <= top.
+Proof. dual @geq_bot. Qed.
+
+Lemma cap_spec {L: sB<<l} (x y z: X): z <= x ⊓ y <-> z <= x /\ z <= y.
+Proof. dual @cup_spec. Qed.
+
+Lemma capA {L: sB<<l} (x y z: X): x ⊓ (y ⊓ z) ≡ x ⊓ y ⊓ z. 
+Proof. dual @cupA. Qed.
+
+Lemma cinf_inf {L: sA<<l} P C: cinf P C ≡[X] inf P.
+Proof. dual @csup_sup. Qed.
+Lemma dinf_inf {L: sA<<l} P D: dinf P D ≡[X] inf P.
+Proof. dual @dsup_sup. Qed.
+
+Lemma cinf_bot {L: sEC<<l} C: cinf bot C ≡[X] top.
+Proof. dual @csup_bot. Qed.
+Lemma dinf_bot {L: sED<<l} D: dinf bot D ≡[X] top.
+Proof. dual @dsup_bot. Qed.
+Lemma inf_bot {L: sA<<l}: inf bot ≡[X] top.
+Proof. dual @sup_bot. Qed.
+
+Lemma inf_pair {L: sA<<l} (x y: X): inf (pair x y) ≡ x ⊓ y.
+Proof. dual @sup_pair. Qed.
+
+End s.
+
+(* TODO: etc *)
+
 
