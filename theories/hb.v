@@ -76,6 +76,15 @@ Program Definition setoid_dualf {X Y} (f: X -eqv-> Y)
   := isExtensional.Build (dual X) (dual Y) (dualf f) extensional.
 HB.instance Definition _ {X Y} f := @setoid_dualf X Y f.
 
+Ltac dual0 t :=
+  match type of t with
+  | forall X: ?T, _ =>
+      match goal with
+      | X: T |- _ => apply: (t (dual X))
+      end
+  end.
+Ltac dual t := dual0 t.
+
 (** ** instances *)
 
 (** discrete setoids, for types where [eq] is fine *)
@@ -922,36 +931,34 @@ Context {X: PO.type}.
 Implicit Types x y z: X. 
 Implicit Types P Q: X -> Prop.
 
-(* TODO: Ltac dual *)
-
 Lemma leq_from_below x y: (forall z, z <= x -> z <= y) -> x <= y.
-Proof. apply (leq_from_above (y: dual X)). Qed.
+Proof. dual @leq_from_above. Qed.
 Lemma from_below x y: (forall z, z <= x <-> z <= y) -> x ≡ y.
-Proof. apply (from_above (x: dual X)). Qed.
+Proof. dual @from_above. Qed.
 
 Definition cocovered P := covered (P: dual X -> Prop).
 Definition cobicovered P Q := bicovered (P: dual X -> Prop) Q.
 
 Definition is_inf P x := forall z, z <= x <-> forall y, P y -> z <= y.
 Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
-Proof. apply: (leq_is_sup (x:=x: dual X)). Qed.
+Proof. dual @leq_is_sup. Qed.
 Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
-Proof. apply: (@is_sup_leq _ (P: dual X -> Prop)). Qed.
+Proof. dual @is_sup_leq. Qed.
 Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
-Proof. apply: (@is_sup_eqv _ (P: dual X -> Prop)). Qed.
+Proof. dual @is_sup_eqv. Qed.
 Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
-Proof. apply (supU (P:=P: dual X -> Prop)). Qed.
+Proof. dual @supU. Qed.
 
 Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
 Lemma inf_closed_impl (P Q: X -> Prop): Proper (leq ==> leq) P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).
-Proof. apply (sup_closed_impl (P:=P: dual X->Prop)). Qed.
+Proof. dual @sup_closed_impl. Qed.
 
 Lemma inf_closed_leq (f: X -mon-> X): inf_closed (fun x => f x <= x).
 Proof. exact (sup_closed_leq (dualf f)). Qed.
 
 Definition inf_closure P: X -> Prop := sup_closure (P: dual X -> Prop).
 Lemma is_inf_closure P: is_inf (inf_closure P) ≡ is_inf P.
-Proof. exact (is_sup_closure (P: dual X -> Prop)). Qed.
+Proof. dual @is_sup_closure. Qed.
 
 Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
 Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
@@ -967,10 +974,7 @@ Lemma chain_cochain P: chain P ≡ chain (P: dual X -> Prop).
 Proof. by apply: antisym=>H x y Px Py; rewrite or_comm; apply H. Qed.
 
 Lemma chain_codirected P: chain P -> codirected P.
-Proof. 
-  rewrite chain_cochain. 
-  apply (chain_directed (P:=P: dual X -> Prop)).
-Qed. 
+Proof. rewrite chain_cochain. dual @chain_directed. Qed. 
 
 End dual_props.
 
