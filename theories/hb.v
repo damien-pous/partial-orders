@@ -19,7 +19,7 @@ Notation types_comp := preliminaries.comp.
 
 (** ** class *)
 
-HB.mixin Record isSetoid X := {
+HB.mixin Record isSetoid (X: Type) := {
   #[canonical=no] eqv: relation X;
   #[canonical=no] Equivalence_eqv: Equivalence eqv
 }.
@@ -233,7 +233,7 @@ Check forall X: Setoid.type, forall f: X -eqv-> prod nat X, f ≡ f.
 (*   move=>[a a'] [b b']/=. cbn. *)
 (* Abort. *)
 (* Check forall (x: nat * forall b: bool, nat + (b=true)), x ≡ x. *)
-Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ f ° const x ≡[X->X] const (g y) /\ const x ≡[X->X] const y.
+Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ types_comp f (const x) ≡[X->X] const (g y) /\ const x ≡[X->X] const y.
 Proof.
   intros X f g x y fg xy. repeat split.
   rewrite xy. by apply fg.
@@ -255,7 +255,7 @@ Abort.
   }.
 Arguments id {_ _}.
 Arguments comp {_ _ _ _}.
-Notation "g ° f" := (comp g f).
+Notation "g ° f" := (comp g f) (at level 20).
 
 (** the category of setoids and extensional functions *)
 Program Canonical Structure SETOIDS :=
@@ -536,7 +536,7 @@ Definition po_app {A} {X: A -> PO.type} (a: A) :=
 HB.instance Definition _ A X a := @po_app A X a.
 
 (** products and sums of partial orders *)
-Section sumproducts.
+Section sumprod.
  Variables X Y: PO.type.
 
  (** direct product *)
@@ -555,15 +555,17 @@ Section sumproducts.
    isMonotone.Build (prod X Y) Y snd (fun p q pq => proj2 pq).
 
  (** lexicographic product *)
- Definition lex_prod := prod.
+ (** we use an alias for product to guide structure inferrence *)
+ (** we need to eta expand this alias otherwise we run into universe problems with SPOs... *)
+ Definition lex_prod X Y := prod X Y. 
  Definition leq_lex_prod: relation (X*Y) :=
    fun p q => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q).
  Lemma PO_axm_lex_prod: PO_axm leq_lex_prod.
  Proof.
-   split. constructor=>//. unfold leq_lex_prod. 
+   split. constructor=>//. unfold leq_lex_prod.
    move=>[x x'][y y'][z z']/=.
    intuition solve [transitivity y; auto|transitivity y'; auto].
-   unfold eqv, leq_lex_prod=>??/=. rewrite 2!eqv_of_leq. intuition. 
+   unfold eqv, leq_lex_prod=>??/=. rewrite 2!eqv_of_leq. intuition.
  Qed.
  HB.instance Definition lex_prod_PO := isPO.Build (lex_prod X Y) PO_axm_lex_prod.
 
@@ -603,9 +605,9 @@ Section sumproducts.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
  HB.instance Definition sequential_sum_PO := isPO.Build (sequential_sum X Y) PO_axm_sequential_sum.
-End sumproducts. 
+End sumprod. 
 Arguments leq_prod [_ _] _ _/.
-Arguments leq_lex_prod [_ _] _ _/.
+(* Arguments leq_lex_prod [_ _] _ _/. *)
 Arguments leq_parallel_sum [_ _] _ _/.
 Arguments leq_sequential_sum [_ _] _ _/.
   

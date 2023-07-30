@@ -44,7 +44,6 @@ Proof.
 Qed.
 HB.instance Definition K_PO := isPO.Build K PO_axm_K. 
 
-(* Definition sigset X := sigT (fun I => (I -> Prop) * (I -> X))%type. *)
 Inductive sigset (X: Type) := idx: forall I: Type, (I->Prop) -> (I->X) -> sigset X.
 Definition sig2set {X}: sigset X -> (X -> Prop) := fun '(idx P f) => image f P.
 Definition set2sig {X}: (X -> Prop) -> sigset X := fun P => idx P (fun x => x).
@@ -62,7 +61,7 @@ Definition args k (X: PO.type): Type :=
 Definition setof {X: PO.type} k: args k X -> X -> Prop :=
   match k with
   | kE => fun _ => empty
-  | kB => fun p => pair (fst p) (snd p)
+  | kB => fun '(x,y) => pair x y
   | kC => @proj1_sig _ _
   | kD => @proj1_sig _ _
   | kA => @sig2set X
@@ -85,7 +84,7 @@ Section map_args.
  Definition map_args k: args k X -> args k Y :=
    match k return args k X -> args k Y with
    | kE => types_id
-   | kB => fun '(x,y) => (f x,f y)
+   | kB => fun '(x,y) => (f x, f y)
    | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
    | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
    | kA => fun '(idx P g) => idx P (types_comp f g)
@@ -220,20 +219,59 @@ Ltac solve_lower :=
 #[export] Hint Extern 0 (lower _ _) => solve_lower: typeclass_instances.
 
 
+(** generic supremum operation, given any type [A] that can be interpreted as subsets of [X] *)
+Section s.
+Context (X: PO.type). 
+Definition ggsup_op {A} (setof: A -> X -> Prop) :=
+  {sup: A -> X | forall a, is_sup (setof a) (sup a)}.
+Definition gsup_op k := (ggsup_op (setof k)).
+Definition sup_op := (ggsup_op types_id).
+
+(** helpers to deduce some suprema out of other ones *)
+Definition ggsup_from {A B} {Aset: A -> X -> Prop} {Bset: B -> X -> Prop}:
+  ggsup_op Aset -> forall f: B -> A, types_comp Aset f ≡ Bset -> ggsup_op Bset.
+  move=>sup f Hf. eexists (fun b => proj1_sig sup (f b)).
+  abstract by move=>b; rewrite -(Hf b); apply (proj2_sig sup).
+Defined.
+Arguments ggsup_from {_ _ _ _}.
+Program Definition sup_from_isup (isup: gsup_op kA): sup_op := ggsup_from isup set2sig set2sig2set.
+Program Definition csup_from_sup (sup: sup_op): gsup_op kC := ggsup_from sup (@proj1_sig _ _) _.
+Program Definition dsup_from_sup (sup: sup_op): gsup_op kD := ggsup_from sup (@proj1_sig _ _) _.
+Program Definition csup_from_dsup (dsup: gsup_op kD): gsup_op kC :=
+  ggsup_from dsup (fun '(exist _ P C) => exist _ P (chain_directed C)) _.
+Next Obligation. by move=>[]. Qed.
+Program Definition bot_from_csup (csup: gsup_op kC): gsup_op kE :=
+  ggsup_from csup (fun _: unit => exist _ _ chain_empty) _.
+Program Definition bot_from_dsup (dsup: gsup_op kD): gsup_op kE :=
+  ggsup_from dsup (fun _: unit => exist _ _ directed_empty) _.
+Program Definition bot_from_sup (sup: sup_op): gsup_op kE :=
+  ggsup_from sup (fun _: unit => empty) _.
+Program Definition cup_from_sup (sup: sup_op): gsup_op kB :=
+  ggsup_from sup (fun '(x,y) => pair x y) _.
+Next Obligation. by move=>[]. Qed.
+(* TOTHINK: strangely, using the same pattern to obtain the lemma below universe-conflicts with [sup_from_isup]  *)
+(* Program Definition isup_from_sup (sup: sup_op): gsup_op kA := ggsup_from sup sig2set _. *)
+(* fortunately, unfolding its resulting def leaves the universes untouched *)
+(* Print Universes Subgraph (sigset.u0 sig2set.u0 set2sig.u0). *)
+Definition isup_from_sup (sup: sup_op): gsup_op kA.
+  exists (fun P => proj1_sig sup (sig2set P)).
+  abstract by move=>?; apply (proj2_sig sup).
+Defined.
+(* Print Universes Subgraph (sigset.u0 sig2set.u0 set2sig.u0). *)
+Definition sup_from_cup_and_dsup: gsup_op kB -> gsup_op kD -> sup_op.
+  move=>cup dsup.
+  unshelve eexists (fun P => proj1_sig dsup (exist _ (sup_closure P) _)).
+  abstract (move=>x y Px Py; exists (proj1_sig cup (x,y)); split; [
+                (apply: sc_sup; [|apply (proj2_sig cup)])=>_[->|->]// |
+                move: (proj1 (proj2_sig cup (x,y) (proj1_sig cup (x,y))))=>H; split; apply H=>//=; rewrite /pair; auto ]).
+  abstract (move=>P; apply is_sup_closure, (proj2_sig dsup)).
+Defined.
+End s.
+
+
 (** ** class *)
 
-Definition gsup_ops (X: PO.type) k := sig (fun sup: args k X -> X => forall x, is_sup (setof k x) (sup x)).
-Definition ginf_ops (X: PO.type) := gsup_ops (dual X).
-
-(* raises universe problems afterwards *)
-(* Definition gsup_C_of_A X (sup: gsup_ops X kA): gsup_ops X kC. *)
-(*   exists (fun '(exist _ P C) => proj1_sig sup (set2sig P)). *)
-(*   abstract by move=>[P?]/=; rewrite -{1}(set2sig2set P); *)
-(*                    apply (proj2_sig sup).  *)
-(* Abort. *)
-
-Notation SPO_ops l X := (forall k, l k -> gsup_ops X k).
-
+Notation SPO_ops l X := (forall k, l k -> gsup_op X k).
 HB.mixin Record isSPO (l: slevel) X of PO X := {
     #[canonical=no] specified_gsup: SPO_ops l (X: PO.type)
 }.
@@ -247,9 +285,6 @@ Definition gsup_spec {l} {X: SPO.type l} {k kl}:
 Lemma leq_gsup {l} {X: SPO.type l} k kl x (y: X):
   setof k x y -> y <= gsup k kl x.
 Proof. apply leq_is_sup, gsup_spec. Qed.
-
-Lemma sEmpty_rect {P: Type}: sEmpty -> P.
-Proof. by []. Qed.
 
 (** ** instances *)
 
@@ -267,7 +302,7 @@ Program Definition SPO_ops_bool: SPO_ops sF bool :=
   fun k => match k with
         | kE => fun _ => exist _ (fun _ => false) _
         | kB => fun _ => exist _ (fun '(x,y) => orb x y) _
-        | kC | kD | kA  => sEmpty_rect
+        | kC | kD | kA  => sEmpty_rect _
         end.
 Next Obligation. by case. Qed.
 Next Obligation. 
@@ -279,30 +314,27 @@ HB.instance Definition _ := isSPO.Build sF bool SPO_ops_bool.
 (** complete sup-semilattice of Propositions
     (infinite suprema are available via impredicativity) *)
 Definition SPO_ops_Prop: SPO_ops sA Prop.
-  refine (
-  (* let gsup_kA: gsup_ops kA Prop := *)
-  (*   exist _ (fun '(idx P f) => exists2 i, P i & f i) _ *)
-  (* in *)
-  fun k _ => match k return gsup_ops Prop k with
+  unshelve refine (
+  let isup: gsup_op Prop kA := exist _ (fun '(idx P f) => exists2 i, P i & f i) _ in
+  let sup:= sup_from_isup isup in
+  (* let sup: sup_op Prop := exist _ (fun P => exists2 p, P p & p) _ in *)
+  (* let isup:= isup_from_sup sup in *)
+  fun k _ => match k return gsup_op Prop k with
         | kE => exist _ (fun _ => False) _
         | kB => exist _ (fun '(p,q) => p\/q) _
-        | kD => exist _ (fun '(exist _ P _) => exists2 p, P p & p) _
-        | kC => exist _ (fun '(exist _ P _) => exists2 p, P p & p) _
-        | kA => exist _ (fun '(idx P f) => exists2 i, P i & f i) _
-        (* | kC => gsup_kD_of_kA gsup_kA *)
-        (* | kD => gsup_kD_of_kA gsup_kA *)
-        (* | kA => gsup_kA *)
+        | kC => csup_from_sup sup
+        | kD => dsup_from_sup sup
+        | kA => isup
         end).
-  all: abstract by move=>[]; cbv; firstorder subst; eauto. 
+  all: abstract by try clear isup sup; move=>[]; cbv; firstorder subst; eauto.
 Defined.
 HB.instance Definition _ := isSPO.Build sA Prop SPO_ops_Prop. 
 
 (** SPOs on (dependent) function space *)
 Program Definition SPO_ops_dprod {A l} {X: A -> SPO.type l}: SPO_ops l (forall a, X a) :=
-  fun k kl => exist _ (fun F a => gsup k kl (map_args (app a) k F)) _
-.
+  fun k kl => exist _ (fun F a => gsup k kl (map_args (app a) k F)) _.
 Next Obligation.
-  apply dprod_sup=>a. eapply Proper_is_sup.
+  apply dprod_sup=>a'. eapply Proper_is_sup.
   2: reflexivity. 2: apply: gsup_spec.
   apply eqv_covered. by rewrite setof_map_args. 
 Qed.
@@ -436,9 +468,6 @@ Definition dsup {l} {X: SPO.type l} {L: sED<<l} (P: X -> Prop) (D: directed P): 
 Definition isup {l} {X: SPO.type l} {L: sA<<l} {I} (P: I -> Prop) (f: I -> X): X := gsup kA (has_slevel kA l L) (idx P f). 
 Notation sup P := (isup P (fun x => x)).
 
-(* ARGH *)
-Check fun X: SPO.type sA => sup (fun _ => False).
-
 Infix "⊔" := cup (left associativity, at level 50). 
 Arguments csup {_ _ _}. 
 Arguments dsup {_ _ _}. 
@@ -466,7 +495,7 @@ Lemma leq_sup {l} {X: SPO.type l} {L: sA<<l} (P: X -> Prop) x: P x -> x <= sup P
 Proof. apply: leq_isup. Qed.
 
 Lemma bot_spec {l} {X: SPO.type l} {L: sE<<l} (z: X): bot <= z <-> True.
-Proof. rewrite is_sup_bot. firstorder. Qed.
+Proof. rewrite is_sup_bot. cbn. firstorder. Qed.
 Lemma leq_bot {l} {X: SPO.type l} {L: sE<<l} (z: X): bot <= z.
 Proof. by apply bot_spec. Qed.
 #[export] Hint Extern 0 (bot <= _)=> apply: leq_bot: core.
@@ -495,7 +524,7 @@ Proof. apply: supU. apply is_sup_sup. apply is_sup_cup. Qed.
 
 Lemma directed_sup_closure {l} {X: SPO.type l} {L: sB<<l} (P: X -> Prop): directed (sup_closure P).
 Proof.
-  (* TODO: use in [reducer.reduce] *)
+  (* TODO: use in [sup_from_cup_and_dsup] *)
   move=>x y Px Py. exists (x⊔y); split. 2: by apply cup_spec.
   apply sc_sup with (pair x y). 2: apply is_sup_cup.
   by move=>z [->|->].
@@ -507,10 +536,7 @@ Proof. rewrite dsup_sup. apply: supU. apply is_sup_sup. apply is_sup_closure, is
 
 
 (** ** optimised constructor *)
-
-(* need to work-out universe constraints *)
-(* Print Universes Subgraph (prod.u0 set2sig.u0 args.u0 ). *)
-
+(** TOTHINK: is it really useful?  *)
 Module sreduce.
   Section s.
   Variable T: K -> Type.
@@ -546,25 +572,17 @@ Module sreduce.
   End s.
   Section s.
   Variable X: PO.type.
-  Definition reducer: forall h k: K, h <= k -> gsup_ops X k -> gsup_ops X h.
-    case; case=>//_ [v H].
-    - exists (fun _ => v (exist _ empty chain_empty)). by move=>/=_; apply H. 
-    - exists (fun _ => v (exist _ empty directed_empty)). by move=>/=_; apply H. 
-    - exists (fun _ => v (set2sig empty)). by move=>/=_; rewrite -{1}(set2sig2set empty); apply H. 
-    - exists (fun '(x,y) => v (set2sig (pair x y))). by move=>[??]/=; rewrite -{1}(set2sig2set (pair _ _)); apply H. 
-    - exists (fun '(exist _ P C) => v (exist _ P (chain_directed C))). by move=>/=[??]; apply H. 
-    - exists (fun '(exist _ P C) => v (set2sig P)). by move=>[P?]/=; rewrite -{1}(set2sig2set P); apply H. 
-    - exists (fun '(exist _ P C) => v (set2sig P)). by move=>[P?]/=; rewrite -{1}(set2sig2set P); apply H. 
+  Definition reducer: forall h k: K, h <= k -> gsup_op X k -> gsup_op X h.
+    case; case=>//_ s.
+    - by apply bot_from_csup.
+    - by apply bot_from_dsup.
+    - by apply bot_from_sup, sup_from_isup.
+    - by apply cup_from_sup, sup_from_isup.
+    - by apply csup_from_dsup.
+    - by apply csup_from_sup, sup_from_isup.
+    - by apply dsup_from_sup, sup_from_isup.
   Defined.
-  Definition reducer': gsup_ops X kB -> gsup_ops X kD -> gsup_ops X kA.
-    move=>[cup cup_spec] [dsup dsup_spec].
-    unshelve eexists (fun P => dsup (exist _ (sup_closure (sig2set P)) _)).
-    (* TOTHINK: how to perform such proofs in a nice conext? *)
-    abstract (move=>x y Px Py; exists (cup (x,y)); split; [
-    (apply: sc_sup; [|apply cup_spec])=>_[->|->]// |
-    move: (proj1 (cup_spec (x,y) (cup (x,y))))=>H; split; apply H=>//=; rewrite /pair; auto ]).
-    abstract (move=>P; apply is_sup_closure, dsup_spec).
-  Defined.
-  Definition reduce f := abstract_reduce _ f reducer reducer'. 
+  Definition reduce f :=
+    abstract_reduce _ f reducer (fun cup dsup => isup_from_sup (sup_from_cup_and_dsup cup dsup)). 
   End s.
 End sreduce.

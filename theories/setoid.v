@@ -1,6 +1,7 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Export Setoid Morphisms Basics.
 Require Export preliminaries.
+Infix "°" := comp (at level 20).
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

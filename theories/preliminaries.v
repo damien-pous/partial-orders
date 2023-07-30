@@ -5,7 +5,7 @@ Set Implicit Arguments.
 
 Definition comp {X Y Z} (f: Y -> Z) (g: X -> Y): X -> Z := fun x => f (g x).
 Arguments comp {_ _ _} _ _ _/. 
-Infix "°" := comp (at level 20).
+#[local] Infix "°" := comp (at level 20).
 Definition const {X Y} y: X -> Y := fun _ => y. 
 Arguments const {_ _} _ _/.
 
