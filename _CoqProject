@@ -4,7 +4,7 @@
 -R theories/ PartialOrders
 theories/preliminaries.v
 theories/hb.v
-theories/hb_chain.v
+theories/hb_chain_old.v
 theories/hb_spo.v
 theories/setoid.v
 theories/po.v
