@@ -1,24 +1,27 @@
     Time |  Peak Mem | File Name              
 ----------------------------------------------
-0m24.59s | 535732 ko | Total Time / Peak Mem  
+0m36.26s | 522592 ko | Total Time / Peak Mem  
 ----------------------------------------------
-0m07.25s | 535732 ko | attic/orders.vo        
-0m03.88s | 425796 ko | attic/split.vo         
-0m03.10s | 381036 ko | attic/split_tc.vo      
-0m02.86s | 385140 ko | attic/alone.vo         
-0m02.46s | 365980 ko | chain.vo               
-0m02.12s | 342648 ko | spo.vo                 
-0m00.82s | 330156 ko | po.vo                  
-0m00.35s | 323364 ko | gpo.vo                 
-0m00.30s | 325520 ko | ipo.vo                 
-0m00.28s | 320864 ko | tests/sanity_po.vo     
-0m00.22s | 308992 ko | nat.vo                 
-0m00.18s | 302564 ko | setoid.vo              
-0m00.14s | 179148 ko | adjunctions.vo         
-0m00.14s | 168532 ko | attic/level_attempts.vo
-0m00.10s | 152620 ko | tests/sanity.vo        
-0m00.09s | 146104 ko | tests/sanity_setoid.vo 
-0m00.09s | 122284 ko | tests/sanity_spo.vo    
-0m00.08s |  98600 ko | tests/sanity_gpo.vo    
-0m00.08s | 120716 ko | tests/sanity_ipo.vo    
-0m00.06s | 107208 ko | preliminaries.vo       
+0m07.66s | 522592 ko | hb_spo.vo              
+0m05.82s | 488560 ko | hb.vo                  
+0m03.78s | 423464 ko | attic/split.vo         
+0m03.66s | 476080 ko | hb_chain_old.vo        
+0m03.06s | 380928 ko | attic/split_tc.vo      
+0m02.80s | 382656 ko | attic/alone.vo         
+0m02.50s | 370412 ko | chain.vo               
+0m02.11s | 342420 ko | spo.vo                 
+0m01.99s | 482940 ko | hb_chain.vo            
+0m00.79s | 327724 ko | po.vo                  
+0m00.33s | 321780 ko | gpo.vo                 
+0m00.29s | 325240 ko | ipo.vo                 
+0m00.27s | 320552 ko | tests/sanity_po.vo     
+0m00.21s | 309436 ko | nat.vo                 
+0m00.18s | 302072 ko | setoid.vo              
+0m00.14s | 151852 ko | tests/sanity.vo        
+0m00.13s | 168140 ko | attic/level_attempts.vo
+0m00.12s | 177848 ko | adjunctions.vo         
+0m00.10s | 129220 ko | tests/sanity_gpo.vo    
+0m00.10s | 121412 ko | tests/sanity_ipo.vo    
+0m00.08s | 146300 ko | tests/sanity_setoid.vo 
+0m00.08s | 127140 ko | tests/sanity_spo.vo    
+0m00.06s | 105972 ko | preliminaries.vo       
