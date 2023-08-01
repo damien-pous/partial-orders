@@ -6,6 +6,7 @@ theories/preliminaries.v
 theories/hb.v
 theories/hb_chain_old.v
 theories/hb_spo.v
+theories/hb_sanity.v
 theories/hb_chain.v
 theories/setoid.v
 theories/po.v

@@ -70,18 +70,6 @@ Next Obligation. Admitted.
 Next Obligation. Admitted.
 HB.instance Definition _ {X Y} := @mon_Lattice X Y.
 
-Time Goal
-  let T := ((bool -> bool -> bool -> bool -> Prop)) in
-  let T' := (T: PO.type) in
-  let T'' := (T: Lattice.type) in
-  let X := ((T-mon->T): Lattice.type) in (* fast *)
-  let X' := ((T'-mon->T'): Lattice.type) in (* fast *)
-  let X'' := ((T''-mon->T''): Lattice.type) in (* fast *)
-  True.
-intros.
-cbn in *.
-Abort.
-
 
 
 (** * dCPOs *)

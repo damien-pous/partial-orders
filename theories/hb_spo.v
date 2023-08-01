@@ -897,16 +897,15 @@ Definition level_fun (l: level) k: SProp :=
   end.
 Coercion level_fun: level >-> Funclass.
 (*
-Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
-Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
-Goal forall l, dual_level l ° inr = l ° inl. reflexivity. Qed.
-Goal forall l x, dual_level (dual_level l) x = l x. reflexivity. Qed.
+Check fun l: level => unify (types_comp l inl) (suplevel l). 
+Check fun l: level => unify (types_comp l inr) (inflevel l). 
+Check fun l: level => unify (types_comp (dual_level l) inr) (types_comp l inl). 
+Check fun (l: level) x => unify (dual_level (dual_level l) x) (l x). 
+Fail Check fun l: level => unify (dual_level (dual_level l)) l. (* ok thanks to above weaker form *)
 *)
 Definition lA := mk_level None None (reflexivity _).
 (*
-Goal forall l, (lA << l) = (lA << dual_level l).
-  intro. cbn.  Fail reflexivity. (* dommage *)
-Abort.
+Fail Check fun l => unify (lA << l) (lA << dual_level l). (* unfortunately *)
 *)
 #[export] Instance lower_dual {h k} {H: dual_level h << k}: h << dual_level k.
 Proof.

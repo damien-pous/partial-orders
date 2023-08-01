@@ -207,17 +207,6 @@ Section kernel.
 End kernel.
 Arguments eqv_kern [_ _] _ _ _/.
 
-(* SANITY: kernel composition,
-   taking two successive kernels is definitionally equivalent to taking a composite one
-   crucial from some inheritance paths to be equivalent, e.g.,
-   (X-eqv->Y) -> (sig (Proper ...)) -> X->Y
-          \____________________________/
- *)
-Check fun (X: Setoid.type) (f g: X -> X) =>
-        unify_setoids
-          (kernel (X:=kernel g) f)
-          (kernel (types_comp g f)).
-
 (** sub-setoids as a special case *)
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   Setoid.copy (sig P) (kernel (@proj1_sig X P)).
@@ -242,31 +231,6 @@ Lemma types_comp_eqv {X Y Z: Setoid.type}:
 Proof.
   move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'.
 Qed.
-
-
-(** SANITY *)
-Goal forall a b: nat*Prop*unit, a≡b.
-  move=>[[a a'] a''] [[b b'] b'']/=. cbn.
-Abort.
-Goal forall (x: nat * sig (fun b: bool=> b=true)), x ≡ x.
-  intros [x [b ?]]. cbn.
-Abort.
-Goal forall (x: nat * (bool -> nat) * {y: nat | y=5}), x ≡ x.
-  intros [[x f] [p ?]]. cbv.
-Abort.
-Check forall X: Setoid.type, forall f: X -eqv-> prod nat X, f ≡ f.
-(* below: need setoid of irrelevant propositions *)
-(* Goal forall a b: nat*True, a≡b. *)
-(*   move=>[a a'] [b b']/=. cbn. *)
-(* Abort. *)
-(* Check forall (x: nat * forall b: bool, nat + (b=true)), x ≡ x. *)
-Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ types_comp f (const x) ≡[X->X] const (g y) /\ const x ≡[X->X] const y.
-Proof.
-  intros X f g x y fg xy. repeat split.
-  rewrite xy. by apply fg.
-  2: by rewrite xy. 
-  Fail rewrite fg.            (* dommage *)
-Abort.  
 
 
 (** * categories *)
@@ -294,82 +258,6 @@ Program Canonical Structure SETOIDS :=
     comp_eqv := @types_comp_eqv;
   |}.
 
-(* SANITY SETOID *)
-Check forall X (f: X -eqv-> X), f ° f ≡ f.
-Check forall X (f: X -eqv-> X), id ° f ≡ id. 
-Check forall X (f: X -eqv-> X), f ≡ id.
-Check fun X => (id: X -eqv-> X). 
-Check forall X (f: X -eqv-> X), id ≡ f. 
-Goal forall X, forall f g h: X-eqv->X, f ≡ g -> f ° g ≡ h.
-Proof. intros * H. rewrite H. rewrite -H. Abort.
-Goal forall X (f: X -eqv-> X) (x y: X), x≡y -> f (f x) ≡ f (f x).
-Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
-Goal forall X (f: X -eqv-> X) (x y: X), x≡y -> (f ° f) x ≡ f (f x).
-Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
-Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x ≡ y -> f x ≡ g y /\ f ° const x ≡[X-eqv->X] const (g y) /\ const x ≡[X->X] const y.
-Proof.
-  intros X f g x y fg xy. repeat split.
-  Fail rewrite fg.              (* fair enough *)
-  rewrite xy. by apply fg.
-  2: by rewrite xy.
-  rewrite fg.
-  by rewrite xy.                (* thanks to [const_eqv'] *)
-Abort.  
-Goal forall X: Setoid.type, forall f g: X-eqv->X, f ≡ g -> f ° g ≡ g ° g.
-Proof. by move=>X f g ->. Abort.
-
-Check fun f: bool -eqv-> bool => f ≡ id. 
-Check fun f: bool -eqv-> bool => f ≡ types_id. 
-Check fun f: bool -eqv-> bool => id ≡ f. 
-Fail Check fun f: bool -eqv-> bool => types_id ≡ f. 
-Check fun f: bool -eqv-> bool => @types_id bool ≡ f. 
-Check fun f: bool -eqv-> bool => f ≡ Datatypes.id. 
-Fail Check fun f: bool -eqv-> bool => Datatypes.id ≡ f. 
-Check fun f: bool -eqv-> bool => @Datatypes.id bool ≡ f. 
-Fail Check fun f: bool -eqv-> bool => id ≡[bool->bool] f. (* fair enough *)
-Check fun f: bool -eqv-> bool => f ≡[bool->bool] types_id. 
-Check fun f: bool -eqv-> bool => f ° f. 
-Check fun f: bool -eqv-> bool => f ° id ° f. 
-
-Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
-Proof. intros * H. rewrite H -H. Abort.
-
-Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡ h.
-Proof. intros * H. rewrite H -H. Abort. 
-
-Check bool: Setoid.type. 
-Check (bool * (unit -> dual bool) * sig (fun b: bool=> b=true)  (* * True *))%type: Setoid.type. 
-Check (bool -> bool -> Prop): Setoid.type. 
-Check (bool -eqv-> bool -eqv-> Prop): Setoid.type. 
-
-Goal forall f: nat -> Prop, f ≡ f.
-  move=>f x.
-Abort.
-Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
-  intros * ->.
-Abort.
-Goal forall X, forall f g h: X -eqv-> X, f ≡ g -> types_comp f g ≡ h.
-  Fail intros * ->.              (* fair enough *)
-Abort.
-Goal forall f g: nat -> Prop, f ≡ g -> f ≡ g.
-  intros * ->.
-Abort.
-
-Section s.
-  Variable X: Setoid.type.
-  Check forall f g: X -eqv-> X, f ° g ≡ id.
-  Check forall f g: bool -eqv-> bool, f ° g ≡ id.
-End s.
-
-Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> f (f x) ≡ f (f x).
-Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
-
-Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> (f ° f) x ≡ f (f x).
-Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
-
-(* /SANITY SETOID *)
-
-
 
 (** * partial orders *)
 
@@ -392,7 +280,7 @@ Lemma eqv_of_leq {X: PO.type} (x y: X): x ≡ y <-> x <= y /\ y <= x.
 Proof. apply PO_axm. Defined.
 
 (** testing that two partial orders are definitionally equal *)
-Notation unify_po X Y := (unify (X: PO.type) (Y: PO.type)).
+Notation unify_pos X Y := (unify (X: PO.type) (Y: PO.type)).
 
 
 (** ** morphisms *)
@@ -441,18 +329,6 @@ Program Definition po_const {X Y: PO.type} (y: Y) :=
   isMonotone.Build X Y (const y) _.
 Next Obligation. move=>/=_ _ _. apply PreOrder_leq. Qed.
 HB.instance Definition _ {X Y} y := @po_const X Y y.
-
-(* SANITY *)
-Goal forall (X: PO.type) (x: nat -> X), x ≡ x.
-  intros * n.  
-Abort.
-Goal forall A (X: A -> PO.type) (x: forall a, X a), x ≡ x. 
-  intros * a.
-Abort.
-Check fun X: PO.type => @types_id X: X-mon->X. 
-Check fun (X: PO.type) (f g: X -mon-> X) => types_comp f g: X -mon->X. 
-Check fun (X: PO.type) (f g: X -mon-> X) => f: X -eqv->X. 
-(* /SANITY *)
 
 
 (** ** immediate properties *)
@@ -517,21 +393,9 @@ HB.instance Definition _ X := po_discrete X.
 (** trivial partial order as the discrete partial order on the trivial setoid *)
 HB.instance Definition _ (X: Type) := PO.copy (trivial X) (discrete (trivial X)).
 
-(* SANITY *)
-Check unify_po (discrete unit) (trivial unit). 
-Fail Check unit: PO.type.       (* should indeed fail before next declaration *)
-
 (** trivial partial order on the unit type *)
 HB.instance Definition _ := PO.copy unit (discrete unit).
 
-
-
-(* SANITY *)
-Check fun X: Type => trivial X: Setoid.type.
-Fail Check fun X: Type => discrete X: Setoid.type. (* should indeed fail *)
-Check fun X: Setoid.type => discrete X: PO.type.
-Check fun X: Type => discrete (trivial X): PO.type.
-Check fun X: Type => trivial X: PO.type.
 
 
 (** propositions ordered by implication *)
@@ -702,11 +566,6 @@ Section kernel.
 End kernel.
 Arguments leq_kern [_ _] _ _ _/.
 
-Check fun (X: PO.type) (f g: X -> X) =>
-        unify_po
-          (kernel (X:=kernel g) f)
-          (kernel (types_comp g f)).
-
 (** sub partial orders as a special case *)
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   PO.copy (sig P) (kernel (@proj1_sig X P)).
@@ -752,33 +611,6 @@ Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing).
 (* idem for this one? *)
 #[export] Instance setoid_comp_leq {X: Setoid.type} {Y Z: PO.type}:
   Proper (leq ==> eqv ==> leq) (@comp SETOIDS X Y Z) := types_comp_leq_eqv.
-
-
-(* SANITY PO *)
-
-Compute tt <= tt.
-
-Check forall (X: PO.type) (f: X -mon-> X), id ° f <= id. 
-Check forall (X: PO.type) (f: X -eqv-> X), f <= id.
-Check forall (X: PO.type) (f: X -mon-> X), f <= id.
-Check forall (X: PO.type) (f: X -mon-> X), f ≡ id.
-Check forall (X: PO.type) (f: X -mon-> X), id ≡ f. 
-
-(* this one fails, but we have the three alternatives below *)
-Fail Check forall (X: PO.type) (f: X -mon-> X), id <= f. 
-Check forall (X: PO.type) (f: X -mon-> X), po_id <= f. 
-Check forall (X: PO.type) (f: X -mon-> X), id <=[X-mon->X] f.
-Check forall (X: PO.type) (f: X -mon-> X), id ≦ f. 
-
-Goal forall X: PO.type, forall f g h: X-mon->X, f ≡ g -> f ° g ≡ h.
-Proof. intros * H. rewrite H. rewrite -H. Abort.
-Goal forall (X: PO.type) (f: X -mon-> X) (x y: X), x≡y -> y<=x -> f (f x) <= (f (f x)).
-Proof. intros * H H'. rewrite {1}H H'. reflexivity. Abort.  
-Goal forall (X: PO.type) (f g: X -mon-> X) (x y: X), x≡y -> y<=x -> f <= g -> (f ° f) x <= (f ° f) x /\ f ° f <= g ° g.
-Proof.
-  intros * H H' H''. rewrite {1}H H'. split=>//.
-  rewrite {2}H''. 
-Abort.
 
 
 (** ** theory *)
