@@ -10,8 +10,15 @@
 - theories/adjunctions.v     adjunctions
 - theories/nat.v             the partial order of natural numbers (with min, max, 0)
 
+- theories/hb[_spo].v        HB based version of {setoid,po,spo,ipo,gpo,adjunctions,nat}.v
+- theories/hb_chain.v        HB based version of chain.v
+- theories/hb_chain_old.v    HB based version of chain.v, defining its own hierarchy on top of hb.v
+
+sanity checks
+- theories/hb_sanity.v       tests for the HB based version
+- tests/sanity_*.v           tests for the CS based version
+
 old attempts
-- attic/orders.v    with HB
 - attic/alone.v     without HB
 - attic/split.v     split operations/laws
 - attic/split_tc.v  idem, with TC for laws
@@ -19,15 +26,17 @@ old attempts
 
 # TODO
 
-smart constructor for GPO 
+split hb.v / hb_spo.v 
+prefix the other files with cs
+do a typeclass attempt?
 
-direct sub-GPO construct?
-GPO products/sums
+smart constructor for SPO/IPO/GPO ?
 
-resplit ops and laws ??
-merge Setoid and PO ??
+GPO products/sums/option
 
-distributive, Heyting, Boolean
+distributive GPO 
+Heyting algebras ? (on top of SPO sB or ???)
+Boolean algebras ? (on top of GPO (sB,sB), or ???)
 
 setoid_congruence tactic
 lattice tactics
@@ -35,7 +44,7 @@ more on adjunctions
 
 cast_setoid
 
-strong eqc
+strong setoids (where eqv=eq)
 decidable eqv, leq
 finite
 
@@ -49,6 +58,12 @@ in classical logic,
 
 
 # MISC
+
+- efficiency: 
+  HB needs 15s where CS only needs 4s, 
+  but HB seems faster on the user side: hb_chain needs 2.1s where chain needs 2.5s
+
+- merge Setoid and PO ??  (probably not: lex_prod and prod share setoid their setoid structure)
 
 - split ops and laws:
   + was forced in relation aglebra?
@@ -75,9 +90,6 @@ in classical logic,
   
   concrete instances with a fixed concrete level
   definitions and lemmas explicitly upward closed (forall l, k<<l -> )
-
-- SPO, IPO (by duality), GPO ?  (in that case, remove slevel sN)
-
 
 - duality: difficulty with monotone functions: [X-mon->Y] =/= [dual X-mon-> dual Y] due to the switch in monotonicity statement proofs 
 
