@@ -719,8 +719,6 @@ HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
 
 (** monotone functions as a special case *)
 HB.instance Definition _ {X Y: PO.type} :=
-  Setoid.copy (X-mon->Y) (kernel (fun f: X-mon->Y => f: X -> Y)).
-HB.instance Definition _ {X Y: PO.type} :=
   PO.copy (X-mon->Y) (kernel (fun f: X-mon->Y => f: X -> Y)).
 
 (* TOHINK: useful as instances? *)

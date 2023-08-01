@@ -380,12 +380,11 @@ Section sub.
    2: reflexivity. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args. 
  Qed.
- (* TO ASK: the following two instances do not seem necessary to me:
-    [sub_closed_sig] is already recognised as a Setoid/PO, by unfolding to [sig]
+ (* TO ASK: the following isntance does not seem necessary to me:
+    [sub_closed_sig] is already recognised as a Setoid/PO, by unfolding to [sig] 
     Check (sup_closed_sig HP: Setoid.type).  
     Check (sup_closed_sig HP: PO.type).      
-    But if we don't mark those instances explicitly, then the third declaration does declare the expected CS *)
- HB.instance Definition _ := Setoid.copy (sup_closed_sig HP) (sig P).
+    But if we don't mark this instance explicitly, then the second (new) declaration does not declare the expected CS *)
  HB.instance Definition _ := PO.copy (sup_closed_sig HP) (sig P).
  HB.instance Definition _ := isSPO.Build l (sup_closed_sig HP) spo_sig.
 End sub.
@@ -744,7 +743,6 @@ Section sub.
  Definition inf_closed_sig P (HP: inf_closed' P) := sig P.
  Variables (P: X -> Prop) (HP: inf_closed' P). 
  Definition ipo_sig: ipo_ops l (inf_closed_sig HP) := @spo_sig l (dual X) P HP. 
- HB.instance Definition _ := Setoid.copy (inf_closed_sig HP) (sig P).
  HB.instance Definition _ := PO.copy (inf_closed_sig HP) (sig P).
  HB.instance Definition _ := isIPO.Build l (inf_closed_sig HP) ipo_sig.
 End sub.
@@ -878,7 +876,6 @@ Definition alt_level l :=
   | None,_ | _,None => None
   | Some p,Some q => Some (p,q)
   end.
-HB.instance Definition _ := Setoid.copy level (kernel alt_level).
 HB.instance Definition _ := PO.copy level (kernel alt_level).
 Lemma suplevel_mon: Proper (leq ==> leq) suplevel.
 Proof.

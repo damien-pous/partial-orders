@@ -173,7 +173,6 @@ Section c.
  Coercion elem': Chain >-> Setoid.sort. 
 
  (** the chain inherits the partial order structure from X *)
- HB.instance Definition _ := Setoid.copy Chain (kernel elem).
  HB.instance Definition _ := PO.copy Chain (kernel elem).
 
  (** the chain is closed under [f] *)
