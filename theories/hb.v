@@ -28,6 +28,8 @@ HB.structure Definition Setoid :=
 Infix "≡" := eqv (at level 70).
 Notation "x ≡[ X ] y" := (@eqv X x y) (at level 70, only parsing).
 
+(** testing that two setoids are definitionally equal *)
+Notation unify_setoids X Y := (unify (X: Setoid.type) (Y: Setoid.type)).
 
 (** ** morphisms *)
 
@@ -88,15 +90,16 @@ Ltac dual t := dual0 t.
 (** ** instances *)
 
 (** discrete setoids, for types where [eq] is fine *)
-Definition eq_Setoid X := isSetoid.Build X eq_equivalence.
-HB.instance Definition _ := eq_Setoid bool.
-HB.instance Definition _ := eq_Setoid nat.
+Definition eq_setoid X := isSetoid.Build X eq_equivalence.
+HB.instance Definition _ := eq_setoid bool.
+HB.instance Definition _ := eq_setoid nat.
 
 (** trivial setoids, for proof irrelevant types *)
-Program Definition trivial_Setoid (X: Type) := isSetoid.Build X (eqv := fun _ _ => True) _.
+Definition trivial (X: Type) := X.
+Program Definition setoid_trivial (X: Type) := isSetoid.Build (trivial X) (eqv := fun _ _ => True) _.
 Next Obligation. split; firstorder. Qed.
-HB.instance Definition unit_Setoid := trivial_Setoid unit. 
-(* HB.instance Definition irrelevant_Setoid (P: Prop) := trivial_Setoid P. *)
+HB.instance Definition _ X := setoid_trivial X. 
+HB.instance Definition _ := Setoid.copy unit (trivial unit). 
 
 (** setoid of extensional propositions *)
 HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
@@ -185,30 +188,45 @@ Arguments eqv_option [_] _ _/.
 Arguments eqv_list [_] _ _/.
 
 (** constructing setoids via functions into other setoids *)
+Definition kernel {A X: Type} (f: A -> X) := A.
+Definition kernelf {A X: Type} (f: A -> X): kernel f -> X := f.
 Section kernel.
  Variables (A: Type) (X: Setoid.type) (f: A -> X).
- Definition eqv_kern: relation A := fun x y => f x ≡ f y.
+ Definition eqv_kern: relation (kernel f) := fun x y => f x ≡ f y.
  Lemma setoid_kern: Equivalence eqv_kern.
  Proof.
    rewrite /eqv_kern.
    constructor.
-   - by move=>//=. 
+   - by move=>?; reflexivity. 
    - by move=>???; symmetry. 
    - by move=>?????; etransitivity; eauto.
- Qed.
- Definition kern_Setoid := isSetoid.Build _ setoid_kern.  
+     (* need to be Defined so that kernel compositions properly reduce *)     
+ Defined. 
+ HB.instance Definition _ := isSetoid.Build (kernel f) setoid_kern.
+ HB.instance Definition _ := isExtensional.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
-Arguments eqv_kern [_] _ _ _ _/.
+Arguments eqv_kern [_ _] _ _ _/.
+
+(* SANITY: kernel composition,
+   taking two successive kernels is definitionally equivalent to taking a composite one
+   crucial from some inheritance paths to be equivalent, e.g.,
+   (X-eqv->Y) -> (sig (Proper ...)) -> X->Y
+          \____________________________/
+ *)
+Check fun (X: Setoid.type) (f g: X -> X) =>
+        unify_setoids
+          (kernel (X:=kernel g) f)
+          (kernel (types_comp g f)).
 
 (** sub-setoids as a special case *)
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
-  kern_Setoid _ (@proj1_sig X P).
+  Setoid.copy (sig P) (kernel (@proj1_sig X P)).
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   isExtensional.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
 
 (** extensional functions as special case *)
 HB.instance Definition _ {X Y: Setoid.type} :=
-  kern_Setoid _ (fun f: X-eqv->Y => f: X -> Y).
+  Setoid.copy (X-eqv->Y) (kernel (fun f: X-eqv->Y => f: X -> Y)).
 
 (** extensionality of the constant function construction *)
 #[export] Instance const_eqv {X} {Y: Setoid.type}:
@@ -367,10 +385,14 @@ HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 
+(* those two projections need to be Defined in order kernel composition to behave well *)
 #[export] Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
-Proof. apply PO_axm. Qed.
+Proof. apply PO_axm. Defined.
 Lemma eqv_of_leq {X: PO.type} (x y: X): x ≡ y <-> x <= y /\ y <= x. 
-Proof. apply PO_axm. Qed.
+Proof. apply PO_axm. Defined.
+
+(** testing that two partial orders are definitionally equal *)
+Notation unify_po X Y := (unify (X: PO.type) (Y: PO.type)).
 
 
 (** ** morphisms *)
@@ -441,7 +463,7 @@ Proof. intros x y. apply eqv_of_leq. Qed.
 #[export] Instance leq_rw {X: PO.type}: @RewriteRelation X leq := {}.
 
 Lemma leq_refl {X: PO.type} (x: X): x <= x.
-Proof. reflexivity. Defined.
+Proof. reflexivity. Qed.
 #[export] Hint Extern 0 (_ <= _)=> exact: (leq_refl _): core.
 
 
@@ -486,13 +508,31 @@ HB.builders Context X (PO: isPO_from_PreOrder X).
 HB.end.
 
 (** discrete partial order on top of a setoid *)
-Section discrete.
-  HB.declare Context X of Setoid X.
-  Program Definition discrete_PO := isPO.Build X (leq:=eqv) _.
-  Next Obligation. split. typeclasses eauto. intuition. Qed.
-End discrete.
-(* TOFIX: why do we need to specify [unit_Setoid]? *)
-HB.instance Definition _ := discrete_PO unit_Setoid. 
+Definition discrete (X: Type) := X.
+HB.instance Definition _ {X: Setoid.type} := Setoid.copy (discrete X) X.
+Program Definition po_discrete (X: Setoid.type) := isPO.Build (discrete X) (leq:=eqv) _.
+Next Obligation. split. typeclasses eauto. intuition. Qed.
+HB.instance Definition _ X := po_discrete X.
+
+(** trivial partial order as the discrete partial order on the trivial setoid *)
+HB.instance Definition _ (X: Type) := PO.copy (trivial X) (discrete (trivial X)).
+
+(* SANITY *)
+Check unify_po (discrete unit) (trivial unit). 
+Fail Check unit: PO.type.       (* should indeed fail before next declaration *)
+
+(** trivial partial order on the unit type *)
+HB.instance Definition _ := PO.copy unit (discrete unit).
+
+
+
+(* SANITY *)
+Check fun X: Type => trivial X: Setoid.type.
+Fail Check fun X: Type => discrete X: Setoid.type. (* should indeed fail *)
+Check fun X: Setoid.type => discrete X: PO.type.
+Check fun X: Type => discrete (trivial X): PO.type.
+Check fun X: Type => trivial X: PO.type.
+
 
 (** propositions ordered by implication *)
 Lemma po_Prop: po_axm impl. 
@@ -555,7 +595,7 @@ Section sumprod.
 
  (** lexicographic product *)
  (** we use an alias for product to guide structure inferrence *)
- (** we need to eta expand this alias otherwise we run into universe problems with SPOs... *)
+ (** TOREPORT? we need to eta expand this alias otherwise we run into universe problems with SPOs... *)
  Definition lex_prod X Y := prod X Y. 
  Definition leq_lex_prod: relation (X*Y) :=
    fun p q => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q).
@@ -606,7 +646,7 @@ Section sumprod.
  HB.instance Definition _ := isPO.Build (sequential_sum X Y) po_sequential_sum.
 End sumprod. 
 Arguments leq_prod [_ _] _ _/.
-(* Arguments leq_lex_prod [_ _] _ _/. *)
+Arguments leq_lex_prod [_ _] _ _/.
 Arguments leq_parallel_sum [_ _] _ _/.
 Arguments leq_sequential_sum [_ _] _ _/.
   
@@ -647,34 +687,41 @@ Arguments leq_list [_] _ _/.
 (** constructing a partial order via a function into another partial order *)
 Section kernel.
  Variables (A: Type) (X: PO.type) (f: A -> X).
- Definition leq_kern: relation A := fun x y => f x <= f y.
- (* local, just so that the definitions below typecheck *)
- #[local] HB.instance Definition _ := kern_Setoid X f.
+ Definition leq_kern: relation (kernel f) := fun x y => f x <= f y.
  Lemma po_kern: po_axm leq_kern.
  Proof.
    split.
-   - rewrite /leq_kern.
-     constructor.
-     -- by move=>//=. 
+   - rewrite /leq_kern. constructor.
+     -- by move=>?; reflexivity.
      -- by move=>?????; etransitivity; eauto.
    - cbn=>??. apply eqv_of_leq.
- Qed.
- Definition kern_PO := isPO.Build A po_kern.  
+     (* need to be defined for kernel composition to behave well *)
+ Defined.
+ HB.instance Definition _ := isPO.Build (kernel f) po_kern.  
+ HB.instance Definition _ := isMonotone.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
-Arguments leq_kern [_] _ _ _ _/.
+Arguments leq_kern [_ _] _ _ _/.
+
+Check fun (X: PO.type) (f g: X -> X) =>
+        unify_po
+          (kernel (X:=kernel g) f)
+          (kernel (types_comp g f)).
 
 (** sub partial orders as a special case *)
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
-  kern_PO X (@proj1_sig X P).
+  PO.copy (sig P) (kernel (@proj1_sig X P)).
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   isMonotone.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
 
-(** extensional functions as a special case (already a setoid) *)
-HB.instance Definition _ {X: Setoid.type} {Y: PO.type} := kern_PO _ (fun f: X-eqv->Y => f: X -> Y).
+(** extensional functions as a special case (already declared as a setoid) *)
+HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
+  PO.copy (X-eqv->Y) (kernel (fun f: X-eqv->Y => f: X -> Y)).
 
 (** monotone functions as a special case *)
-HB.instance Definition _ {X Y: PO.type} := kern_Setoid _ (fun f: X-mon->Y => f: X -> Y).
-HB.instance Definition _ {X Y: PO.type} := kern_PO _ (fun f: X-mon->Y => f: X -> Y).
+HB.instance Definition _ {X Y: PO.type} :=
+  Setoid.copy (X-mon->Y) (kernel (fun f: X-mon->Y => f: X -> Y)).
+HB.instance Definition _ {X Y: PO.type} :=
+  PO.copy (X-mon->Y) (kernel (fun f: X-mon->Y => f: X -> Y)).
 
 (* TOHINK: useful as instances? *)
 Lemma types_comp_leq {X} {Y Z: PO.type}:
@@ -710,6 +757,8 @@ Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing).
 
 
 (* SANITY PO *)
+
+Compute tt <= tt.
 
 Check forall (X: PO.type) (f: X -mon-> X), id ° f <= id. 
 Check forall (X: PO.type) (f: X -eqv-> X), f <= id.
@@ -825,7 +874,6 @@ Proof.
 Qed.
 #[export] Instance PO_covered: PartialOrder bicovered covered.
 Proof. by []. Qed.
-(* TOTHINK: declare [subrelation] instances? *)
 #[export] Instance leq_covered: subrelation leq covered.
 Proof. move=>P Q H x Px. exists x; split=>//. by apply H. Qed.
 #[export] Instance eqv_covered: subrelation eqv bicovered.
@@ -1067,12 +1115,9 @@ Qed.
 
 (** sups can be computed as expected in sub-spaces *)
 Section ks.
-  Context {A} {X: PO.type} (f: A -> X) (P: A->Prop) (a: A).
-  (* TOFIX: how to provide the partial order on A more easily? *)
-  #[local] HB.instance Definition _ := kern_Setoid X f. 
-  #[local] HB.instance Definition _ := kern_PO X f. 
-  Lemma kern_sup:
-    is_sup (image f P) (f a) -> is_sup P a.
+  Context {A} {X: PO.type} (f: A -> X) (P: kernel f->Prop) (a: kernel f).
+  (* recall that [kernel f = A] *)
+  Lemma kern_sup: is_sup (image f P) (f a) -> is_sup P a.
   Proof.
     move=>H b; split=>ab.
     -- move=>c Pc. rewrite -ab. by apply H; auto. 

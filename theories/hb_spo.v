@@ -26,7 +26,7 @@ then: Distributive, Heyting, Boole
 *)
 
 Variant K := kE | kB | kC | kD | kA.
-HB.instance Definition _ := eq_Setoid K.
+HB.instance Definition _ := eq_setoid K.
 Definition leq_K h k :=
   match h,k with
   | _,kA
@@ -98,7 +98,7 @@ Section map_args.
 End map_args.
 
 Variant plevel := pN | pE | pB | pF | pEC | pFC | pED.
-HB.instance Definition _ := eq_Setoid plevel.
+HB.instance Definition _ := eq_setoid plevel.
 Definition leq_plevel h k :=
   match h,k with
   | pN,_
@@ -248,7 +248,7 @@ Program Definition bot_from_sup (sup: sup_op): gsup_op kE :=
 Program Definition cup_from_sup (sup: sup_op): gsup_op kB :=
   ggsup_from sup (fun '(x,y) => pair x y) _.
 Next Obligation. by move=>[]. Qed.
-(* TOTHINK: strangely, using the same pattern to obtain the lemma below universe-conflicts with [sup_from_isup]  *)
+(* TOREPORT: strangely, using the same pattern to obtain the lemma below universe-conflicts with [sup_from_isup]  *)
 (* Program Definition isup_from_sup (sup: sup_op): gsup_op kA := ggsup_from sup sig2set _. *)
 (* fortunately, unfolding its resulting def leaves the universes untouched *)
 (* Print Universes Subgraph (sigset.u0 sig2set.u0 set2sig.u0). *)
@@ -352,10 +352,10 @@ Section prod.
    all: by rewrite setof_map_args. 
  Qed.
  HB.instance Definition _ :=
-   isSPO.Build l (prod X Y) spo_prod. 
+   isSPO.Build l (prod X Y) spo_prod.
 End prod.
 
-(* TODO: option (with None above or below) *)
+(* TODO: option (with None above or below) ? *)
 
 (** sub-SPOs *)
 Section sub.
@@ -366,10 +366,13 @@ Section sub.
  Proof. move=>P H k kl x Hx. apply: H. apply Hx. apply gsup_spec. Qed.
  #[export] Instance sup_closed'_eqv: Proper (eqv==>eqv) sup_closed'.
  Proof. apply Proper_half=>P Q H HP k kl x E. apply H. apply HP. by rewrite H. Qed.
- Program Definition spo_sig P (Psup: sup_closed' P): spo_ops l (sig P) := 
+ 
+ Definition sup_closed_sig P (HP: sup_closed' P) := sig P.
+ Variables (P: X -> Prop) (HP: sup_closed' P). 
+ Program Definition spo_sig: spo_ops l (sup_closed_sig HP) := 
    fun k kl => exist _ (fun F => exist _ (gsup k kl (map_args (@proj1_sig X P) k F)) _) _. 
  Next Obligation.
-   apply: Psup. rewrite setof_map_args. 
+   apply: HP. rewrite setof_map_args. 
    by move=>_ [[x Px] [_ ->]]. 
  Qed.
  Next Obligation.
@@ -377,52 +380,62 @@ Section sub.
    2: reflexivity. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args. 
  Qed.
- (* TOTHINK: how to present this in a useful way? *)
- Definition sig_spo P Psup := SPO.pack_ (isSPO.Build l (sig P) (spo_sig Psup)). 
+ (* TO ASK: the following two instances do not seem necessary to me:
+    [sub_closed_sig] is already recognised as a Setoid/PO, by unfolding to [sig]
+    Check (sup_closed_sig HP: Setoid.type).  
+    Check (sup_closed_sig HP: PO.type).      
+    But if we don't mark those instances explicitly, then the third declaration does declare the expected CS *)
+ HB.instance Definition _ := Setoid.copy (sup_closed_sig HP) (sig P).
+ HB.instance Definition _ := PO.copy (sup_closed_sig HP) (sig P).
+ HB.instance Definition _ := isSPO.Build l (sup_closed_sig HP) spo_sig.
 End sub.
-Arguments sig_spo [_ _ _] _. 
 
 (** SPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
+Definition retract_of {A} {X: Setoid.type}
+  (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id) := kernel r.
+(* TOFIX: like above, the following two declarations should not be necessary *)
+HB.instance Definition _ A X r i ri := Setoid.copy (@retract_of A X r i ri) (kernel r).
+HB.instance Definition _ A (X: PO.type) r i ri := PO.copy (@retract_of A X r i ri) (kernel r).
 Section c.
  Context {A: Type} {l} (X: SPO.type l).
- Variable r: A->X.               (* retraction *)
- Variable i: X->A.               (* section *)
- Hypothesis ri: types_comp r i ≡ types_id.
- #[local] HB.instance Definition _ := kern_Setoid X r.
- #[local] HB.instance Definition _ := kern_PO X r.
- #[local] HB.instance Definition _ := isExtensional.Build _ _ r (fun x y xy => xy). 
- #[local] HB.instance Definition _ := isMonotone.Build _ _ r (fun x y xy => xy). 
- Program Definition spo_retract: spo_ops l A := 
-   fun k kl => exist _ (fun x => i (gsup k kl (map_args r k x))) _.
+ Variables (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id).
+ Program Definition spo_retract: spo_ops l (@retract_of A X r i ri) := 
+   fun k kl => exist _ (fun x => i (gsup k kl (map_args (kernelf r) k x))) _.
  Next Obligation.
    apply kern_sup. eapply Proper_is_sup. 2: apply: ri. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args.
  Qed.
- (* TOTHINK: how to present this in a useful way? *)
- Definition retract_spo := SPO.pack_ (isSPO.Build l A spo_retract). 
+ HB.instance Definition _ := isSPO.Build l (retract_of ri) spo_retract.
 End c.
-Arguments retract_spo [_ _] _ [_ _]. 
 
-(** altogether, we get general sub-SPOs  *)
-Section c.
- Context {A: Type} {l} {X: SPO.type l} (P: X -> Prop).
- Variable r: A->sig P.
- Variable i: sig P->A.
- Hypothesis ri: types_comp r i ≡ types_id. 
- Hypothesis Psup: sup_closed' P.
- (* TOTHINK: how to present this in a useful way? *)
- Definition sub_spo := retract_spo (sig_spo Psup) ri. 
-End c. 
+(* (** altogether, we get general sub-SPOs  *) *)
+(* Section c. *)
+(*  Context {A: Type} {l} {X: SPO.type l} (P: X -> Prop). *)
+(*  Variable r: A->sig P. *)
+(*  Variable i: sig P->A. *)
+(*  Hypothesis ri: types_comp r i ≡ types_id.  *)
+(*  Hypothesis HP: sup_closed' P. *)
+(*  #[local] HB.instance Definition _ := isSPO_sig HP. *)
+(*  (* TOTHINK: how to present this in a useful way? *) *)
+(*  Definition isSPO_sub := isSPO_retract ri. *)
+(*  (* Definition sub_spo := retract_spo (sig_spo HP) ri.  *) *)
+(* End c.  *)
 
 (** the SPO of extensional functions *)
-Lemma setoid_morphism_as_sig {X Y: Setoid.type}:
-  (* TODO: how to do this nicely? *)
-  types_comp
-    (fun f: X-eqv->Y => exist (Proper (eqv ==> eqv)) f extensional)
-    (fun f: sig (Proper (eqv ==> eqv)) => @setoid_morphism.pack_ X Y (proj1_sig f) (isExtensional.Axioms_ _ _ (proj2_sig f))) ≡ types_id.
-Proof. by case. Qed.
 Section s.
- Context {X: Setoid.type} {l} {Y: SPO.type l}.
+ Context {X: Setoid.type}.
+ Section s'.
+ Context {Y: Setoid.type}.
+ Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
+   exist (Proper (eqv ==> eqv)) f extensional.
+ Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
+   (* TODO nicer way? *)
+   @setoid_morphism.pack_ X Y (proj1_sig f) (isExtensional.Axioms_ _ _ (proj2_sig f)).
+ Lemma setoid_morphism_as_sig:
+  types_comp setoid_morphism_to_sig sig_to_setoid_morphism ≡ types_id. 
+ Proof. by case. Qed.
+ End s'.
+ Context {l} {Y: SPO.type l}.
  Lemma sup_closed'_extensional: sup_closed' (Proper (@eqv X ==> @eqv Y)).
  Proof.
    move=>k kl P HP. apply Proper_half=>x y xy.
@@ -430,20 +443,29 @@ Section s.
    transitivity (f y). apply eqv_leq, (HP _ Hf _ _ xy). apply leq_gsup. 
    apply setof_map_args. by exists f.
  Qed.
- (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
- #[local] HB.instance Definition _ := isSPO.Build l (sig _) (spo_sig sup_closed'_extensional).
- HB.instance Definition _ := isSPO.Build l (X-eqv->Y) (spo_retract setoid_morphism_as_sig). 
+ (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
+ HB.instance Definition _ :=
+   SPO.copy (X-eqv->Y)
+     (* TOTHINK: if the aforementioned superfluous-looking instances are not declared, we need the SPO type annotation below *)
+     (retract_of (X:=sup_closed_sig sup_closed'_extensional(* : SPO.type _ *)) (@setoid_morphism_as_sig Y)).
 End s.
 
 (** the SPO of monotone functions *)
-Lemma po_morphism_as_sig {X Y: PO.type}:
-  (* TODO: how to do this nicely? *)
-  types_comp
-    (fun f: X-mon->Y => exist (Proper (leq ==> leq)) f monotone)
-    (fun f: sig (Proper (leq ==> leq)) => @po_morphism.pack_ X Y (proj1_sig f) (isMonotone.Axioms_ _ _ (proj2_sig f)) (isExtensional.Axioms_ _ _ (op_leq_eqv_1 (Hf:=proj2_sig f)))) ≡ types_id.
-Proof. by case. Qed.
 Section s.
- Context {X: PO.type} {l} {Y: SPO.type l}.
+ Context {X: PO.type}.
+ Section s'.
+ Context {Y: PO.type}.
+ Definition po_morphism_to_sig (f: X-mon->Y): sig (Proper (leq==>leq)) :=
+   exist (Proper (leq ==> leq)) f monotone.
+ Definition sig_to_po_morphism (f: sig (Proper (leq==>leq))): X-mon->Y :=
+   (* TODO nicer way? *)
+   @po_morphism.pack_ X Y (proj1_sig f) (isMonotone.Axioms_ _ _ (proj2_sig f))
+     (isExtensional.Axioms_ _ _ (op_leq_eqv_1 (Hf:=proj2_sig f))).
+ Lemma po_morphism_as_sig:
+  types_comp po_morphism_to_sig sig_to_po_morphism ≡ types_id. 
+ Proof. by case. Qed.
+ End s'.
+ Context {l} {Y: SPO.type l}.
  Lemma sup_closed'_monotone: sup_closed' (Proper (@leq X ==> @leq Y)).
  Proof.
    move=>k kl P HP x y xy.
@@ -451,9 +473,10 @@ Section s.
    transitivity (f y). apply (HP _ Hf _ _ xy). apply leq_gsup. 
    apply setof_map_args. by exists f.
  Qed.
- (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
- #[local] HB.instance Definition _ := isSPO.Build l (sig _) (spo_sig sup_closed'_monotone).
- HB.instance Definition _ := isSPO.Build l (X-mon->Y) (spo_retract po_morphism_as_sig). 
+ (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
+ HB.instance Definition _ :=
+   SPO.copy (X-mon->Y)
+     (retract_of (X:=sup_closed_sig sup_closed'_monotone(* : SPO.type _ *)) (@po_morphism_as_sig Y)).
 End s.
 
 (** ** theory  *)
@@ -675,7 +698,7 @@ Next Obligation.
   move=>c/=. rewrite forall_pair. cbn.
   rewrite !Bool.le_implb Bool.implb_andb_distrib_r Bool.andb_true_iff//.
 Qed.
-HB.instance Definition _ := isSPO.Build sF bool spo_bool. 
+HB.instance Definition _ := isIPO.Build sF bool ipo_bool. 
 
 (** complete inf-semilattice of Propositions
     (infinite suprema are available via impredicativity) *)
@@ -694,7 +717,7 @@ Definition ipo_Prop: ipo_ops sA Prop.
   abstract by clear; cbv; firstorder. 
   abstract by cbv; clear=>[][]; firstorder subst; auto; eapply H; eauto.
 Defined.
-HB.instance Definition _ := isSPO.Build sA Prop spo_Prop. 
+HB.instance Definition _ := isIPO.Build sA Prop ipo_Prop. 
 
 (** IPOs on (dependent) function space *)
 Definition ipo_dprod {A l} {X: A -> IPO.type l}: ipo_ops l (forall a, X a) :=
@@ -717,45 +740,42 @@ Section sub.
  Lemma inf_closed_inf_closed': inf_closed <= inf_closed'.
  Proof. apply (@sup_closed_sup_closed' _ (dual X)). Qed.
  #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed' := @sup_closed'_eqv _ (dual X).
- Definition ipo_sig: forall P, inf_closed' P -> ipo_ops l (sig P) := @spo_sig l (dual X). 
- Definition sig_ipo P Pinf := IPO.pack_ (isIPO.Build l (sig P) (ipo_sig Pinf)). 
+
+ Definition inf_closed_sig P (HP: inf_closed' P) := sig P.
+ Variables (P: X -> Prop) (HP: inf_closed' P). 
+ Definition ipo_sig: ipo_ops l (inf_closed_sig HP) := @spo_sig l (dual X) P HP. 
+ HB.instance Definition _ := Setoid.copy (inf_closed_sig HP) (sig P).
+ HB.instance Definition _ := PO.copy (inf_closed_sig HP) (sig P).
+ HB.instance Definition _ := isIPO.Build l (inf_closed_sig HP) ipo_sig.
 End sub.
-Arguments sig_ipo [_ _ _] _. 
 
 (** IPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
 Section c.
  Context {A: Type} {l} (X: IPO.type l).
- Variable r: A->X.               (* retraction *)
- Variable i: X->A.               (* section *)
- Hypothesis ri: types_comp r i ≡ types_id.
- #[local] HB.instance Definition _ := kern_Setoid X r.
- #[local] HB.instance Definition _ := kern_PO X r.
- (* #[local] HB.instance Definition _ := isExtensional.Build _ _ r (fun x y xy => xy).  *)
- (* #[local] HB.instance Definition _ := isMonotone.Build _ _ r (fun x y xy => xy).  *)
- Definition ipo_retract: ipo_ops l A := @spo_retract A l (dual X) r i ri.  
- Definition retract_ipo := IPO.pack_ (isIPO.Build l A ipo_retract). 
+ Variables (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id).
+ Definition ipo_retract: ipo_ops l (@retract_of A X r i ri) := @spo_retract A l (dual X) r i ri.  
+ HB.instance Definition _ := isIPO.Build l (retract_of ri) ipo_retract.
 End c.
-Arguments retract_ipo [_ _] _ [_ _]. 
 
-(** altogether, we get general sub-IPOs  *)
-Section c.
- Context {A: Type} {l} {X: IPO.type l} (P: X -> Prop).
- Variable r: A->sig P.
- Variable i: sig P->A.
- Hypothesis ri: types_comp r i ≡ types_id. 
- Hypothesis Pinf: inf_closed' P.
- (* TOTHINK: how to present this in a useful way? *)
- Definition sub_ipo := retract_ipo (sig_ipo Pinf) ri. 
-End c. 
+(* (** altogether, we get general sub-IPOs  *) *)
+(* Section c. *)
+(*  Context {A: Type} {l} {X: IPO.type l} (P: X -> Prop). *)
+(*  Variable r: A->sig P. *)
+(*  Variable i: sig P->A. *)
+(*  Hypothesis ri: types_comp r i ≡ types_id.  *)
+(*  Hypothesis Pinf: inf_closed' P. *)
+(*  (* TOTHINK: how to present this in a useful way? *) *)
+(*  Definition sub_ipo := retract_ipo (sig_ipo Pinf) ri.  *)
+(* End c.  *)
 
 (** the IPO of extensional functions *)
 Section s.
  Context {X: Setoid.type} {l} {Y: IPO.type l}.
  Lemma inf_closed'_extensional: inf_closed' (Proper (@eqv X ==> @eqv Y)).
  Proof. apply (@sup_closed'_extensional X l (dual Y)). Qed.
- (* TOTHINK: how to use directly a [sub_spo]-like definition? *)
- #[local] HB.instance Definition _ := isIPO.Build l (sig _) (ipo_sig inf_closed'_extensional).
- HB.instance Definition _ := isIPO.Build l (X-eqv->Y) (ipo_retract setoid_morphism_as_sig). 
+ HB.instance Definition _ := 
+   IPO.copy (X-eqv->Y)
+     (retract_of (X:=inf_closed_sig inf_closed'_extensional) (@setoid_morphism_as_sig X Y)).
 End s.
 
 (** the IPO of monotone functions *)
@@ -766,8 +786,9 @@ Section s.
    rewrite Proper_flip.
    apply (@sup_closed'_monotone (dual X) l (dual Y)).
  Qed.
- #[local] HB.instance Definition _ := isIPO.Build l (sig _) (ipo_sig inf_closed'_monotone).
- HB.instance Definition _ := isIPO.Build l (X-mon->Y) (ipo_retract po_morphism_as_sig). 
+ HB.instance Definition _ := 
+   IPO.copy (X-mon->Y)
+     (retract_of (X:=inf_closed_sig inf_closed'_monotone) (@po_morphism_as_sig X Y)).
 End s.
 
 (** ** theory *)
@@ -837,7 +858,149 @@ Lemma inf_pair {L: sA<<l} (x y: X): inf (pair x y) ≡ x ⊓ y.
 Proof. dual @sup_pair. Qed.
 
 End s.
+#[export] Hint Extern 0 (_ <= top)=> apply: leq_top: core.
 
 (* TODO: etc *)
 
 
+
+(** * partial orders with suprema and infima *)
+
+
+(** ** levels *)
+
+(* isomorphic to [option (plevel*plevel)], but enabling duality *)
+Record level := mk_level { suplevel: slevel; inflevel: slevel; merge_tops: suplevel=None <-> inflevel=None }.
+Arguments mk_level: clear implicits.  
+
+Definition alt_level l :=
+  match suplevel l,inflevel l with
+  | None,_ | _,None => None
+  | Some p,Some q => Some (p,q)
+  end.
+HB.instance Definition _ := Setoid.copy level (kernel alt_level).
+HB.instance Definition _ := PO.copy level (kernel alt_level).
+Lemma suplevel_mon: Proper (leq ==> leq) suplevel.
+Proof.
+  move=>[[?|] [?|] ?] [[?|] [?|] ?] //=hk;
+       try apply hk; exfalso; clear hk; intuition congruence.
+Qed.
+Lemma inflevel_mon: Proper (leq ==> leq) inflevel.
+Proof.
+  move=>[[?|] [?|] ?] [[?|] [?|] ?] //=hk;
+       try apply hk; exfalso; clear hk; intuition congruence.
+Qed.
+
+Definition dual_level (l: level) := mk_level (inflevel l) (suplevel l) (symmetry (merge_tops l)).
+
+Definition level_fun (l: level) k: SProp :=
+  match k with
+  | inl k => suplevel l k
+  | inr k => inflevel l k
+  end.
+Coercion level_fun: level >-> Funclass.
+(*
+Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
+Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
+Goal forall l, dual_level l ° inr = l ° inl. reflexivity. Qed.
+Goal forall l x, dual_level (dual_level l) x = l x. reflexivity. Qed.
+*)
+Definition lA := mk_level None None (reflexivity _).
+(*
+Goal forall l, (lA << l) = (lA << dual_level l).
+  intro. cbn.  Fail reflexivity. (* dommage *)
+Abort.
+*)
+#[export] Instance lower_dual {h k} {H: dual_level h << k}: h << dual_level k.
+Proof.
+  revert H.
+  case: h=>[[hs|] [hi|] hE]; try solve [intuition discriminate]; 
+  case: k=>[[ks|] [ki|] kE]; try solve [intuition discriminate].
+  cbn; simpl. tauto.
+Qed.   
+Program Definition lSI p q := mk_level (Some p) (Some q) _.
+Next Obligation. split; discriminate. Qed.
+Definition merge_slevels p q :=
+  match p,q with
+  | None,_ | _,None => lA
+  | Some p,Some q => lSI p q
+  end.
+
+(** ** class *)
+
+HB.mixin Record isGPO (l: level) X := {}.
+HB.structure Definition GPO (l: level) :=
+  { X of isSetoid X & isPO X & isSPO (suplevel l) X & isIPO (inflevel l) X & isGPO l X }.
+
+HB.instance Definition _ l (X: GPO.type l) := isGPO.Build (dual_level l) (dual X). 
+Ltac dual2 t :=
+  match type of t with
+  | forall l, forall X: GPO.type l, _ =>
+      match goal with
+      | X: GPO.type ?l |- _ => apply: (t _ (dual X))
+      end
+  end.
+Ltac dual t ::= dual2 t || dual1 t || dual0 t.
+
+(* lattice of booleans, complete lattice of Propositions *)
+HB.instance Definition _ := isGPO.Build (lSI pF pF) bool.
+HB.instance Definition _ := isGPO.Build lA Prop.
+
+Section sub.
+ Context {l} {X: GPO.type l}.
+ Definition closed' (P: X -> Prop):= sup_closed' P /\ inf_closed' P.
+ #[export] Instance closed'_eqv: Proper (eqv==>eqv) closed'.
+ Proof. move=>P Q PQ. by rewrite /closed' PQ. Qed.
+
+ Definition closed_sig P (HP: closed' P) := sig P.
+ HB.instance Definition _ P HP := SPO.copy (@closed_sig P HP) (sup_closed_sig (proj1 HP)).
+ HB.instance Definition _ P HP := IPO.copy (@closed_sig P HP) (inf_closed_sig (proj2 HP)).
+ HB.instance Definition _ P HP := isGPO.Build l (@closed_sig P HP).
+End sub.
+
+(** GPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
+HB.instance Definition _ {A: Type} {l} (X: GPO.type l)
+  (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id)
+  := isGPO.Build l (retract_of ri). 
+
+(* (** altogether, we get general sub-GPOs  *) *)
+(* Section c. *)
+(*  Context {A: Type} {l} {X: GPO l} (P: X -> Prop). *)
+(*  Variable r: A->sig P. *)
+(*  Variable i: sig P->A. *)
+(*  Hypothesis ri: r°i ≡ id.  *)
+(*  Hypothesis HP: closed' P. *)
+(*  Definition sub_gpo: GPO l := retract_gpo (sig_gpo HP) ri.  *)
+(* End c. *)
+
+(** the GPO of extensive functions *)
+HB.instance Definition _ {X: Setoid.type} {l} {Y: GPO.type l}
+  := isGPO.Build l (X-eqv->Y).
+
+(** the GPO of monotone functions *)
+HB.instance Definition _ {X: PO.type} {l} {Y: GPO.type l}
+  := isGPO.Build l (X-mon->Y).
+
+
+(** ** extended level-solving tactic *)
+
+Lemma lower_trans_sup k h l (kh: k<<suplevel h) (hl: h<<l): k<<suplevel l.
+Proof. rewrite ->kh. by apply suplevel_mon. Qed.
+Lemma lower_trans_inf k h l (kh: k<<inflevel h) (hl: h<<l): k<<inflevel l.
+Proof. rewrite ->kh. by apply inflevel_mon. Qed.
+Ltac solve_lower ::=
+  solve [ reflexivity | assumption |
+          match goal with
+          | H: ?h << ?l |- ?k << ?l => exact: (lower_trans k h l I H)
+          | H: ?h << ?l |- ?k << suplevel ?l => exact: (lower_trans_sup k h l I H)
+          | H: ?h << ?l |- ?k << inflevel ?l => exact: (lower_trans_inf k h l I H)
+          end
+    ].
+
+(** ** theory *)
+
+Lemma sup_top {l} {X: GPO.type l} {L: lA<<l}: sup top ≡[X] top.
+Proof. apply: antisym=>//. by apply: leq_sup. Qed.
+
+Lemma inf_top {l} {X: GPO.type l} {L: lA<<l}: inf top ≡[X] bot.
+Proof. dual @sup_top. Qed.

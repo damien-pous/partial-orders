@@ -139,10 +139,8 @@ Section c.
  Variable f: A->X.
  Variable from_sup: forall (P: A -> Prop) x, directed (image f P) -> is_sup (image f P) x -> A.
  Hypothesis f_from_sup: forall P x DfP (fPx: is_sup (image f P) x), f (from_sup DfP fPx) ≡ x.
- #[local] HB.instance Definition _ := kern_Setoid X f.
- #[local] HB.instance Definition _ := kern_PO X f.
  Program Definition kern_dCPO :=
-   isdCPO.Build A (fun P D =>
+   isdCPO.Build (kernel f) (fun P D =>
                                    let D' := _: directed (image f P) in
                                    from_sup D' (dsup_spec (image f P) D')) _.
  Next Obligation.
@@ -175,8 +173,8 @@ Section c.
  Coercion elem': Chain >-> Setoid.sort. 
 
  (** the chain inherits the partial order structure from X *)
- HB.instance Definition Chain_Setoid := kern_Setoid _ elem.
- HB.instance Definition Chain_PO := kern_PO _ elem.
+ HB.instance Definition _ := Setoid.copy Chain (kernel elem).
+ HB.instance Definition _ := PO.copy Chain (kernel elem).
 
  (** the chain is closed under [f] *)
  Canonical Structure next (x: Chain) := {| elem := f x; Celem := Cf (Celem x) |}.
@@ -184,7 +182,7 @@ Section c.
  (** the chain is closed under (existing) sups *)
  Lemma Csup' (P: Chain -> Prop) (x: X): is_sup (fun x => exists Cx, P (@chn x Cx)) x -> C x.
  Proof. move=>H. by apply: (Csup _ H)=>y [Cy _]. Qed.
-
+   
  (** the chain is inductively generated *)
  Proposition tower: forall (P: Chain -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
  Proof.
@@ -267,27 +265,13 @@ End c.
 Section c.
  Context {X: dCPO.type}.
  Variable f: X->X.
- Program Definition Chain_dCPO := kern_dCPO (f:=@elem _ f) (fun Q x _ Hx => @chn _ f x _) _.
+ Program Definition Chain_dCPO: isdCPO.axioms (Chain f) :=
+   kern_dCPO (f:=@elem _ f) (fun Q x _ Hx => @chn _ f x _) _.
  Next Obligation.
    eapply Csup. 2: apply Hx.
    move=>/=_ [z [_ ->]]. apply Celem. 
  Qed.
  HB.instance Definition _ := Chain_dCPO.
- 
-   
- (*   isdCPO.Build (Chain f) (fun P D => {| elem := dsup (fun c => exists Cf: C f c, P (chn Cf)) _ |}) _. *)
- (* Next Obligation. *)
- (*   move=>x y [Cx Px] [Cy Py]. case: (D _ _ Px Py)=>/=[[z Cz]] [Pz [xz yz]]. *)
- (*   exists z. split. eauto. by split. *)
- (* Qed. *)
- (* Next Obligation. *)
-   
- (* Qed. *)
- (* Next Obligation. *)
- (*   move=>/=x. etransitivity. apply dsup_spec. simpl. *)
- (*   split;[|clear; firstorder]=>H [y Cy] Dy. *)
- (*   apply H. eauto. *)
- (* Qed. *)
 End c. 
 Arguments tower {_}.  
 Arguments next {_}.  
@@ -615,7 +599,8 @@ End BourbakiWitt'.
 (* TODO: generic construction (via dprod_CPO) *)
 Section s.
  Context {X: PO.type} {Y: dCPO.type}. 
- Program Definition mon_dCPO := kern_dCPO (f:=fun f: X -mon-> Y => f: X -> Y) (fun Q f D Qf => _) _.
+ Program Definition mon_dCPO: isdCPO.axioms (X-mon->Y) :=
+   kern_dCPO (f:=fun f: X -mon-> Y => f: X -> Y) (fun Q f D Qf => _) _.
  Next Obligation.
    have E: f ≡ dsup _ D. apply: is_sup_eqv. apply Qf. apply: dsup_spec. reflexivity.
    have I: Proper (leq ==> leq) f. {
@@ -639,7 +624,7 @@ Section s.
  Context {C: dCPO.type}.
 
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => id ≦ f) _.
+ Program Definition h: C-mon->C := dsup (fun f => po_id ≦ f) _.
  Next Obligation.
    (* grrr: goals are not nice-looking *)
    move=>/=i j I J. exists (i°j)=>/=. split; last split.
