@@ -1,7 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Export Setoid Morphisms Basics.
 Require Export preliminaries.
-Infix "°" := comp (at level 20).
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -33,7 +32,7 @@ Arguments build_morphism {_ _}.
 Canonical Structure id {X: type}: morphism X X :=
   build_morphism Datatypes.id _.
 Program Canonical Structure comp {X Y Z: type} (f: morphism Y Z) (g: morphism X Y): morphism X Z :=
-  build_morphism (comp f g) _. 
+  build_morphism (f ∘ g) _. 
 Next Obligation. move=>x y xy. apply f, g, xy. Qed.
 Program Canonical Structure const {X Y: type} (y: Y): morphism X Y :=
   build_morphism (const y) _.
@@ -149,11 +148,11 @@ Canonical Structure setoid_morphisms_setoid (X Y: Setoid) :=
 
 
 (* most general lemma *)
-Lemma comp_eqv {X Y Z}: Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@comp X Y Z).
+Lemma comp_eqv {X Y Z}: Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.
 (* but only this restriction makes it possible to use [setoid_rewrite] *)
 #[export] Instance setoid_comp_eqv {X Y Z: Setoid}: Proper (eqv ==> eqv ==> eqv) (@Setoid.comp X Y Z) := comp_eqv.
 
-#[export] Instance const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@const X Y).
+#[export] Instance const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@const Y X).
 Proof. move=>/=y y' yy' _/=. apply yy'. Qed.
 #[export] Instance setoid_const_eqv {X} {Y: Setoid}: Proper (eqv ==> eqv) (@Setoid.const X Y) := const_eqv.

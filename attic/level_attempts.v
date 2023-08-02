@@ -155,9 +155,9 @@ Coercion level_fun: level >-> Funclass.
 (*   case=>[[p q]|]; case=>[[p' q']|]=>//=H[k|k]/=; *)
 (*     try apply implybT; apply plevel_mon=>//=; apply H. *)
 (* Qed. *)
-Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
-Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
-Goal forall l, dual_level l ° inr = l ° inl. Fail reflexivity. Abort. 
+Goal forall l: level, l ∘ inl = suplevel l. reflexivity. Qed.
+Goal forall l: level, l ∘ inr = inflevel l. reflexivity. Qed.
+Goal forall l, dual_level l ∘ inr = l ∘ inl. Fail reflexivity. Abort. 
 Goal forall l k, dual_level (dual_level l) k = l k. Fail reflexivity. Abort. 
 End IDEAL.
 
@@ -170,8 +170,8 @@ Definition level_fun (l: level) k: SProp :=
   | inr k => inflevel l k
   end.
 Coercion level_fun: level >-> Funclass.
-Goal forall l: level, l ° inl = suplevel l. reflexivity. Qed.
-Goal forall l: level, l ° inr = inflevel l. reflexivity. Qed.
-Goal forall l, dual_level l ° inr = l ° inl. reflexivity. Qed.
+Goal forall l: level, l ∘ inl = suplevel l. reflexivity. Qed.
+Goal forall l: level, l ∘ inr = inflevel l. reflexivity. Qed.
+Goal forall l, dual_level l ∘ inr = l ∘ inl. reflexivity. Qed.
 Goal forall l x, dual_level (dual_level l) x = l x. reflexivity. Qed.
 End EXTENDEDPAIRS.

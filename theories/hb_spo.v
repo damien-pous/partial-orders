@@ -87,7 +87,7 @@ Section map_args.
    | kB => fun '(x,y) => (f x, f y)
    | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
    | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
-   | kA => fun '(idx P g) => idx P (types_comp f g)
+   | kA => fun '(idx P g) => idx P (f ∘ g)
    end.
  Lemma setof_map_args k: forall x, setof k (map_args k x) ≡ image f (setof k x).
  Proof.
@@ -228,7 +228,7 @@ Definition sup_op := (ggsup_op types_id).
 
 (** helpers to deduce some suprema out of other ones *)
 Definition ggsup_from {A B} {Aset: A -> X -> Prop} {Bset: B -> X -> Prop}:
-  ggsup_op Aset -> forall f: B -> A, types_comp Aset f ≡ Bset -> ggsup_op Bset.
+  ggsup_op Aset -> forall f: B -> A, Aset ∘ f ≡ Bset -> ggsup_op Bset.
   move=>sup f Hf. eexists (fun b => proj1_sig sup (f b)).
   abstract by move=>b; rewrite -(Hf b); apply (proj2_sig sup).
 Defined.
@@ -391,13 +391,13 @@ End sub.
 
 (** SPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
 Definition retract_of {A} {X: Setoid.type}
-  (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id) := kernel r.
+  (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id) := kernel r.
 (* TOFIX: like above, the following two declarations should not be necessary *)
 HB.instance Definition _ A X r i ri := Setoid.copy (@retract_of A X r i ri) (kernel r).
 HB.instance Definition _ A (X: PO.type) r i ri := PO.copy (@retract_of A X r i ri) (kernel r).
 Section c.
  Context {A: Type} {l} (X: SPO.type l).
- Variables (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id).
+ Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id).
  Program Definition spo_retract: spo_ops l (@retract_of A X r i ri) := 
    fun k kl => exist _ (fun x => i (gsup k kl (map_args (kernelf r) k x))) _.
  Next Obligation.
@@ -412,7 +412,7 @@ End c.
 (*  Context {A: Type} {l} {X: SPO.type l} (P: X -> Prop). *)
 (*  Variable r: A->sig P. *)
 (*  Variable i: sig P->A. *)
-(*  Hypothesis ri: types_comp r i ≡ types_id.  *)
+(*  Hypothesis ri: r ∘ i ≡ types_id.  *)
 (*  Hypothesis HP: sup_closed' P. *)
 (*  #[local] HB.instance Definition _ := isSPO_sig HP. *)
 (*  (* TOTHINK: how to present this in a useful way? *) *)
@@ -431,7 +431,7 @@ Section s.
    (* TODO nicer way? *)
    @setoid_morphism.pack_ X Y (proj1_sig f) (isExtensional.Axioms_ _ _ (proj2_sig f)).
  Lemma setoid_morphism_as_sig:
-  types_comp setoid_morphism_to_sig sig_to_setoid_morphism ≡ types_id. 
+  setoid_morphism_to_sig ∘ sig_to_setoid_morphism ≡ types_id. 
  Proof. by case. Qed.
  End s'.
  Context {l} {Y: SPO.type l}.
@@ -461,7 +461,7 @@ Section s.
    @po_morphism.pack_ X Y (proj1_sig f) (isMonotone.Axioms_ _ _ (proj2_sig f))
      (isExtensional.Axioms_ _ _ (op_leq_eqv_1 (Hf:=proj2_sig f))).
  Lemma po_morphism_as_sig:
-  types_comp po_morphism_to_sig sig_to_po_morphism ≡ types_id. 
+  po_morphism_to_sig ∘ sig_to_po_morphism ≡ types_id. 
  Proof. by case. Qed.
  End s'.
  Context {l} {Y: SPO.type l}.
@@ -623,7 +623,7 @@ Definition inf_op := @sup_op (dual X).
 
 (** helpers to deduce some infrema out of other ones *)
 Definition gginf_from: forall {A B} {Aset: A -> X -> Prop} {Bset: B -> X -> Prop},
-  gginf_op Aset -> forall f: B -> A, types_comp Aset f ≡ Bset -> gginf_op Bset
+  gginf_op Aset -> forall f: B -> A, Aset ∘ f ≡ Bset -> gginf_op Bset
   := @ggsup_from (dual X).
 Arguments gginf_from {_ _ _ _}.
 Definition inf_from_iinf: ginf_op kA -> inf_op := @sup_from_isup (dual X).
@@ -750,7 +750,7 @@ End sub.
 (** IPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
 Section c.
  Context {A: Type} {l} (X: IPO.type l).
- Variables (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id).
+ Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id).
  Definition ipo_retract: ipo_ops l (@retract_of A X r i ri) := @spo_retract A l (dual X) r i ri.  
  HB.instance Definition _ := isIPO.Build l (retract_of ri) ipo_retract.
 End c.
@@ -760,7 +760,7 @@ End c.
 (*  Context {A: Type} {l} {X: IPO.type l} (P: X -> Prop). *)
 (*  Variable r: A->sig P. *)
 (*  Variable i: sig P->A. *)
-(*  Hypothesis ri: types_comp r i ≡ types_id.  *)
+(*  Hypothesis ri: r ∘ i ≡ types_id.  *)
 (*  Hypothesis Pinf: inf_closed' P. *)
 (*  (* TOTHINK: how to present this in a useful way? *) *)
 (*  Definition sub_ipo := retract_ipo (sig_ipo Pinf) ri.  *)
@@ -897,9 +897,9 @@ Definition level_fun (l: level) k: SProp :=
   end.
 Coercion level_fun: level >-> Funclass.
 (*
-Check fun l: level => unify (types_comp l inl) (suplevel l). 
-Check fun l: level => unify (types_comp l inr) (inflevel l). 
-Check fun l: level => unify (types_comp (dual_level l) inr) (types_comp l inl). 
+Check fun l: level => unify (l ∘ inl) (suplevel l). 
+Check fun l: level => unify (l ∘ inr) (inflevel l). 
+Check fun l: level => unify (dual_level l ∘ inr) (l ∘ inl). 
 Check fun (l: level) x => unify (dual_level (dual_level l) x) (l x). 
 Fail Check fun l: level => unify (dual_level (dual_level l)) l. (* ok thanks to above weaker form *)
 *)
@@ -956,7 +956,7 @@ End sub.
 
 (** GPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
 HB.instance Definition _ {A: Type} {l} (X: GPO.type l)
-  (r: A->X) (i: X->A) (ri: types_comp r i ≡ types_id)
+  (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id)
   := isGPO.Build l (retract_of ri). 
 
 (* (** altogether, we get general sub-GPOs  *) *)

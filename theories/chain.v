@@ -112,7 +112,7 @@ Section c.
  Variable f: X->X.
  Lemma Chain_as_sig:
    (fun c: Chain f => exist (C f) (elem c) (Celem c))
-     ° (fun c: sig (C f) => chn (proj2_sig c)) ≡ id.
+     ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ id.
  Proof. by case. Qed.
  Canonical Structure Chain_spo: SPO l :=
    SPO.cast (Chain f)
@@ -487,16 +487,16 @@ Section s.
  (** the largest monotone and extensive function on [C] *)
  Program Definition h: C-mon->C := dsup (fun f => Datatypes.id <=[C-mon->C] f) _.
  Next Obligation.
-   move=>/=i j I J. exists (i°j). split; last split.
+   move=>/=i j I J. exists (i∘j). split; last split.
    - by rewrite -I.
-   - by rewrite -J.             (* !! need [kern_po _ ° kern po _ = kern_po (_°_)] *)
+   - by rewrite -J.             (* !! need [kern_po _ ∘ kern po _ = kern_po (_∘_)] *)
    - by rewrite -I.
  Qed.
  
  Lemma h_ext: PO.id <= h.
  Proof. by apply: leq_dsup. Qed.
 
- Lemma h_invol: h ° h <=[_-mon->_] h.
+ Lemma h_invol: h ∘ h <=[_-mon->_] h.
  Proof.
    apply: leq_dsup.
    by rewrite -h_ext.
@@ -507,7 +507,7 @@ Section s.
  Variable f: C-mon->C.
  Hypothesis f_ext: PO.id <= f. 
  
- Lemma h_prefixpoint: f ° h <=[_-mon->_] h.
+ Lemma h_prefixpoint: f ∘ h <=[_-mon->_] h.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 

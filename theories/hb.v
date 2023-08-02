@@ -1,19 +1,12 @@
 Require Import Arith.           (* TMP *)
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
-Require Export Setoid Morphisms Basics.
 Require Export preliminaries.
-Require Classical.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
 Local Unset Transparent Obligations.
 Set Primitive Projections.
-
-Notation types_id := Datatypes.id.
-Notation types_comp := preliminaries.comp.
-
-#[export] Hint Extern 0 => reflexivity: core.
 
 (** * setoids *)
 
@@ -47,7 +40,7 @@ Notation setoid_id := (types_id: _ -eqv-> _) (only parsing).
 
 (** composition of morphisms *)
 Program Definition setoid_comp {X Y Z} (f: Y-eqv->Z) (g: X-eqv->Y) := 
-  isExtensional.Build X Z (comp f g) _.
+  isExtensional.Build X Z (types_comp f g) _.
 Next Obligation. move=>x y xy. by do 2 apply extensional. Qed. 
 HB.instance Definition _ {X Y Z} f g := @setoid_comp X Y Z f g.
 
@@ -103,6 +96,13 @@ HB.instance Definition _ := Setoid.copy unit (trivial unit).
 
 (** setoid of extensional propositions *)
 HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
+
+(** setoid of extenstional functions (between types)
+    NB: different from extensional functions between setoids (setoid_morphisms), here we use [eq] on the codomain *)
+Definition efun X Y := arrow X Y.
+Definition eid {X}: efun X X := types_id. 
+HB.instance Definition _ X Y :=
+  isSetoid.Build (efun X Y) (@Equivalence.pointwise_equivalence X Y eq eq_equivalence). 
 
 (** (dependent) function space *)
 Section dprod.
@@ -219,18 +219,16 @@ HB.instance Definition _ {X Y: Setoid.type} :=
 
 (** extensionality of the constant function construction *)
 #[export] Instance const_eqv {X} {Y: Setoid.type}:
-  Proper (eqv ==> eqv) (@const X Y).
+  Proper (eqv ==> eqv) (@const Y X).
 Proof. move=>/=y y' yy x. apply yy. Qed.
 #[export] Instance const_eqv' {X} {Y: Setoid.type}:
-  Proper (eqv ==> @eqv (X-eqv->Y)) (@const X Y) := const_eqv.
+  Proper (eqv ==> @eqv (X-eqv->Y)) (@const Y X) := const_eqv.
 
 (** extensionality of functional composition,
     provided the outer function is extensive *)
 Lemma types_comp_eqv {X Y Z: Setoid.type}:
   Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@types_comp X Y Z).
-Proof.
-  move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'.
-Qed.
+Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 
 
 (** * categories *)
@@ -246,8 +244,19 @@ Qed.
   }.
 Arguments id {_ _}.
 Arguments comp {_ _ _ _}.
-Notation "g ° f" := (comp g f) (at level 20).
+Infix "°" := comp.
 
+(* the category of types and extensional functions (unused so far) *)
+(* TO REMEMBER: needs to be defined after [sup_from_isup] to avoid univers inconsistencies... *)
+(* Program Canonical Structure TYPES := *)
+(*   {| *)
+(*     ob := Type; *)
+(*     hom := efun; *)
+(*     comp := @types_comp; *)
+(*     id := @types_id; *)
+(*   |}. *)
+(* Next Obligation. move=>f f' ff g g' gg x/=. by rewrite ff gg. Qed. *)
+  
 (** the category of setoids and extensional functions *)
 Program Canonical Structure SETOIDS :=
   {|
@@ -257,7 +266,6 @@ Program Canonical Structure SETOIDS :=
     id := @types_id;
     comp_eqv := @types_comp_eqv;
   |}.
-
 
 (** * partial orders *)
 
@@ -320,7 +328,7 @@ Notation po_id := (types_id: _ -mon-> _) (only parsing).
 
 (** composition of morphisms *)
 Program Definition po_comp {X Y Z} (f: Y-mon->Z) (g: X-mon->Y) := 
-  isMonotone.Build X Z (types_comp f g) _.
+  isMonotone.Build X Z (f ∘ g) _.
 Next Obligation. move=>x y xy. by do 2apply monotone. Qed. 
 HB.instance Definition _ {X Y Z} f g := @po_comp X Y Z f g.
 
@@ -588,10 +596,10 @@ Lemma types_comp_leq_eqv {X} {Y: Setoid.type} {Z: PO.type}: Proper (@leq (Y-eqv-
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
 #[export] Instance const_leq {X} {Y: PO.type}:
-  Proper (leq ==> leq) (@const X Y).
+  Proper (leq ==> leq) (@const Y X).
 Proof. move=>/=y y' yy x. apply yy. Qed.
 #[export] Instance const_leq' {X} {Y: PO.type}:
-  Proper (leq ==> @leq (X-mon->Y)) (@const X Y) := const_leq.
+  Proper (leq ==> @leq (X-mon->Y)) const := const_leq.
 
 (** the category of partial orders and monotone functions *)
 Program Canonical Structure POS :=
@@ -860,7 +868,7 @@ End dual_props.
 Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
 Definition image_id {X: Type} (P: X -> Prop): image types_id P ≡ P.
 Proof. cbv. by firstorder subst. Qed.
-Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (types_comp f g) P ≡ image f (image g P).
+Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (f ∘ g) P ≡ image f (image g P).
 Proof. cbv. firstorder subst; eauto. Qed.
 Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
 Proof. by exists x. Qed.
@@ -979,7 +987,7 @@ Lemma adjoint_id {X}: @adjunction X X types_id types_id.
 Proof. by []. Qed.
 
 Lemma adjoint_comp {X Y Z f g f' g'} {A: @adjunction X Y f g} {B: @adjunction Y Z f' g'}:
-  adjunction (types_comp f' f) (types_comp g g').
+  adjunction (f' ∘ f) (g ∘ g').
 Proof. move=>x y/=. by rewrite 2!adj. Qed.
 
 Lemma dual_adjunction `(A: adjunction): adjunction (g: dual Y -> dual X) (f: dual X -> dual Y).

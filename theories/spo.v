@@ -83,7 +83,7 @@ Section map_args.
    | kB => fun '(x,y) => (f x,f y)
    | kC => fun '(exist _ P C) => exist _ (image f P) (image_chain C)
    | kD => fun '(exist _ P D) => exist _ (image f P) (image_directed D)
-   | kA => fun '(existT _ _ (P,g)) => existT _ _ (P,f°g)
+   | kA => fun '(existT _ _ (P,g)) => existT _ _ (P, f∘g)
    end.
  Lemma setof_map_args k: forall x, setof k (map_args k x) ≡ image f (setof k x).
  Proof.
@@ -382,7 +382,7 @@ Section c.
  Context {A: Type} {l} (X: SPO l).
  Variable r: A->X.               (* retraction *)
  Variable i: X->A.               (* section *)
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Program Let r': kern_po X r -mon-> X := PO.build_morphism r _.
  Next Obligation. by []. Qed.
  Program Definition retract_spo := 
@@ -399,7 +399,7 @@ Section c.
  Context {A: Type} {l} {X: SPO l} (P: X -> Prop).
  Variable r: A->sig P.
  Variable i: sig P->A.
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Hypothesis Psup: sup_closed' P.
  Definition sub_spo: SPO l := retract_spo (sig_spo Psup) ri. 
 End c. 
@@ -407,7 +407,7 @@ End c.
 (** the SPO of monotone functions *)
 Lemma po_morphism_as_sig {X Y: PO}:
   (fun f: X-mon->Y => exist (Proper (leq ==> leq)) (PO.body f) (@body_leq _ _ f))
-    ° (fun f: sig (Proper (leq ==> leq)) => PO.build_morphism _ (proj2_sig f)) ≡ id.
+    ∘ (fun f: sig (Proper (leq ==> leq)) => PO.build_morphism _ (proj2_sig f)) ≡ id.
 Proof. by case. Qed.
 Section s.
  Context {X: PO} {l} {Y: SPO l}.

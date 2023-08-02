@@ -131,7 +131,7 @@ Section c.
  Context {A: Type} {l} (X: GPO l).
  Variable r: A->X.               (* retraction *)
  Variable i: X->A.               (* section *)
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Definition retract_gpo: GPO l :=
    GPO.from_PO _ _ (retract_spo X ri) (retract_ipo X ri). 
 End c.
@@ -142,7 +142,7 @@ Section c.
  Context {A: Type} {l} {X: GPO l} (P: X -> Prop).
  Variable r: A->sig P.
  Variable i: sig P->A.
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Hypothesis HP: closed' P.
  Definition sub_gpo: GPO l := retract_gpo (sig_gpo HP) ri. 
 End c.

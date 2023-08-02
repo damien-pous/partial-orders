@@ -105,7 +105,7 @@ Section c.
  Context {A: Type} {l} (X: IPO l).
  Variable r: A->X.               (* retraction *)
  Variable i: X->A.               (* section *)
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Definition retract_ipo: IPO l :=
    IPO.cast A (IPO.dual' (retract_spo (IPO.dual X) ri)). 
 End c.
@@ -115,7 +115,7 @@ Section c.
  Context {A: Type} {l} {X: IPO l} (P: X -> Prop).
  Variable r: A->sig P.
  Variable i: sig P->A.
- Hypothesis ri: r°i ≡ id. 
+ Hypothesis ri: r∘i ≡ id. 
  Hypothesis Pinf: inf_closed' P.
  Definition sub_ipo: IPO l := retract_ipo (sig_ipo Pinf) ri. 
 End c. 

@@ -19,7 +19,7 @@ Abort.
 
 (* lucky here too *)
 Check fun A B (X: PO) (f: B -> X) (g: A -> B) =>
-        unify (kern_po (kern_po X f) g) (kern_po X (f ° g)).
+        unify (kern_po (kern_po X f) g) (kern_po X (f ∘ g)).
 
 
 
@@ -42,7 +42,7 @@ Goal forall x y: nat -> Prop, x ≡ y -> x <= y.
 Proof. intros * ->. Abort. 
 
 
-Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ° g ≡ h.
+Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ∘ g ≡ h.
   Fail intros * ->.
 Abort.
 Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> Setoid.comp f g ≡ h.
@@ -58,10 +58,10 @@ Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> Setoid.comp f g <= h.
   Fail intros * ->.
   intros * H. rewrite (H: f≡[_-eqv->_]g). 
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ° g <=[_-mon->_] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ∘ g <=[_-mon->_] h.
   intros * ->.
 Abort. 
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g <=[_-mon->_] h.
+Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ∘ g <=[_-mon->_] h.
   intros * ->.
 Abort. 
 
@@ -102,14 +102,14 @@ Check fun (X: PO) (f: X-mon->dual X) => f <= f.
 Check fun (X: PO) (f: dual X-mon->X) => f <= f. 
 Check fun (X: PO) (f: dual X-mon->dual X) => f <= f. 
 
-Check fun (X: PO) (f: X-mon->X) => f°f <= f. 
-Check fun (X: PO) (f: X-mon->X) => f°f ≡ f. 
-Check fun (X: PO) (f: X-eqv->X) => f°f <= f. 
-Check fun (X: PO) (f: X-eqv->X) => f°f ≡ f. 
-Check fun (X: PO) (f: X->X) => f°f <= f. 
-Check fun (X: PO) (f: X->X) => f°f ≡ f. 
-Check fun (X: Setoid) (f: X-eqv->X) => f°f ≡ f. 
-Check fun (X: Setoid) (f: X->X) => f°f ≡ f. 
+Check fun (X: PO) (f: X-mon->X) => f∘f <= f. 
+Check fun (X: PO) (f: X-mon->X) => f∘f ≡ f. 
+Check fun (X: PO) (f: X-eqv->X) => f∘f <= f. 
+Check fun (X: PO) (f: X-eqv->X) => f∘f ≡ f. 
+Check fun (X: PO) (f: X->X) => f∘f <= f. 
+Check fun (X: PO) (f: X->X) => f∘f ≡ f. 
+Check fun (X: Setoid) (f: X-eqv->X) => f∘f ≡ f. 
+Check fun (X: Setoid) (f: X->X) => f∘f ≡ f. 
 
 Check fun (X: PO) (f: X-mon->X) => id <= f. 
 Check fun (X: PO) (f: X-mon->X) => Datatypes.id <= f. 
@@ -126,22 +126,22 @@ Check fun (X: Setoid) (f: X->X) => id ≡ f.
 Section s.
   Variable X: Setoid.
   Variable Y: PO.
-  Check forall f g: X -eqv-> X, f ° g ≡ id.
-  Check forall f g: bool -eqv-> bool, f ° g ≡ id.
-  Check forall f g: bool -mon-> bool, f ° g ≡ id.
-  Check forall f g: X -eqv-> Y, forall h: Y-eqv->X, f ° h ° g ≡ g.
-  Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ° h ° g ≡ g.
-  Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ° h ° g <= g.
-  Check forall f g: Y -mon-> Y, forall h: Y-mon->Y, f ° h ° g <= g.
-  Check forall f g: Y -mon-> Y, forall h: Y-eqv->Y, f ° h ° g ≡ g.
-  Check forall f: Y -eqv-> Y, forall g: Y-mon->Y, f ° g ≡ id.
-  Check forall f: Y -mon-> Y, forall g: Y-eqv->Y, f ° g ≡ id.
+  Check forall f g: X -eqv-> X, f ∘ g ≡ id.
+  Check forall f g: bool -eqv-> bool, f ∘ g ≡ id.
+  Check forall f g: bool -mon-> bool, f ∘ g ≡ id.
+  Check forall f g: X -eqv-> Y, forall h: Y-eqv->X, f ∘ h ∘ g ≡ g.
+  Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ∘ h ∘ g ≡ g.
+  Check forall f g: Y -eqv-> Y, forall h: Y-mon->Y, f ∘ h ∘ g <= g.
+  Check forall f g: Y -mon-> Y, forall h: Y-mon->Y, f ∘ h ∘ g <= g.
+  Check forall f g: Y -mon-> Y, forall h: Y-eqv->Y, f ∘ h ∘ g ≡ g.
+  Check forall f: Y -eqv-> Y, forall g: Y-mon->Y, f ∘ g ≡ id.
+  Check forall f: Y -mon-> Y, forall g: Y-eqv->Y, f ∘ g ≡ id.
 End s.
 
 Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> f (f x) ≡ f (f x).
 Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
 
-Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> (f ° f) x ≡ f (f x).
+Goal forall X, forall f: X -eqv-> X, forall x y: X, x≡y -> (f ∘ f) x ≡ f (f x).
 Proof. intros * H. rewrite H. rewrite -H. reflexivity. Abort.  
 
 

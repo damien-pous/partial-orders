@@ -47,9 +47,6 @@ Next Obligation.
   - tauto.
   - split; transitivity y; tauto.
 Qed.
-Next Obligation.
-  reflexivity.
-Qed.
 Arguments build_from_type: clear implicits.
 
 Program Definition dual_mixin X M (N: @mixin X M): @mixin (dual X) M :=
@@ -69,7 +66,7 @@ Next Obligation. move=>x y. rewrite 2!eqv_of_leq=>xy. split; apply f; apply xy. 
 Canonical Structure id {X: type}: morphism X X :=
   build_morphism Datatypes.id _.
 Program Canonical Structure comp {X Y Z: type} (f: morphism Y Z) (g: morphism X Y): morphism X Z :=
-  build_morphism (comp f g) _. 
+  build_morphism (f ∘ g) _. 
 Next Obligation. move=>x y xy. apply f, g, xy. Defined.
 Program Canonical Structure const {X Y: type} (y: Y): morphism X Y :=
   build_morphism (const y) _.
@@ -176,7 +173,6 @@ Next Obligation. case: x; case: y=>//=; intuition discriminate. Qed.
 
 Program Canonical Structure Prop_po := Eval cbn in PO.build Prop impl _ _.
 Next Obligation. split; cbv; tauto. Qed.
-Next Obligation. cbv; tauto. Qed.
 
 Program Canonical Structure prod_po (X Y: PO) :=
   PO.build (prod X Y) (fun p q => fst p <= fst q /\ snd p <= snd q) _ _.
@@ -307,9 +303,9 @@ Next Obligation. rewrite and_comm. apply eqv_of_leq. Qed.
 Program Canonical Structure dual_po_morphism {X Y: PO} (f: X -mon-> Y): dual X -mon-> dual Y := PO.build_morphism f _.
 Next Obligation. move=>x y xy. apply f, xy. Qed.
 
-Lemma comp_leq {X Y Z}: Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@comp X Y Z).
+Lemma comp_leq {X Y Z}: Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
-Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@comp X Y Z).
+Lemma comp_leq_eqv {X Y} {Z: PO}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
 #[export] Instance setoid_comp_leq {X Y} {Z: PO}: Proper (leq ==> eqv ==> leq) (@Setoid.comp X Y Z) := comp_leq_eqv.
@@ -323,7 +319,7 @@ Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
 
 
-#[export] Instance const_leq {X} {Y: PO}: Proper (leq ==> leq) (@const X Y).
+#[export] Instance const_leq {X} {Y: PO}: Proper (leq ==> leq) (@const Y X).
 Proof. move=>/=y y' yy' _/=. apply yy'. Qed.
 #[export] Instance setoid_const_leq {X} {Y: PO}: Proper (leq ==> leq) (@Setoid.const X Y) := const_leq.
 #[export] Instance po_const_leq {X} {Y: PO}: Proper (leq ==> leq) (@PO.const X Y) := const_leq.
@@ -440,7 +436,7 @@ Qed.
 Lemma sup_closed_Proper P: sup_closed P -> Proper (eqv ==> eqv) P.
 Proof.
   move=>H. apply Proper_half=>x y xy Px. apply (H (eq x)). by move=>?<-. 
-  move: (is_sup_single x). apply Proper_is_sup=>//. reflexivity.
+  move: (is_sup_single x). apply Proper_is_sup=>//. 
 Qed.
 
 Inductive sup_closure P: X -> Prop :=
@@ -510,7 +506,7 @@ End s.
 Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
 Definition image_id {X: Type} (P: X -> Prop): image Datatypes.id P ≡ P.
 Proof. cbv. by firstorder subst. Qed.
-Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (f ° g) P ≡ image f (image g P).
+Definition image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (f ∘ g) P ≡ image f (image g P).
 Proof. cbv. firstorder subst; eauto. Qed.
 Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
 Proof. by exists x. Qed.
