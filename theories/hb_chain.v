@@ -1,7 +1,7 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Classical.
-Require Import hb_spo.
+Require Import hb_spo hb_categories.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

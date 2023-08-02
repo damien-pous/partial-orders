@@ -231,41 +231,6 @@ Lemma types_comp_eqv {X Y Z: Setoid.type}:
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
 
 
-(** * categories *)
-#[universes(polymorphic=yes)] Structure CATEGORY := {
-    ob: Type;
-    hom:> ob -> ob -> Setoid.type;
-#[canonical=no] id: forall {A}, hom A A;
-#[canonical=no] comp: forall {A B C}, hom B C -> hom A B -> hom A C;
-#[canonical=no] comp_eqv:: forall {A B C}, Proper (eqv ==> eqv ==> eqv) (@comp A B C);
-#[canonical=no] idl: forall {A B} f, @comp A A B f id ≡ f;
-#[canonical=no] idr: forall {A B} f, @comp B A A id f ≡ f;
-#[canonical=no] compA: forall {A B C D} f g h, @comp A B D (@comp B C D h g) f ≡ @comp A C D h (@comp A B C g f)
-  }.
-Arguments id {_ _}.
-Arguments comp {_ _ _ _}.
-Infix "°" := comp.
-
-(* the category of types and extensional functions (unused so far) *)
-(* TO REMEMBER: needs to be defined after [sup_from_isup] to avoid univers inconsistencies... *)
-(* Program Canonical Structure TYPES := *)
-(*   {| *)
-(*     ob := Type; *)
-(*     hom := efun; *)
-(*     comp := @types_comp; *)
-(*     id := @types_id; *)
-(*   |}. *)
-(* Next Obligation. move=>f f' ff g g' gg x/=. by rewrite ff gg. Qed. *)
-  
-(** the category of setoids and extensional functions *)
-Program Canonical Structure SETOIDS :=
-  {|
-    ob := Setoid.type;
-    hom X Y := X -eqv-> Y;
-    comp := @types_comp;
-    id := @types_id;
-    comp_eqv := @types_comp_eqv;
-  |}.
 
 (** * partial orders *)
 
@@ -587,6 +552,8 @@ HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
 (** monotone functions as a special case *)
 HB.instance Definition _ {X Y: PO.type} :=
   PO.copy (X-mon->Y) (kernel (fun f: X-mon->Y => f: X -> Y)).
+(** notation to help typechecking morphisms comparisons *)
+Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing). 
 
 (* TOHINK: useful as instances? *)
 Lemma types_comp_leq {X} {Y Z: PO.type}:
@@ -600,25 +567,6 @@ Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 Proof. move=>/=y y' yy x. apply yy. Qed.
 #[export] Instance const_leq' {X} {Y: PO.type}:
   Proper (leq ==> @leq (X-mon->Y)) const := const_leq.
-
-(** the category of partial orders and monotone functions *)
-Program Canonical Structure POS :=
-  {|
-    ob := PO.type;
-    hom X Y := X -mon-> Y;
-    comp := @types_comp;
-    id := @types_id;
-    comp_eqv := @types_comp_eqv;    
-  |}.
-(* notation to help typechecking morphisms comparisons *)
-Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing). 
-
-(* this instance of [types_comp_leq] needs to be explicited to be useful for setoid-rewriting *)
-#[export] Instance po_comp_leq {X Y Z: PO.type}:
-  Proper (leq ==> leq ==> leq) (@comp POS X Y Z) := types_comp_leq.
-(* idem for this one? *)
-#[export] Instance setoid_comp_leq {X: Setoid.type} {Y Z: PO.type}:
-  Proper (leq ==> eqv ==> leq) (@comp SETOIDS X Y Z) := types_comp_leq_eqv.
 
 
 (** ** theory *)
