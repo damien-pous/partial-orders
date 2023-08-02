@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Classical.
-Require Import ipo.
+Require Import cs_ipo.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

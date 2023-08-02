@@ -1,6 +1,6 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
-Require Import hb hb_categories.
+Require Import hb_po hb_categories.
 Require Classical.
 
 Set Implicit Arguments.

@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Import StrictProp.
-From PartialOrders Require Import spo.
+From PartialOrders Require Import cs_spo.
 
 Set Implicit Arguments.
 Set Primitive Projections.

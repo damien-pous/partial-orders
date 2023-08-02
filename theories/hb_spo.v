@@ -1,7 +1,7 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Import StrictProp.
-Require Export hb.
+Require Export hb_po.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

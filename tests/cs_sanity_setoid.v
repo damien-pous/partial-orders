@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-From PartialOrders Require Import setoid.
+From PartialOrders Require Import cs_setoid.
 
 (* we are lucky here... *)
 Check fun A B (X: Setoid) (f: B -> X) (g: A -> B) =>

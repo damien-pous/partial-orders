@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-Require Import hb.
+Require Import hb_spo.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

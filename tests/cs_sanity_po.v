@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-From PartialOrders Require Import po.
+From PartialOrders Require Import cs_po.
 
 Goal nat -> True <= True.
   move=>n x.                     (* requires Eval hnf/cbn in [Prop_po] *)

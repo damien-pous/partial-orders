@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-Require Export setoid.
+Require Export cs_setoid.
 Require Eqdep_dec.
 
 Set Implicit Arguments.

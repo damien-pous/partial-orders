@@ -1,5 +1,5 @@
 Require Import Arith.
-Require Export gpo.
+Require Export cs_gpo.
 
 Canonical Structure nat_setoid := eq_setoid nat.
 

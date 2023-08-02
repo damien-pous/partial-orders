@@ -1,22 +1,25 @@
 # FILES
 
 - theories/preliminaries.v   elementary helpers
-- theories/setoid.v          setoids
-- theories/po.v              partial orders
-- theories/spo.v             partial orders with (some) supremums
-- theories/ipo.v             partial orders with (some) infimums
-- theories/gpo.v             partial orders with (some) supremums & infimums 
-- theories/chain.v           study of the chain of a function (BourbakiWitt/Pataraia)
-- theories/adjunctions.v     adjunctions
-- theories/nat.v             the partial order of natural numbers (with min, max, 0)
+- theories/--_setoid.v          setoids
+- theories/--_po.v              partial orders
+- theories/--_spo.v             partial orders with (some) supremums
+- theories/--_ipo.v             partial orders with (some) infimums
+- theories/--_gpo.v             partial orders with (some) supremums & infimums 
+- theories/--_chain.v           study of the chain of a function (BourbakiWitt/Pataraia)
+- theories/--_adjunctions.v     adjunctions
+- theories/--_nat.v             the partial order of natural numbers (with min, max, 0)
 
-- theories/hb[_spo].v        HB based version of {setoid,po,spo,ipo,gpo,adjunctions,nat}.v
-- theories/hb_chain.v        HB based version of chain.v
-- theories/hb_chain_old.v    HB based version of chain.v, defining its own hierarchy on top of hb.v
+where -- is
+- hb for the HB based version
+- cs for the homemade CS based one
+- tc for the homemade TC based one (not yet)
+- mx for the homemade CS+TC based one (not yet)
+
+- theories/hb_chain_alt.v      alternative version of hb_chain, defining its own hierarchy on top of hb_po.v
 
 sanity checks
-- theories/hb_sanity.v       tests for the HB based version
-- tests/sanity_*.v           tests for the CS based version
+- tests/*.v
 
 old attempts
 - attic/alone.v     without HB

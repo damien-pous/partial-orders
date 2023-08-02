@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Import StrictProp.
-Require Export po.
+Require Export cs_po.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

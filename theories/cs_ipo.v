@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-Require Export spo.
+Require Export cs_spo.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-Require Export po.
+Require Export cs_po.
 
 Set Implicit Arguments.
 
