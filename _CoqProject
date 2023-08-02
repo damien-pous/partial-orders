@@ -3,14 +3,16 @@
 # end-user library
 -R theories/ PartialOrders
 theories/preliminaries.v
-#theories/hb_setoid.v
+theories/hb_setoid.v
 theories/hb_po.v
-theories/hb_categories.v
 theories/hb_spo.v
-#theories/hb_ipo.v
-#theories/hb_gpo.v
-theories/hb_chain_alt.v
+theories/hb_ipo.v
+theories/hb_gpo.v
+theories/hb_instances.v
+theories/hb_adjunctions.v
+theories/hb_categories.v
 theories/hb_chain.v
+theories/hb_chain_alt.v
 theories/cs_setoid.v
 theories/cs_po.v
 theories/cs_adjunctions.v
@@ -22,11 +24,11 @@ theories/cs_chain.v
 
 # tests & sanity checks
 -R tests/ PartialOrdersTests
-#tests/hb_sanity_setoid.v
-#tests/hb_sanity_po.v
+tests/hb_sanity_setoid.v
+tests/hb_sanity_po.v
 tests/hb_sanity_spo.v
-#tests/hb_sanity_ipo.v
-#tests/hb_sanity_gpo.v
+tests/hb_sanity_ipo.v
+tests/hb_sanity_gpo.v
 tests/hb_sanity.v
 tests/cs_sanity_setoid.v
 tests/cs_sanity_po.v
