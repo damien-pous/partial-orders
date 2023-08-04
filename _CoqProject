@@ -16,6 +16,7 @@ theories/hb_chain_alt.v
 theories/cs_setoid.v
 theories/cs_po.v
 theories/cs_adjunctions.v
+theories/cs_categories.v
 theories/cs_spo.v
 theories/cs_ipo.v
 theories/cs_gpo.v

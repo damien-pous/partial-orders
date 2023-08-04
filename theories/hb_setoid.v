@@ -13,12 +13,15 @@ Set Primitive Projections.
 
 HB.mixin Record isSetoid (X: Type) := {
   #[canonical=no] eqv: relation X;
-  #[canonical=no] Equivalence_eqv: Equivalence eqv
+  #[canonical=no] axm: Equivalence eqv
 }.
 HB.structure Definition Setoid :=
   { X of isSetoid X }.
 Infix "≡" := eqv (at level 70).
-Notation "x ≡[ X ] y" := (@eqv X x y) (at level 70, only parsing).
+Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
+
+#[export] Instance Equivalence_eqv {X}: Equivalence (@eqv X) :=
+  isSetoid.axm _.
 
 (** testing that two setoids are definitionally equal *)
 Notation unify_setoids X Y := (unify (X: Setoid.type) (Y: Setoid.type)).
@@ -30,6 +33,7 @@ HB.mixin Record isExtensional (X Y: Setoid.type) (f: X -> Y) := {
 }.
 HB.structure Definition setoid_morphism (X Y: Setoid.type) :=
   { f of isExtensional X Y f }.
+#[export] Existing Instance extensional.
 Notation "X '-eqv->' Y" := (setoid_morphism.type X Y) (at level 99, Y at level 200).
 
 (** identity morphism *)
@@ -40,19 +44,16 @@ Notation setoid_id := (types_id: _ -eqv-> _) (only parsing).
 (** composition of morphisms *)
 Program Definition setoid_comp {X Y Z} (f: Y-eqv->Z) (g: X-eqv->Y) := 
   isExtensional.Build X Z (types_comp f g) _.
-Next Obligation. move=>x y xy. by do 2 apply extensional. Qed. 
 HB.instance Definition _ {X Y Z} f g := @setoid_comp X Y Z f g.
 
 (** constant morphism *)
 Program Canonical Structure setoid_const {X Y: Setoid.type} (y: Y) :=
   isExtensional.Build X Y (const y) _.
-Next Obligation. move=>/=_ _ _. apply Equivalence_eqv. Qed.
+Next Obligation. by move=>/=_ _ _. Qed.
 HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 
 (** ** properties *)
 
-#[export] Existing Instance Equivalence_eqv.
-#[export] Existing Instance extensional.
 Lemma eqv_refl {X: Setoid.type} (x: X): x ≡ x.
 Proof. reflexivity. Qed.
 Lemma eqv_sym {X: Setoid.type} (x y: X): x ≡ y -> y ≡ x.
@@ -87,20 +88,14 @@ HB.instance Definition _ := eq_setoid bool.
 
 (** trivial setoids, for proof irrelevant types *)
 Definition trivial (X: Type) := X.
-Program Definition setoid_trivial (X: Type) := isSetoid.Build (trivial X) (eqv := fun _ _ => True) _.
-Next Obligation. split; firstorder. Qed.
+Program Definition setoid_trivial (X: Type) :=
+  isSetoid.Build (trivial X) (eqv := fun _ _ => True) _.
+Next Obligation. firstorder. Qed.
 HB.instance Definition _ X := setoid_trivial X. 
 HB.instance Definition _ := Setoid.copy unit (trivial unit). 
 
 (** setoid of extensional propositions *)
-HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
-
-(** setoid of extenstional functions (between types)
-    NB: different from extensional functions between setoids (setoid_morphisms), here we use [eq] on the codomain *)
-Definition efun X Y := arrow X Y.
-Definition eid {X}: efun X X := types_id. 
-HB.instance Definition _ X Y :=
-  isSetoid.Build (efun X Y) (@Equivalence.pointwise_equivalence X Y eq eq_equivalence). 
+HB.instance Definition _ := isSetoid.Build Prop _. 
 
 (** (dependent) function space *)
 Section dprod.
@@ -121,9 +116,10 @@ Definition setoid_app {A} {X: A -> Setoid.type} (a: A) :=
   isExtensional.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
 HB.instance Definition _ A X a := @setoid_app A X a.
 
-(** direct sum and product *)
-Section sumprod.
+Section s.
  Variables (X Y: Setoid.type).
+
+ (** direct product *)
  Definition eqv_prod: relation (X*Y) := fun x y => fst x ≡ fst y /\ snd x ≡ snd y.
  Lemma setoid_prod: Equivalence eqv_prod.
  Proof.
@@ -138,6 +134,7 @@ Section sumprod.
  HB.instance Definition _ :=
    isExtensional.Build (prod X Y) Y snd (fun p q pq => proj2 pq).
 
+ (** direct sum *)
  Definition eqv_sum: relation (X+Y) :=
    fun x y => match x,y with inl x,inl y | inr x,inr y => x ≡ y | _,_ => False end.
  Lemma setoid_sum: Equivalence eqv_sum.
@@ -153,13 +150,8 @@ Section sumprod.
    isExtensional.Build X (sum X Y) inl (fun p q pq => pq).
  HB.instance Definition _ :=
    isExtensional.Build Y (sum X Y) inr (fun p q pq => pq).
-End sumprod.
-Arguments eqv_prod {_ _} _ _/. 
-Arguments eqv_sum {_ _}_ _/. 
 
-(** option & list setoids *)
-Section optionlist.
- Variables (X: Setoid.type).
+ (** option type *)
  Definition eqv_option (p q: option X) :=
   match p,q with Some p,Some q => p≡q | None,None => True | _,_ => False end.
  Lemma setoid_option: Equivalence eqv_option.
@@ -170,20 +162,13 @@ Section optionlist.
    by move=>[?|][y|][?|]??//=; transitivity y. 
  Qed.
  HB.instance Definition _ := isSetoid.Build _ setoid_option.
-
- Fixpoint eqv_list (h k: list X) :=
-   match h,k with cons x h,cons y k => x≡y /\ eqv_list h k | nil,nil => True | _,_ => False end.
- Lemma setoid_list: Equivalence eqv_list.
- Proof.
-   constructor.
-   - by elim=>//.
-   - by elim=>[|x h IH][|y k]//=[? ?]; split; auto. 
-   - elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto. 
- Qed.
- HB.instance Definition _ := isSetoid.Build _ setoid_list.
-End optionlist.
-Arguments eqv_option [_] _ _/.
-Arguments eqv_list [_] _ _/.
+ HB.instance Definition _ :=
+   isExtensional.Build X (option X) Some (fun p q pq => pq).
+ 
+End s.
+Arguments eqv_prod {_ _} _ _/. 
+Arguments eqv_sum {_ _}_ _/. 
+Arguments eqv_option {_}_ _/. 
 
 (** constructing setoids via functions into other setoids *)
 Definition kernel {A X: Type} (f: A -> X) := A.
@@ -191,19 +176,23 @@ Definition kernelf {A X: Type} (f: A -> X): kernel f -> X := f.
 Section kernel.
  Variables (A: Type) (X: Setoid.type) (f: A -> X).
  Definition eqv_kern: relation (kernel f) := fun x y => f x ≡ f y.
- Lemma setoid_kern: Equivalence eqv_kern.
+ Lemma kern_setoid: Equivalence eqv_kern.
  Proof.
    rewrite /eqv_kern.
    constructor.
    - by move=>?; reflexivity. 
    - by move=>???; symmetry. 
    - by move=>?????; etransitivity; eauto.
-     (* need to be Defined so that kernel compositions properly reduce *)     
  Defined. 
- HB.instance Definition _ := isSetoid.Build (kernel f) setoid_kern.
+ HB.instance Definition _ := isSetoid.Build (kernel f) kern_setoid.
  HB.instance Definition _ := isExtensional.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
 Arguments eqv_kern [_ _] _ _ _/.
+(* NB: [kern_setoid] should be defined carefully, and left transparent, so that we have:  *)
+(* Check fun (X: Setoid.type) (f g: X -> X) => *)
+(*         unify_setoids *)
+(*           (kernel (X:=kernel g) f) *)
+(*           (kernel (types_comp g f)). *)
 
 (** sub-setoids as a special case *)
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
@@ -226,4 +215,4 @@ Proof. move=>/=y y' yy x. apply yy. Qed.
     provided the outer function is extensive *)
 Lemma types_comp_eqv {X Y Z: Setoid.type}:
   Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@types_comp X Y Z).
-Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
+Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.

@@ -7,7 +7,6 @@ Unset Printing Implicit Defensive.
 Local Unset Transparent Obligations.
 Set Primitive Projections.
 
-
 (** * partial orders *)
 
 (** ** class *)
@@ -54,7 +53,7 @@ Qed.
 HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
-(** inheritance: setoid morphisms are po morphisms *)
+(** inheritance: po morphisms are setoid morphisms *)
 HB.builders Context X Y f (F : isMonotone X Y f).
   HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
@@ -89,7 +88,6 @@ Proof. intros x y. apply eqv_of_leq. Qed.
 
 Lemma leq_refl {X: PO.type} (x: X): x <= x.
 Proof. reflexivity. Qed.
-#[export] Hint Extern 0 (_ <= _)=> exact: (leq_refl _): core.
 
 
 (** ** duality *)
@@ -140,17 +138,12 @@ Next Obligation. split. typeclasses eauto. intuition. Qed.
 HB.instance Definition _ X := po_discrete X.
 
 (** trivial partial order as the discrete partial order on the trivial setoid *)
-HB.instance Definition _ (X: Type) := PO.copy (trivial X) (discrete (trivial X)).
+HB.instance Definition _ (X: Type) :=
+  PO.copy (trivial X) (discrete (trivial X)).
 
 (** trivial partial order on the unit type *)
-HB.instance Definition _ := PO.copy unit (discrete unit).
-
-
-
-(** propositions ordered by implication *)
-Lemma po_Prop: po_axm impl. 
-Proof. split=>//. split; cbv; tauto. Qed.
-HB.instance Definition _ := isPO.Build Prop po_Prop.
+HB.instance Definition _ :=
+  PO.copy unit (discrete unit).
 
 (** Booleans with [false ≦ true] *)
 Lemma po_bool: po_axm Bool.le.
@@ -159,6 +152,11 @@ Proof.
   case; case=>//=; intuition discriminate.
 Qed.
 HB.instance Definition _ := isPO.Build bool po_bool.
+
+(** propositions ordered by implication *)
+Lemma po_Prop: po_axm impl. 
+Proof. split=>//. split; cbv; tauto. Qed.
+HB.instance Definition _ := isPO.Build Prop po_Prop.
 
 (** (dependent) function space, ordered pointwise *)
 Section dprod.
@@ -179,8 +177,8 @@ Definition po_app {A} {X: A -> PO.type} (a: A) :=
   isMonotone.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
 HB.instance Definition _ A X a := @po_app A X a.
 
-(** products and sums of partial orders *)
-Section sumprod.
+(** products, sums, option *)
+Section s.
  Variables X Y: PO.type.
 
  (** direct product *)
@@ -249,15 +247,6 @@ Section sumprod.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
  HB.instance Definition _ := isPO.Build (sequential_sum X Y) po_sequential_sum.
-End sumprod. 
-Arguments leq_prod [_ _] _ _/.
-Arguments leq_lex_prod [_ _] _ _/.
-Arguments leq_parallel_sum [_ _] _ _/.
-Arguments leq_sequential_sum [_ _] _ _/.
-  
-(** option & list partial orders *)
-Section optionlist.
- Variables (X: PO.type).
 
  (** [option] type, adding [None] as top element *)
  (* TODO: propose the other variant;
@@ -272,40 +261,34 @@ Section optionlist.
    case=>[?|]; case=>[?|]; cbn; rewrite ?eqv_of_leq; tauto.
  Qed.
  HB.instance Definition _ := isPO.Build (option X) po_option.
-
- (** lists ordered lexicographically *)
- Fixpoint leq_list (h k: list X) :=
-   match h,k with cons x h,cons y k => x<=y /\ leq_list h k | nil,_ => True | _,_ => False end.
- Lemma po_list: po_axm leq_list.
- Proof.
-   split. constructor.
-   - by elim=>//.
-   - by elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto.
-   - elim=>[|x h IH][|y k]; cbn; try tauto.
-     rewrite eqv_of_leq. setoid_rewrite IH. tauto.
- Qed.
- HB.instance Definition _ := isPO.Build (list X) po_list.
-End optionlist.
+End s. 
+Arguments leq_prod [_ _] _ _/.
+Arguments leq_lex_prod [_ _] _ _/.
+Arguments leq_parallel_sum [_ _] _ _/.
+Arguments leq_sequential_sum [_ _] _ _/.
 Arguments leq_option [_] _ _/.
-Arguments leq_list [_] _ _/.
-
+  
 (** constructing a partial order via a function into another partial order *)
 Section kernel.
  Variables (A: Type) (X: PO.type) (f: A -> X).
  Definition leq_kern: relation (kernel f) := fun x y => f x <= f y.
- Lemma po_kern: po_axm leq_kern.
+ Lemma kern_po: po_axm leq_kern.
  Proof.
    split.
    - rewrite /leq_kern. constructor.
      -- by move=>?; reflexivity.
      -- by move=>?????; etransitivity; eauto.
    - cbn=>??. apply eqv_of_leq.
-     (* need to be defined for kernel composition to behave well *)
  Defined.
- HB.instance Definition _ := isPO.Build (kernel f) po_kern.  
+ HB.instance Definition _ := isPO.Build (kernel f) kern_po.  
  HB.instance Definition _ := isMonotone.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
 Arguments leq_kern [_ _] _ _ _/.
+(* [kern_po] should be defined carefully, and left transparent, so that we have:  *)
+(* Check fun (X: PO.type) (f g: X -> X) => *)
+(*         unify_pos *)
+(*           (kernel (X:=kernel g) f) *)
+(*           (kernel (types_comp g f)). *)
 
 (** sub partial orders as a special case *)
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
@@ -324,10 +307,10 @@ HB.instance Definition _ {X Y: PO.type} :=
 Infix "≦" := (@leq (_ -mon-> _)) (at level 70, only parsing). 
 
 (* TOHINK: useful as instances? *)
-Lemma types_comp_leq {X} {Y Z: PO.type}:
+Lemma types_comp_leq {X Y Z}:
   Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@types_comp X Y Z).
-Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply ff'. Qed.
-Lemma types_comp_leq_eqv {X} {Y: Setoid.type} {Z: PO.type}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
+Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.
+Lemma types_comp_leq_eqv {X Y} {Z: PO.type}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
 #[export] Instance const_leq {X} {Y: PO.type}:
@@ -678,36 +661,3 @@ Section ks.
     -- apply H=>_ [c [Pc ->]]. by apply ab.
   Qed.
 End ks.
-
-
-(** *  adjunctions *)
-Section s.
-  Context {X Y: PO.type}.
-  Variables (f: X -> Y) (g: Y -> X).
-  Class adjunction := adj: forall x y, f x <= y <-> x <= g y.
-  
-  #[local] Instance left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
-  Proof. intros x y xy. apply adj. rewrite xy. by apply adj. Qed.
-  
-  #[local] Instance right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
-  Proof. intros x y xy. apply adj. rewrite -xy. by apply adj. Qed.
-  
-  Lemma left_adjoint_sup (A: adjunction) P x: is_sup P x -> is_sup (image f P) (f x).
-  Proof.
-    unfold is_sup. intros H y. rewrite adj H.
-    setoid_rewrite <-adj. symmetry. apply forall_image.
-  Qed.
-End s.
-
-Lemma adjoint_id {X}: @adjunction X X types_id types_id.
-Proof. by []. Qed.
-
-Lemma adjoint_comp {X Y Z f g f' g'} {A: @adjunction X Y f g} {B: @adjunction Y Z f' g'}:
-  adjunction (f' ∘ f) (g ∘ g').
-Proof. move=>x y/=. by rewrite 2!adj. Qed.
-
-Lemma dual_adjunction `(A: adjunction): adjunction (g: dual Y -> dual X) (f: dual X -> dual Y).
-Proof. rewrite /adjunction/= => y x. symmetry. by apply adj. Qed.
-
-Lemma right_adjoint_inf `(A: adjunction) P y: is_inf P y -> is_inf (image g P) (g y).
-Proof. apply (left_adjoint_sup (dual_adjunction A)). Qed. 

@@ -7,10 +7,10 @@ Set Primitive Projections.
 
 Module Failed_CS_level_inheritance_attempts.
   
-Definition bot {X: SPO sE}: X := @gsup _ X kE stt tt. 
+Definition bot {X: SPO.type sE}: X := @gsup _ X kE stt tt. 
 Fail Check bot: bool. 
 
-Definition bot' {X: SPO sF}: X := @gsup _ X kE stt tt. 
+Definition bot' {X: SPO.type sF}: X := @gsup _ X kE stt tt. 
 Check bot': bool. 
 
 Module A. 
@@ -20,10 +20,10 @@ Structure coercer (l: slevel) := c {
   }.
 Canonical Structure cEF := c sE sF I.
 Structure SPO' l := {
-    get:> SPO l;
+    get:> SPO.type l;
     coe: coercer l;
   }.
-Canonical Structure coercion l (coe: coercer l) (X: SPO (ck coe)): SPO' l :=
+Canonical Structure coercion l (coe: coercer l) (X: SPO.type (ck coe)): SPO' l :=
   Eval hnf in
   {| coe := coe; get := SPO.weaken _ X (ckl coe) |}.
 
@@ -41,9 +41,9 @@ Structure coercer (l: slevel) := c {
 Notation "h <: k" := (c k h I) (at level 80). 
 Canonical Structure cEF := sE <: sF.
 Canonical Structure cEC := sE <: sEC. (* argh *)
-Definition SPO' l := SPO l.
+Definition SPO' l := SPO.type l.
 Coercion sort' l (X: SPO' l): Type := X.
-Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (ck coe) :=
+Canonical Structure coercion l (X: SPO.type l) (coe: coercer l): SPO' (ck coe) :=
   Eval hnf in @SPO.pack (ck coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ckl coe))).
 Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
 Fail Check bot: bool. 
@@ -119,9 +119,9 @@ Module C.
   Canonical Structure cECED : coercer _ := Eval hnf in sEC <: sED.
   Canonical Structure c_A p := Eval hnf in Some p <: sA.
   
-  Definition SPO' l := SPO l.
+  Definition SPO' l := SPO.type l.
   Coercion sort' l (X: SPO' l): Type := X.
-  Canonical Structure coercion l (X: SPO l) (coe: coercer l): SPO' (k l coe) :=
+  Canonical Structure coercion l (X: SPO.type l) (coe: coercer l): SPO' (k l coe) :=
     Eval hnf in @SPO.pack (k l coe) (sort' X) _ _ (SPO.mix (SPO.weaken _ X (ck l coe))).
   Definition bot {X: SPO' sE}: X := @gsup _ X kE stt tt. 
   Fail Check bot: bool. 

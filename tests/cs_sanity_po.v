@@ -18,23 +18,23 @@ Abort.
 
 
 (* lucky here too *)
-Check fun A B (X: PO) (f: B -> X) (g: A -> B) =>
+Check fun A B (X: PO.type) (f: B -> X) (g: A -> B) =>
         unify (kern_po (kern_po X f) g) (kern_po X (f ∘ g)).
 
 
 
-Check forall X Y: PO, forall f: X -> Y, f ≡ f.
-Check forall X Y: PO, ((X->Y) : Setoid).
+Check forall X Y: PO.type, forall f: X -> Y, f ≡ f.
+Check forall X Y: PO.type, ((X->Y) : Setoid.type).
 
 
 
-Goal forall X: PO, forall x y: X, x <= y -> x <= y.
+Goal forall X: PO.type, forall x y: X, x <= y -> x <= y.
 Proof. intros * ->. Abort.
-Goal forall X: PO, forall x y: X, x ≡ y -> x <= y.
+Goal forall X: PO.type, forall x y: X, x ≡ y -> x <= y.
 Proof. intros * ->. Abort. 
-Goal forall X: PO, forall x y: nat -> X, x <= y -> x <= y.
+Goal forall X: PO.type, forall x y: nat -> X, x <= y -> x <= y.
 Proof. intros * ->. Abort.
-Goal forall X: PO, forall x y: nat -> X, x ≡ y -> x <= y.
+Goal forall X: PO.type, forall x y: nat -> X, x ≡ y -> x <= y.
 Proof. intros * ->. Abort. 
 Goal forall x y: nat -> Prop, x <= y -> x <= y.
 Proof. intros * ->. Abort.
@@ -42,26 +42,26 @@ Goal forall x y: nat -> Prop, x ≡ y -> x <= y.
 Proof. intros * ->. Abort. 
 
 
-Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> f ∘ g ≡ h.
+Goal forall X: Setoid.type, forall f g h: X -eqv-> X, f ≡ g -> f ∘ g ≡ h.
   Fail intros * ->.
 Abort.
-Goal forall X: Setoid, forall f g h: X -eqv-> X, f ≡ g -> Setoid.comp f g ≡ h.
+Goal forall X: Setoid.type, forall f g h: X -eqv-> X, f ≡ g -> setoid_comp f g ≡ h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -eqv-> X, f ≡ g -> Setoid.comp f g <= h.
+Goal forall X: PO.type, forall f g h: X -eqv-> X, f ≡ g -> setoid_comp f g <= h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> PO.comp f g ≡ h.
+Goal forall X: PO.type, forall f g h: X -mon-> X, f ≡ g -> po_comp f g ≡ h.
   intros * ->.
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> Setoid.comp f g <= h.
+Goal forall X: PO.type, forall f g h: X -mon-> X, f ≡ g -> setoid_comp f g <= h.
   Fail intros * ->.
   intros * H. rewrite (H: f≡[_-eqv->_]g). 
 Abort.
-Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ∘ g <=[_-mon->_] h.
+Goal forall X: PO.type, forall f g h: X -mon-> X, f <= g -> f ∘ g <=[_-mon->_] h.
   intros * ->.
 Abort. 
-Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ∘ g <=[_-mon->_] h.
+Goal forall X: PO.type, forall f g h: X -mon-> X, f ≡ g -> f ∘ g <=[_-mon->_] h.
   intros * ->.
 Abort. 
 
@@ -76,8 +76,8 @@ Goal forall f g: nat -> Prop, f ≡ g -> f <= g.
 Abort.
 
 
-Check bool: Setoid. 
-Check bool: PO. 
+Check bool: Setoid.type. 
+Check bool: PO.type. 
 
 Eval cbn in (true,false) <= (false,true). 
 Eval cbn in ((true,false): lex_prod _ _) <= (false,true). 
@@ -91,41 +91,41 @@ Abort.
 (* need irrelevant po *)
 Fail Check forall (x: bool * forall b: bool, bool * True), x <= x.
 
-Check fun X: PO => dual X: PO. 
-Check fun (X: PO) (x: dual X) => x <= x. 
-Check fun (X: PO) (f: X-mon->X) => f <= f. 
-Check fun (X: PO) (f: X-mon->X) => f ≡ f. 
-Check fun (X: PO) (f: X-eqv->X) => f ≡ f. 
-Check fun (X: PO) (f: X-eqv->X) => f <= f. 
-Check fun (X: Setoid) (f: X-eqv->X) => f ≡ f. 
-Check fun (X: PO) (f: X-mon->dual X) => f <= f. 
-Check fun (X: PO) (f: dual X-mon->X) => f <= f. 
-Check fun (X: PO) (f: dual X-mon->dual X) => f <= f. 
+Check fun X: PO.type => dual X: PO.type. 
+Check fun (X: PO.type) (x: dual X) => x <= x. 
+Check fun (X: PO.type) (f: X-mon->X) => f <= f. 
+Check fun (X: PO.type) (f: X-mon->X) => f ≡ f. 
+Check fun (X: PO.type) (f: X-eqv->X) => f ≡ f. 
+Check fun (X: PO.type) (f: X-eqv->X) => f <= f. 
+Check fun (X: Setoid.type) (f: X-eqv->X) => f ≡ f. 
+Check fun (X: PO.type) (f: X-mon->dual X) => f <= f. 
+Check fun (X: PO.type) (f: dual X-mon->X) => f <= f. 
+Check fun (X: PO.type) (f: dual X-mon->dual X) => f <= f. 
 
-Check fun (X: PO) (f: X-mon->X) => f∘f <= f. 
-Check fun (X: PO) (f: X-mon->X) => f∘f ≡ f. 
-Check fun (X: PO) (f: X-eqv->X) => f∘f <= f. 
-Check fun (X: PO) (f: X-eqv->X) => f∘f ≡ f. 
-Check fun (X: PO) (f: X->X) => f∘f <= f. 
-Check fun (X: PO) (f: X->X) => f∘f ≡ f. 
-Check fun (X: Setoid) (f: X-eqv->X) => f∘f ≡ f. 
-Check fun (X: Setoid) (f: X->X) => f∘f ≡ f. 
+Check fun (X: PO.type) (f: X-mon->X) => f∘f <= f. 
+Check fun (X: PO.type) (f: X-mon->X) => f∘f ≡ f. 
+Check fun (X: PO.type) (f: X-eqv->X) => f∘f <= f. 
+Check fun (X: PO.type) (f: X-eqv->X) => f∘f ≡ f. 
+Check fun (X: PO.type) (f: X->X) => f∘f <= f. 
+Check fun (X: PO.type) (f: X->X) => f∘f ≡ f. 
+Check fun (X: Setoid.type) (f: X-eqv->X) => f∘f ≡ f. 
+Check fun (X: Setoid.type) (f: X->X) => f∘f ≡ f. 
 
-Check fun (X: PO) (f: X-mon->X) => id <= f. 
-Check fun (X: PO) (f: X-mon->X) => Datatypes.id <= f. 
-Fail Check fun (X: PO) (f: X-mon->X) => id <=[_->_] f. 
-Check fun (X: PO) (f: X-mon->X) => id <=[X->X] f. 
-Fail Check fun (X: PO) (f: X-mon->X) => id ≡ f. 
-Check fun (X: PO) (f: X-eqv->X) => id <= f. 
-Fail Check fun (X: PO) (f: X-eqv->X) => id ≡ f. 
-Check fun (X: PO) (f: X->X) => id <= f. 
-Fail Check fun (X: PO) (f: X->X) => id ≡ f. 
-Check fun (X: Setoid) (f: X-eqv->X) => id ≡ f. 
-Check fun (X: Setoid) (f: X->X) => id ≡ f. 
+Check fun (X: PO.type) (f: X-mon->X) => id <= f. 
+Check fun (X: PO.type) (f: X-mon->X) => Datatypes.id <= f. 
+Fail Check fun (X: PO.type) (f: X-mon->X) => id <=[_->_] f. 
+Check fun (X: PO.type) (f: X-mon->X) => id <=[X->X] f. 
+Fail Check fun (X: PO.type) (f: X-mon->X) => id ≡ f. 
+Check fun (X: PO.type) (f: X-eqv->X) => id <= f. 
+Fail Check fun (X: PO.type) (f: X-eqv->X) => id ≡ f. 
+Check fun (X: PO.type) (f: X->X) => id <= f. 
+Fail Check fun (X: PO.type) (f: X->X) => id ≡ f. 
+Check fun (X: Setoid.type) (f: X-eqv->X) => id ≡ f. 
+Check fun (X: Setoid.type) (f: X->X) => id ≡ f. 
 
 Section s.
-  Variable X: Setoid.
-  Variable Y: PO.
+  Variable X: Setoid.type.
+  Variable Y: PO.type.
   Check forall f g: X -eqv-> X, f ∘ g ≡ id.
   Check forall f g: bool -eqv-> bool, f ∘ g ≡ id.
   Check forall f g: bool -mon-> bool, f ∘ g ≡ id.

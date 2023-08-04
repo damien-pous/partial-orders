@@ -1,5 +1,5 @@
 Require Import ssreflect ssrfun ssrbool.
-Require Import hb_spo.
+Require Import cs_spo.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -53,6 +53,7 @@ Program Canonical Structure POS :=
   |}.
 
 (** this instance of [types_comp_leq] needs to be explicited to be useful for setoid-rewriting *)
+(* TOTHINK: redundant with instances at the end of cs_setoid? *)
 (* TOTHINK: declare the pure [eqv] versions? *)
 #[export] Instance po_comp_leq {X Y Z: PO.type}:
   Proper (leq ==> leq ==> leq) (@comp POS X Y Z) := types_comp_leq.

@@ -37,8 +37,8 @@ Definition leq_K h k :=
   end.
 Lemma po_K: po_axm leq_K.
 Proof.
-  split. 
-  - split. by case. by do 3 (case=>//). 
+  split.
+  - split. by case. by do 3 (case=>//).
   - (case; case=>//=); intuition discriminate.
 Qed.
 HB.instance Definition _ := isPO.Build K po_K. 
@@ -281,8 +281,7 @@ Definition gsup {l} {X: SPO.type l} k kl: args k X -> X :=
 Definition gsup_spec {l} {X: SPO.type l} {k kl}:
   forall x: args k X, is_sup (setof k x) (gsup k kl x) :=
   proj2_sig (SPO_ops k kl).
-Lemma leq_gsup {l} {X: SPO.type l} k kl x (y: X):
-  setof k x y -> y <= gsup k kl x.
+Lemma leq_gsup {l} {X: SPO.type l} k kl x (y: X): setof k x y -> y <= gsup k kl x.
 Proof. apply leq_is_sup, gsup_spec. Qed.
 
 (** ** instances *)
@@ -318,7 +317,7 @@ Definition spo_Prop: spo_ops sA Prop.
   let sup:= sup_from_isup isup in
   (* let sup: sup_op Prop := exist _ (fun P => exists2 p, P p & p) _ in *)
   (* let isup:= isup_from_sup sup in *)
-  fun k _ => match k return gsup_op Prop k with
+  fun k _ => match k with
         | kE => exist _ (fun _ => False) _
         | kB => exist _ (fun '(p,q) => p\/q) _
         | kC => csup_from_sup sup
@@ -379,7 +378,7 @@ Section sub.
    2: reflexivity. 2: apply: gsup_spec.
    apply eqv_covered. by rewrite setof_map_args. 
  Qed.
- (* TO ASK: the following isntance does not seem necessary to me:
+ (* TO ASK: the following instance does not seem necessary to me:
     [sub_closed_sig] is already recognised as a Setoid/PO, by unfolding to [sig] 
     Check (sup_closed_sig HP: Setoid.type).  
     Check (sup_closed_sig HP: PO.type).      
@@ -405,19 +404,6 @@ Section c.
  Qed.
  HB.instance Definition _ := isSPO.Build l (retract_of ri) spo_retract.
 End c.
-
-(* (** altogether, we get general sub-SPOs  *) *)
-(* Section c. *)
-(*  Context {A: Type} {l} {X: SPO.type l} (P: X -> Prop). *)
-(*  Variable r: A->sig P. *)
-(*  Variable i: sig P->A. *)
-(*  Hypothesis ri: r ∘ i ≡ types_id.  *)
-(*  Hypothesis HP: sup_closed' P. *)
-(*  #[local] HB.instance Definition _ := isSPO_sig HP. *)
-(*  (* TOTHINK: how to present this in a useful way? *) *)
-(*  Definition isSPO_sub := isSPO_retract ri. *)
-(*  (* Definition sub_spo := retract_spo (sig_spo HP) ri.  *) *)
-(* End c.  *)
 
 (** the SPO of extensional functions *)
 Section s.
@@ -610,4 +596,3 @@ Module sreduce.
     abstract_reduce _ f reducer (fun cup dsup => isup_from_sup (sup_from_cup_and_dsup cup dsup)). 
   End s.
 End sreduce.
-

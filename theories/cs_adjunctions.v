@@ -2,17 +2,20 @@ Require Import ssreflect ssrfun ssrbool.
 Require Export cs_po.
 
 Set Implicit Arguments.
+Unset Printing Implicit Defensive.
+Local Unset Transparent Obligations.
+Set Primitive Projections.
 
-(** adjunctions *)
+(** *  adjunctions *)
 Section s.
-  Context {X Y: PO}.
+  Context {X Y: PO.type}.
   Variables (f: X -> Y) (g: Y -> X).
   Class adjunction := adj: forall x y, f x <= y <-> x <= g y.
   
-  Lemma left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
+  #[local] Instance left_adjoint_leq {A: adjunction}: Proper (leq ==> leq) f.
   Proof. intros x y xy. apply adj. rewrite xy. by apply adj. Qed.
   
-  Lemma right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
+  #[local] Instance right_adjoint_leq {A: adjunction}: Proper (leq ==> leq) g.
   Proof. intros x y xy. apply adj. rewrite -xy. by apply adj. Qed.
   
   Lemma left_adjoint_sup (A: adjunction) P x: is_sup P x -> is_sup (image f P) (f x).
@@ -22,11 +25,11 @@ Section s.
   Qed.
 End s.
 
-Lemma adjoint_id {X}: @adjunction X X id id.
+Lemma adjoint_id {X}: @adjunction X X types_id types_id.
 Proof. by []. Qed.
 
 Lemma adjoint_comp {X Y Z f g f' g'} {A: @adjunction X Y f g} {B: @adjunction Y Z f' g'}:
-  adjunction (comp f' f) (comp g g').
+  adjunction (f' ∘ f) (g ∘ g').
 Proof. move=>x y/=. by rewrite 2!adj. Qed.
 
 Lemma dual_adjunction `(A: adjunction): adjunction (g: dual Y -> dual X) (f: dual X -> dual Y).

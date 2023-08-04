@@ -29,12 +29,14 @@ old attempts
 
 # TODO
 
-split hb.v / hb_spo.v 
-prefix the other files with cs
-do a typeclass attempt?
+rework&sync sanity checks
+
+don't use HB for morphisms?
+
+revive the mixed cs+tc (split_tc.v)
+do a pure typeclass attempt?
 
 smart constructor for SPO/IPO/GPO ?
-
 GPO products/sums/option
 
 distributive GPO 

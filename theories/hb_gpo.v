@@ -90,8 +90,6 @@ HB.instance Definition _ := isGPO.Build lA Prop.
 Section sub.
  Context {l} {X: GPO.type l}.
  Definition closed' (P: X -> Prop):= sup_closed' P /\ inf_closed' P.
- #[export] Instance closed'_eqv: Proper (eqv==>eqv) closed'.
- Proof. move=>P Q PQ. by rewrite /closed' PQ. Qed.
 
  Definition closed_sig P (HP: closed' P) := sig P.
  HB.instance Definition _ P HP := SPO.copy (@closed_sig P HP) (sup_closed_sig (proj1 HP)).
@@ -100,19 +98,9 @@ Section sub.
 End sub.
 
 (** GPOs from retractions (and thus isomorphisms given the induced order on [A]) *)
-HB.instance Definition _ {A: Type} {l} (X: GPO.type l)
+HB.instance Definition _ {A l} (X: GPO.type l)
   (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id)
   := isGPO.Build l (retract_of ri). 
-
-(* (** altogether, we get general sub-GPOs  *) *)
-(* Section c. *)
-(*  Context {A: Type} {l} {X: GPO l} (P: X -> Prop). *)
-(*  Variable r: A->sig P. *)
-(*  Variable i: sig P->A. *)
-(*  Hypothesis ri: r°i ≡ id.  *)
-(*  Hypothesis HP: closed' P. *)
-(*  Definition sub_gpo: GPO l := retract_gpo (sig_gpo HP) ri.  *)
-(* End c. *)
 
 (** the GPO of extensive functions *)
 HB.instance Definition _ {X: Setoid.type} {l} {Y: GPO.type l}

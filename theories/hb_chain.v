@@ -113,9 +113,8 @@ Section c.
  Context {l} {X: SPO.type l}.
  Variable f: X->X.
  Lemma Chain_as_sig:
-   types_comp
-     (fun c: Chain f => exist (C f) (elem c) (Celem c))
-     (fun c: sig (C f) => chn (proj2_sig c)) ≡ types_id.
+   (fun c: Chain f => exist (C f) (elem c) (Celem c))
+     ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ types_id.
  Proof. by case. Qed.
  HB.instance Definition _ :=
    SPO.copy (Chain f)

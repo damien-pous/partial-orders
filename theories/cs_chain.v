@@ -1,6 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 Require Classical.
-Require Import cs_ipo.
+Require Import cs_ipo cs_categories.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -10,7 +10,7 @@ Set Primitive Projections.
 (** * chain construction *)
 
 Section c.
- Context {X: PO}.
+ Context {X: PO.type}.
  Section d.
  Variable f: X -> X.
 
@@ -23,8 +23,8 @@ Section c.
  Structure Chain := chn { elem:> X; #[canonical=no] Celem: C elem}.
 
  (** the chain inherits the partial order structure from X *)
- Canonical Structure Chain_setoid := Eval hnf in kern_setoid _ elem.
- Canonical Structure Chain_po := PO.cast Chain (kern_po _ elem).
+ Canonical Structure Chain_setoid := Setoid.copy Chain (kernel elem).
+ Canonical Structure Chain_po := PO.copy Chain (kernel elem).
 
  (** the chain is closed under [f] *)
  Canonical Structure next (x: Chain) := {| elem := f x; Celem := Cf (Celem x) |}.
@@ -55,13 +55,13 @@ Section c.
  Arguments next: clear implicits.
 
  (** when [f] is eqv-preserving (on [X]), so is [next] (on [Chain f])  *)
- Program Canonical Structure next_eqv (f: X -eqv-> X) := Setoid.build_morphism (next f) _.   
+ Program Canonical Structure next_eqv (f: X -eqv-> X) := Build_setoid_morphism (next f) _.   
  Next Obligation. by move =>???; apply f. Qed.
  
  (** when [f] is monotone (on [X]), so is [next] (on [Chain f])  *)
  Section d.
  Variable f: X -mon-> X.
- Program Canonical Structure next_leq := PO.build_morphism (next f) _.   
+ Program Canonical Structure next_leq := Build_po_morphism (next f) _.   
  Next Obligation. by move =>???; apply f. Qed.
 
  (** elements of the chain are post-fixpoints of [f] *)
@@ -108,15 +108,15 @@ Section c.
  End d.
 End c.
 Section c.
- Context {l} {X: SPO l}.
+ Context {l} {X: SPO.type l}.
  Variable f: X->X.
  Lemma Chain_as_sig:
    (fun c: Chain f => exist (C f) (elem c) (Celem c))
-     ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ id.
+     ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ types_id.
  Proof. by case. Qed.
- Canonical Structure Chain_spo: SPO l :=
-   SPO.cast (Chain f)
-     (sub_spo Chain_as_sig (sup_closed_sup_closed' (@Csup _ f))). 
+ Canonical Structure Chain_spo :=
+   SPO.copy (Chain f)
+     (retract_spo (sup_closed_sig (sup_closed_sup_closed' (@Csup _ f))) Chain_as_sig). 
 End c. 
 Arguments tower {_}.  
 Arguments next {_}.
@@ -136,7 +136,7 @@ Section classical.
      - we only use it with [f=id, y=y'] to get than the chain is totally ordered
      - we only use it with [f=id, y'=next y] and [f=next, y'= y] to get the stronger [total_chain_strong]
   *)
- Lemma choose (X: PO) (P: X -> Prop) (f: X -eqv-> X) y y':
+ Lemma choose (X: PO.type) (P: X -> Prop) (f: X -eqv-> X) y y':
    (forall x, P x -> f x <= y \/ y' <= x) -> (forall x, P x -> f x <= y) \/ (exists x, P x /\ y' <= x).
  Proof. apply choose_gen. Qed.
 End classical.
@@ -150,7 +150,7 @@ End classical.
 Module BourbakiWitt.
  Section b.
 
- Context {C: PO}.
+ Context {C: PO.type}.
  Implicit Types x y z: C.
 
  Variable next: C -eqv-> C. 
@@ -349,7 +349,7 @@ Module BourbakiWitt.
 End b.
 Section b.
 
- Context {l} {X: SPO l} {L: sEC<<l}.
+ Context {l} {X: SPO.type l} {L: sEC<<l}.
  Variable f: X -eqv-> X. 
  Hypothesis f_ext: forall x, x <= f x.
  
@@ -387,7 +387,7 @@ End BourbakiWitt.
 Module BourbakiWitt'.
 Section b.
 
- Context {C: PO}.
+ Context {C: PO.type}.
  Implicit Types x y z: C.
 
  (** tower induction *)
@@ -395,7 +395,7 @@ Section b.
  Hypothesis tower: forall (P: C -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
 
  (** the function [next] must be extensive *)
- Lemma id_next: PO.id <= next.
+ Lemma id_next: po_id <= next.
  Proof.
    apply: tower=>/=.
    - apply sup_closed_leq.
@@ -449,7 +449,7 @@ Section b.
 End b.
 Section b.
 
- Context {l} {X: SPO l} {L: sEC<<l}.
+ Context {l} {X: SPO.type l} {L: sEC<<l}.
  Variable f: X -mon-> X. 
 
  Lemma chain_C: chain (C f).
@@ -482,21 +482,21 @@ End BourbakiWitt'.
 Module Pataraia. 
 
 Section s.
- Context {l} {C: SPO l} {L: sED<<l}.
+ Context {l} {C: SPO.type l} {L: sED<<l}.
 
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => Datatypes.id <=[C-mon->C] f) _.
+ Program Definition h: C-mon->C := dsup (fun f: C-mon->C => po_id <= f) _.
  Next Obligation.
-   move=>/=i j I J. exists (i∘j). split; last split.
+   move=>/=i j I J. exists (i°j). split; last split.
    - by rewrite -I.
    - by rewrite -J.             (* !! need [kern_po _ ∘ kern po _ = kern_po (_∘_)] *)
    - by rewrite -I.
  Qed.
  
- Lemma h_ext: PO.id <= h.
+ Lemma h_ext: po_id <= h.
  Proof. by apply: leq_dsup. Qed.
 
- Lemma h_invol: h ∘ h <=[_-mon->_] h.
+ Lemma h_invol: h ° h <= h.
  Proof.
    apply: leq_dsup.
    by rewrite -h_ext.
@@ -505,9 +505,9 @@ Section s.
  Definition extensive_fixpoint := locked (h bot).
 
  Variable f: C-mon->C.
- Hypothesis f_ext: PO.id <= f. 
+ Hypothesis f_ext: po_id <= f. 
  
- Lemma h_prefixpoint: f ∘ h <=[_-mon->_] h.
+ Lemma h_prefixpoint: po_comp f h <= h.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
@@ -515,7 +515,7 @@ Section s.
 End s.
 
 Section s.
- Context {l} {X: SPO l} {L: sED<<l}.
+ Context {l} {X: SPO.type l} {L: sED<<l}.
  Variable f: X-mon->X.
 
  Definition lfp := locked (extensive_fixpoint (C:=Chain f): X).

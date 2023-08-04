@@ -7,7 +7,6 @@ Unset Printing Implicit Defensive.
 Local Unset Transparent Obligations.
 Set Primitive Projections.
 
-
 (** * partial orders with infima *)
 
 (** generic infimum operation, given any type [A] that can be interpreted as subsets of [X] *)
@@ -51,11 +50,11 @@ Ltac dual1 t :=
   match type of t with
   | forall l, forall X: SPO.type l, _ =>
       match goal with
-      | X: IPO.type ?l |- _ => apply: (t _ (dual X))
+      | X: IPO.type ?l |- _ => apply: (t l (dual X))
       end
   | forall l, forall X: IPO.type l, _ =>
       match goal with
-      | X: SPO.type ?l |- _ => apply: (t _ (dual X))
+      | X: SPO.type ?l |- _ => apply: (t l (dual X))
       end
   end.
 Ltac dual t ::= dual1 t || dual0 t.
@@ -101,7 +100,7 @@ Definition ipo_Prop: ipo_ops sA Prop.
   unshelve refine (
   let iinf: ginf_op Prop kA := @exist ((sigset Prop)->Prop) _ (fun '(idx P f) => forall i, P i -> f i) _ in
   let inf:= inf_from_iinf iinf in
-  fun k _ => match k return ginf_op Prop k with
+  fun k _ => match k with
         | kE => exist _ (fun _ => True) _
         | kB => exist _ (fun '(p,q) => p/\q) _
         | kC => cinf_from_inf inf
@@ -121,6 +120,7 @@ HB.instance Definition _ A l (X: A -> IPO.type l) :=
   isIPO.Build l (forall a, X a) (@ipo_dprod A l X). 
 
 (** direct product of IPOs *)
+(* TODO: subtyping *)
 Definition ipo_prod {l} {X Y: IPO.type l}: ipo_ops l (prod X Y) :=
   @spo_prod l (dual X) (dual Y). 
  HB.instance Definition _ l (X Y: IPO.type l) := isIPO.Build l (prod X Y) (@ipo_prod l X Y). 
@@ -134,7 +134,8 @@ Section sub.
    forall k: K, forall kl: l k, forall x: args k (dual X), setof k x <= P ->  P (ginf k kl x).
  Lemma inf_closed_inf_closed': inf_closed <= inf_closed'.
  Proof. apply (@sup_closed_sup_closed' _ (dual X)). Qed.
- #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed' := @sup_closed'_eqv _ (dual X).
+ #[export] Instance inf_closed'_eqv: Proper (eqv==>eqv) inf_closed'.
+ Proof. dual @sup_closed'_eqv. Qed.
 
  Definition inf_closed_sig P (HP: inf_closed' P) := sig P.
  Variables (P: X -> Prop) (HP: inf_closed' P). 
@@ -150,17 +151,6 @@ Section c.
  Definition ipo_retract: ipo_ops l (@retract_of A X r i ri) := @spo_retract A l (dual X) r i ri.  
  HB.instance Definition _ := isIPO.Build l (retract_of ri) ipo_retract.
 End c.
-
-(* (** altogether, we get general sub-IPOs  *) *)
-(* Section c. *)
-(*  Context {A: Type} {l} {X: IPO.type l} (P: X -> Prop). *)
-(*  Variable r: A->sig P. *)
-(*  Variable i: sig P->A. *)
-(*  Hypothesis ri: r ∘ i ≡ types_id.  *)
-(*  Hypothesis Pinf: inf_closed' P. *)
-(*  (* TOTHINK: how to present this in a useful way? *) *)
-(*  Definition sub_ipo := retract_ipo (sig_ipo Pinf) ri.  *)
-(* End c.  *)
 
 (** the IPO of extensional functions *)
 Section s.
