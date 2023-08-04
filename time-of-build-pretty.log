@@ -1,0 +1,40 @@
+    Time |  Peak Mem | File Name                
+------------------------------------------------
+0m43.13s | 505500 ko | Total Time / Peak Mem    
+------------------------------------------------
+0m04.44s | 465120 ko | hb_spo.vo                
+0m04.11s | 505500 ko | hb_chain_alt.vo          
+0m03.95s | 425344 ko | attic/split.vo           
+0m03.63s | 373608 ko | cs_chain.vo              
+0m03.55s | 459308 ko | hb_po.vo                 
+0m03.11s | 380932 ko | attic/split_tc.vo        
+0m02.95s | 384644 ko | attic/alone.vo           
+0m02.65s | 344188 ko | cs_spo.vo                
+0m02.63s | 439440 ko | hb_gpo.vo                
+0m02.14s | 483196 ko | hb_chain.vo              
+0m01.92s | 444392 ko | hb_ipo.vo                
+0m01.81s | 442176 ko | hb_setoid.vo             
+0m00.82s | 328272 ko | cs_po.vo                 
+0m00.67s | 423116 ko | hb_instances.vo          
+0m00.46s | 417372 ko | tests/hb_sanity_po.vo    
+0m00.35s | 415156 ko | tests/hb_sanity_setoid.vo
+0m00.33s | 322192 ko | cs_gpo.vo                
+0m00.33s | 401068 ko | cs_instances.vo          
+0m00.31s | 320708 ko | tests/cs_sanity_po.vo    
+0m00.27s | 327844 ko | cs_ipo.vo                
+0m00.27s | 329244 ko | hb_adjunctions.vo        
+0m00.27s | 333772 ko | hb_categories.vo         
+0m00.27s | 303284 ko | tests/hb_sanity.vo       
+0m00.27s | 318292 ko | tests/hb_sanity_gpo.vo   
+0m00.26s | 295460 ko | tests/hb_sanity_ipo.vo   
+0m00.23s | 306884 ko | tests/hb_sanity_spo.vo   
+0m00.17s | 285024 ko | cs_setoid.vo             
+0m00.15s | 168340 ko | attic/level_attempts.vo  
+0m00.13s | 156252 ko | tests/cs_sanity.vo       
+0m00.12s | 178496 ko | cs_adjunctions.vo        
+0m00.11s | 171548 ko | cs_categories.vo         
+0m00.10s | 131192 ko | tests/cs_sanity_gpo.vo   
+0m00.10s | 146268 ko | tests/cs_sanity_setoid.vo
+0m00.09s | 130876 ko | preliminaries.vo         
+0m00.09s | 122396 ko | tests/cs_sanity_ipo.vo   
+0m00.08s | 128540 ko | tests/cs_sanity_spo.vo   
