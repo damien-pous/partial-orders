@@ -146,7 +146,7 @@ Definition slevel_fun (l: slevel) k :=
 Lemma slevel_mon: Proper (leq ==> leq) slevel_fun.
 Proof.
   case=>[p|]; case=>[q|]//=.
-  move=>pq; case=>//; by apply plevel_mon.
+  move=>pq; case=>//; by apply: plevel_mon.
   move=>_; case=>//; by case: p.
 Qed.
 Definition slevel_fun' (l: slevel): K -> SProp := fun k => is_true' (slevel_fun l k).
@@ -161,7 +161,7 @@ Definition slevel_of k: slevel :=
   | kA => sA
   end.
 Lemma has_slevel_of: forall k, slevel_of k k.
-Proof. by case. Qed.
+Proof. by destruct k. Qed.
 Lemma has_slevel (k: K) (l: slevel): slevel_of k <= l -> l k.
 Proof.
   move=>H. move: (has_slevel_of k).
@@ -363,7 +363,7 @@ Section sub.
  Lemma sup_closed_sup_closed': sup_closed <= sup_closed'. 
  Proof. move=>P H k kl x Hx. apply: H. apply Hx. apply gsup_spec. Qed.
  #[export] Instance sup_closed'_eqv: Proper (eqv==>eqv) sup_closed'.
- Proof. apply Proper_half=>P Q H HP k kl x E. apply H. apply HP. by rewrite H. Qed.
+ Proof. apply: Proper_half=>P Q H HP k kl x E. apply H. apply HP. by rewrite H. Qed.
  
  Definition sup_closed_sig P (HP: sup_closed' P) := sig P.
  Variables (P: X -> Prop) (HP: sup_closed' P). 
@@ -422,7 +422,7 @@ Section s.
  Context {l} {Y: SPO.type l}.
  Lemma sup_closed'_extensional: sup_closed' (Proper (@eqv X ==> @eqv Y)).
  Proof.
-   move=>k kl P HP. apply Proper_half=>x y xy.
+   move=>k kl P HP. apply: Proper_half=>x y xy.
    apply gsup_spec=>z Hz. apply setof_map_args in Hz as [f [Hf ->]].
    transitivity (f y). apply eqv_leq, (HP _ Hf _ _ xy). apply leq_gsup. 
    apply setof_map_args. by exists f.

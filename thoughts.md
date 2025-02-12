@@ -1,3 +1,13 @@
+# MENU
+
+ setoids, partial orders, more or less sups/infs
+ - (bounded) lattices + modular/distributive
+ - (pointed) CPOs, by chains or directed sets
+ setoid morphisms, monotone functions, linear / sup-preserving functions (adjunctions)
+ duality
+ Pataraia
+ Knaster-Tarski
+
 # FILES
 
 - theories/preliminaries.v   elementary helpers

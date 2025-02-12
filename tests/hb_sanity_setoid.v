@@ -20,7 +20,7 @@ Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f â‰¡ g -> x â‰
 Proof.
   intros X f g x y fg xy. repeat split.
   Fail rewrite fg.              (* fair enough *)
-  rewrite xy. by apply fg.
+  rewrite xy. by apply: fg.
   2: by rewrite xy.
   Fail rewrite fg.              (* need the category notation *)
   (* by rewrite xy.  *)               (* thanks to [const_eqv'] *)

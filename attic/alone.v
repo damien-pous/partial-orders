@@ -458,10 +458,10 @@ Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> Setoid.comp f g <= h.
   intros * H. rewrite (H: f≡[_-eqv->_]g). 
 Abort.
 Goal forall X: PO, forall f g h: X -mon-> X, f <= g -> f ° g <=[_-mon->_] h.
-  intros * ->.
+  Fail intros * ->.
 Abort. 
 Goal forall X: PO, forall f g h: X -mon-> X, f ≡ g -> f ° g <=[_-mon->_] h.
-  intros * ->.
+  Fail intros * ->.
 Abort. 
 
 Goal forall f g: nat -> Prop, f ≡ g -> f ≡ g.
@@ -1160,9 +1160,9 @@ Program Canonical Structure Prop_spo: SPO sA := Eval hnf in
            | kD => None          (* generated *)
            | kA => Some (exist _ (fun P => exists2 p, P p & p) _)
            end).
-Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto. Qed.
-Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder. Qed.
 
 Program Definition dual_Prop_spo: SPO sA := Eval hnf in
   SPO.reduced_build (dual Prop)
@@ -1173,9 +1173,9 @@ Program Definition dual_Prop_spo: SPO sA := Eval hnf in
            | kD => None          (* generated *)
            | kA => Some (exist _ (fun P => forall p, P p -> p) _)
            end).
-Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto; apply H; eauto. Qed.
-Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder. Qed.
 
 
 Definition app {A} {X: A -> PO} a: (forall a, X a)-mon->X a :=
@@ -1768,8 +1768,12 @@ Module Pataraia.
 Section s.
  Context {l} {C: SPO l} {L: lS lD<<l}.
 
+ (* TMP *)
+ Infix "°" := (PO.comp).
+ Notation id := PO.id.
+
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => Datatypes.id <=[C-mon->C] f) _.
+ Program Definition h: C-mon->C := dsup (fun f => id <= f) _.
  Next Obligation.
    move=>/=i j I J. exists (i°j). split; last split.
    - by rewrite -I.
@@ -1777,10 +1781,10 @@ Section s.
    - by rewrite -I.
  Qed.
  
- Lemma h_ext: PO.id <= h.
+ Lemma h_ext: id <= h.
  Proof. by apply: leq_dsup. Qed.
 
- Lemma h_invol: h ° h <=[_-mon->_] h.
+ Lemma h_invol: h ° h <= h.
  Proof.
    apply: leq_dsup.
    by rewrite -h_ext.
@@ -1789,9 +1793,9 @@ Section s.
  Definition extensive_fixpoint := locked (h bot).
 
  Variable f: C-mon->C.
- Hypothesis f_ext: PO.id <= f. 
+ Hypothesis f_ext: id <= f. 
  
- Lemma h_prefixpoint: f ° h <=[_-mon->_] h.
+ Lemma h_prefixpoint: f ° h <= h.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 

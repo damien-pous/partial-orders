@@ -36,7 +36,7 @@ Infix "°" := comp.
 Program Canonical Structure SETOIDS :=
   {|
     ob := Setoid.type;
-    hom X Y := X -eqv-> Y;
+    hom X Y := setoid_morphism_type__canonical__hb_setoid_Setoid X Y; (* X -eqv-> Y *)
     comp := @types_comp;
     id := @types_id;
     comp_eqv := @types_comp_eqv;
@@ -46,7 +46,7 @@ Program Canonical Structure SETOIDS :=
 Program Canonical Structure POS :=
   {|
     ob := PO.type;
-    hom X Y := X -mon-> Y;
+    hom X Y := po_morphism_type__canonical__hb_po_PO X Y;                (* X -mon-> Y *)
     comp := @types_comp;
     id := @types_id;
     comp_eqv := @types_comp_eqv;    

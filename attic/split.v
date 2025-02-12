@@ -94,35 +94,36 @@ Infix "≡[ X ]" := (@eqv_on X) (at level 70).
 (** ** instances *)
 
 Definition eq_setoid X := Setoid.build X eq.
-Definition eq_setoid_laws_ X := Setoid.validate (eq_setoid X) (@eq_equivalence X).
-Notation eq_setoid_laws X := (Setoid.cast X (eq_setoid_laws_ X)).
+Notation eq_setoid_laws X := (Setoid.validate _ (@eq_equivalence X)).
 
-Canonical Structure unit_setoid := Eval hnf in eq_setoid unit.
-Canonical Structure unit_setoid_laws := Eval hnf in eq_setoid_laws unit.
+Canonical Structure unit_setoid := eq_setoid unit.
+Canonical Structure unit_setoid_laws := eq_setoid_laws unit. 
 
-Canonical Structure bool_setoid := Eval hnf in eq_setoid bool.
-Canonical Structure bool_setoid_laws := Eval hnf in eq_setoid_laws bool.
+Canonical Structure bool_setoid := eq_setoid bool.
+Canonical Structure bool_setoid_laws := eq_setoid_laws bool.
 
-Canonical Structure nat_setoid := Eval hnf in eq_setoid nat.
-Canonical Structure nat_setoid_laws := Eval hnf in eq_setoid_laws nat.
+Canonical Structure nat_setoid := eq_setoid nat.
+Canonical Structure nat_setoid_laws := eq_setoid_laws nat.
 
 Canonical Structure Prop_setoid := Setoid.build Prop iff.
 Canonical Structure Prop_setoid_laws := Setoid.validate _ iff_equivalence.
 
+
 Canonical Structure prod_setoid (X Y: Setoid.ops) :=
   Setoid.build (X*Y) (fun p q => fst p ≡ fst q /\ snd p ≡ snd q).
 Program Canonical Structure prod_setoid_laws (X Y: Setoid) :=
-  Eval hnf in Setoid.validate (X*Y) _.
+  Setoid.validate (prod_setoid X Y) _.
 Next Obligation.
   constructor=>//.
   by move=>??[??]; split; symmetry; assumption.
   by move=>???[??][]; split; etransitivity; eassumption.
 Qed.
 
+
 Canonical Structure sum_setoid (X Y: Setoid.ops) :=
   Setoid.build (X+Y) (fun p q => match p,q with inl p,inl q | inr p,inr q => p ≡ q | _,_ => False end).
 Program Canonical Structure sum_setoid_laws (X Y: Setoid) :=
-  Eval hnf in Setoid.validate (X+Y) _.
+  Eval hnf in Setoid.validate (sum_setoid X Y) _.
 Next Obligation.
   constructor.
   by move=>[]/=; reflexivity. 
@@ -135,7 +136,7 @@ Qed.
 Canonical Structure dprod_setoid A (X: A -> Setoid.ops) :=
   Setoid.build (forall a, X a) (fun f g => forall a, f a ≡ g a).
 Program Canonical Structure dprod_setoid_laws A (X: A -> Setoid) :=
-  Eval hnf in Setoid.validate (forall a, X a) _.
+  Setoid.validate (dprod_setoid X) _.
 Next Obligation.
   constructor.
   - by move=>??. 
@@ -156,25 +157,25 @@ Qed.
 Notation kern_setoid_laws X := (Setoid.cast X (kern_setoid_laws_ _)).
 
 Canonical Structure sig_setoid (X: Setoid.ops) (P: X -> Prop) :=
-  Eval hnf in kern_setoid (@proj1_sig X P).
+  kern_setoid (@proj1_sig X P).
 Canonical Structure sig_setoid_laws (X: Setoid) (P: X -> Prop) :=
-  Eval hnf in kern_setoid_laws (sig P).
+  Setoid.cast (sig_setoid P) (kern_setoid_laws_ _).
 
 Canonical Structure setoid_morphisms_setoid (X Y: Setoid.ops) :=
-  Eval hnf in kern_setoid (@Setoid.body X Y).
-Program Canonical Structure setoid_morphisms_setoid_laws (X Y: Setoid) :=
-  Eval hnf in kern_setoid_laws (X-eqv->Y).
+  kern_setoid (@Setoid.body X Y).
+Canonical Structure setoid_morphisms_setoid_laws (X Y: Setoid) :=
+  Setoid.cast (setoid_morphisms_setoid X Y) (kern_setoid_laws_ _).
 Notation eqv_setoids := (@eqv (setoid_morphisms_setoid _ _)). 
-Infix "≡[-eqv->]" := (eqv_setoids) (at level 70).
+Infix "  ≡[-eqv->]" := (eqv_setoids) (at level 70).
 
 
 Definition dual (X: Type) := X.
 Canonical Structure dual_setoid (X: Setoid.ops) :=
   (* just a clone *)
-  Eval hnf in Setoid.build (dual X) eqv.
+  Setoid.build (dual X) eqv.
 Canonical Structure dual_setoid_laws (X: Setoid) :=
   (* just a clone *)
-  Eval hnf in Setoid.validate (dual_setoid X) (Setoid.Equivalence_eqv _).
+  Setoid.validate (dual_setoid X) (Setoid.Equivalence_eqv _).
 
 Program Canonical Structure dual_setoid_morphism {X Y: Setoid} (f: X -eqv-> Y): dual X -eqv-> dual Y :=
   Setoid.build_morphism f (Setoid.body_eqv _).
@@ -203,7 +204,7 @@ Proof. typeclasses eauto. Abort. (* needs the Hint Extern for Equivalence_eqv *)
 Goal forall X: Setoid, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡ h.
 Proof. intros * H. rewrite H -H. Abort. (* idem *)
 Goal forall X: Setoid, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡[-eqv->] h.
-Proof. intros * H. rewrite H -H. Abort. 
+Proof. intros * H. Fail rewrite H -H. Abort. (* was working before *)
 
 
 Check (bool * (unit -> dual nat) * sig (fun b: bool=> b=true)  (* * True *))%type: Setoid. 

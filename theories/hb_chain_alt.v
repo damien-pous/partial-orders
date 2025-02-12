@@ -332,7 +332,7 @@ Module BourbakiWitt.
      move=>c Ec. apply: tower.
      - move=>T IH t Ht.
        case: (choose T types_id c (next c)).
-         by move=>x Tx; apply IH.
+         by move=>x Tx; apply: IH.
        -- move=>F. left. by apply Ht.
        -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
      - move=>x [xc|cx].
@@ -345,7 +345,7 @@ Module BourbakiWitt.
      apply: tower.
      - move=>T IH b Hb x xb.
        case: (choose T next x x).
-         move=>z Tz. rewrite or_comm. apply M=>//. by apply IH.
+         move=>z Tz. rewrite or_comm. apply M=>//. by apply: IH.
        -- move=>F. left. apply Hb=>y Ty. rewrite ->(id_next y). by apply F.
        -- move=>[c [Tc xc]].
           case: (IH _ Tc x xc)=>cx; swap 1 2.
@@ -399,7 +399,7 @@ Module BourbakiWitt.
        case: (choose T types_id z z).
        by move=>*; apply total_chain.
        -- move=>H. apply proj2 in zx. contradict zx. by apply Ht, H. 
-       -- move=>[u [Tu /=zu]]. by apply IH with u.
+       -- move=>[u [Tu /=zu]]. by apply: (IH u).
      - move=>x IH y yx. constructor=>z zy. apply IH.
        apply lt_leq. eapply ltle_lt; eassumption.
    }
@@ -523,7 +523,7 @@ Section b.
  Lemma leq_next: forall x y, (forall z, next z <= x -> z <= y) -> x <= next y.
  Proof.
    apply: tower.
-   - move=>T IH t Ht y H. apply Ht=>x Tx. apply IH=>//z zx.
+   - move=>T IH t Ht y H. apply Ht=>x Tx. apply: IH=>//z zx.
      apply H. rewrite zx. by apply Ht.
    - move=>x IH y H. by apply next, H.
  Qed.
@@ -537,7 +537,7 @@ Section b.
    (** but the following proof is simpler and requires only [choose _ id x x] *)
    apply: tower.
    - move=>T IH t Ht y.
-     case: (choose T types_id y y). by move=>*; apply IH.
+     case: (choose T types_id y y). by move=>*; apply: IH.
      -- move=>F. left. apply Ht=>x Tx. by apply F.
      -- move=>[x [Tx yx]]. right. rewrite yx. by apply Ht.
    - move=>x IH y.
@@ -589,6 +589,7 @@ Section s.
  Program Definition mon_dCPO: isdCPO.axioms (X-mon->Y) :=
    kern_dCPO (f:=fun f: X -mon-> Y => f: X -> Y) (fun Q f D Qf => _) _.
  Next Obligation.
+   unshelve eexists. exact f.
    have E: f ≡ dsup _ D. apply: is_sup_eqv. apply Qf. apply: dsup_spec. reflexivity.
    have I: Proper (leq ==> leq) f. {
      move=>x y xy. rewrite (E x) (E y).
@@ -597,7 +598,6 @@ Section s.
      etransitivity. 2: apply eqv_covered; symmetry; apply image_comp. 
      apply covered_image=>//g/=. by apply g.
    }
-   unshelve eexists. exact f.
    constructor. constructor. exact I. 
    (* TOFIX: why do we need to provide this proof? *)
    constructor. apply op_leq_eqv_1. 
@@ -609,12 +609,15 @@ Module Pataraia.
 
 Section s.
  Context {C: dCPO.type}.
+  
+ (* TMP *)
+ Infix "°" := (comp (c:=POS)).
+ Notation id := po_id.
 
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => po_id ≦ f) _.
+ Program Definition h: C-mon->C := dsup (fun f => id ≦ f) _.
  Next Obligation.
-   (* grrr: goals are not nice-looking *)
-   move=>/=i j I J. exists (i°j)=>/=. split; last split.
+   move=>/=i j I J. exists (i°j). split; last split.
    - by rewrite -I. 
    - by rewrite -J.
    - by rewrite -I.
@@ -640,7 +643,7 @@ Section s.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
- Proof. apply antisym. apply h_prefixpoint. apply f_ext. Qed.
+ Proof. apply antisym. apply: h_prefixpoint. apply: f_ext. Qed.
 End s.
 
 Section s.

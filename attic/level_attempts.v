@@ -127,7 +127,7 @@ Module C.
   Fail Check bot: bool. 
   Check @bot (@coercion _ bool_spo cEF): bool.
   Check @bot (@coercion _ _ cEF): bool.
-  Fail Check @bot (@coercion _ bool_spo _): bool.
+  Check @bot (@coercion _ bool_spo _): bool.
   Fail Check @bot (@coercion _ _ _): bool.
   Check forall X: SPO' sE, forall (x: X), bot ≡ x.
   Fail Check forall X: SPO' sF, forall (x: X), bot ≡ x. 

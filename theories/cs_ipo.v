@@ -123,7 +123,7 @@ Program Canonical Structure Prop_ipo :=
         | kA => iinf
         end).
 Next Obligation. destruct a as [I P f]; cbv. firstorder subst; apply H; eauto. Qed.
-Next Obligation. firstorder. Qed.
+Next Obligation. cbv; firstorder. Qed.
 Next Obligation. cbv; firstorder subst; eauto; apply H; eauto. Qed.
 
 (** IPOs on (dependent) function space *)

@@ -1,3 +1,4 @@
+Require Import Bool. 
 Require Import ssreflect ssrfun ssrbool.
 Require Export cs_po.
 
@@ -158,7 +159,7 @@ Definition slevel_of k: slevel :=
   | kA => sA
   end.
 Lemma has_slevel_of: forall k, slevel_of k k.
-Proof. by case. Qed.
+Proof. by destruct k. Qed.
 Lemma has_slevel (k: K) (l: slevel): slevel_of k <= l -> l k.
 Proof.
   move=>H. move: (has_slevel_of k).

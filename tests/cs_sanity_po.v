@@ -59,10 +59,10 @@ Goal forall X: PO.type, forall f g h: X -mon-> X, f ≡ g -> setoid_comp f g <= 
   intros * H. rewrite (H: f≡[_-eqv->_]g). 
 Abort.
 Goal forall X: PO.type, forall f g h: X -mon-> X, f <= g -> f ∘ g <=[_-mon->_] h.
-  intros * ->.
+  Fail intros * ->.              (* was working before *)
 Abort. 
 Goal forall X: PO.type, forall f g h: X -mon-> X, f ≡ g -> f ∘ g <=[_-mon->_] h.
-  intros * ->.
+  Fail intros * ->.              (* was working before *)
 Abort. 
 
 Goal forall f g: nat -> Prop, f ≡ g -> f ≡ g.

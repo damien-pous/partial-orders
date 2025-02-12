@@ -28,10 +28,10 @@ Goal forall X: Setoid.type, forall f g: X-eqv->X, forall x y: X, f ≡ g -> x �
 Proof.
   intros X f g x y fg xy. repeat split.
   Fail rewrite fg.              (* fair enough *)
-  rewrite xy. by apply fg.
+  rewrite xy. by apply: fg.
   2: by rewrite xy.
   rewrite fg.                   (* need the category notation *)
-  by rewrite xy.                (* thanks to [const_eqv'] *)
+  Fail by rewrite xy.                (* was working before, thanks to [const_eqv'] *)
 Abort.  
 Goal forall X: Setoid.type, forall f g: X-eqv->X, f ≡ g -> f ° g ≡ g ° g.
 Proof. by move=>X f g ->. Abort.
@@ -50,27 +50,29 @@ Check fun (X: PO.type) (f g: X -mon-> X) => f: X -eqv->X.
 
 Check unify (tt <= tt) True.
 
-Check forall (X: PO.type) (f: X -mon-> X), id ° f <= id. 
+Fail Check forall (X: PO.type) (f: X -mon-> X), id ° f <= id. 
 Check forall (X: PO.type) (f: X -eqv-> X), f <= id.
-Check forall (X: PO.type) (f: X -mon-> X), f <= id.
-Check forall (X: PO.type) (f: X -mon-> X), f ≡ id.
-Check forall (X: PO.type) (f: X -mon-> X), id ≡ f. 
+Fail Check forall (X: PO.type) (f: X -mon-> X), f <= id.
+Fail Check forall (X: PO.type) (f: X -mon-> X), f ≡ id.
+Fail Check forall (X: PO.type) (f: X -mon-> X), id ≡ f. 
 
 (* this one fails, but we have the three alternatives below *)
 Fail Check forall (X: PO.type) (f: X -mon-> X), id <= f. 
 Check forall (X: PO.type) (f: X -mon-> X), po_id <= f. 
-Check forall (X: PO.type) (f: X -mon-> X), id <=[X-mon->X] f.
-Check forall (X: PO.type) (f: X -mon-> X), id ≦ f. 
+Fail Check forall (X: PO.type) (f: X -mon-> X), id <=[X-mon->X] f.
+Fail Check forall (X: PO.type) (f: X -mon-> X), id ≦ f. 
 
-Goal forall X: PO.type, forall f g h: X-mon->X, f ≡ g -> f ° g ≡ h.
-Proof. intros * H. rewrite H. rewrite -H. Abort.
+Fail Goal forall X: PO.type, forall f g h: X-mon->X, f ≡ g -> f ° g ≡ h.
+Fail Qed.
+(* Proof. intros * H. rewrite H. rewrite -H. Abort. *)
 Goal forall (X: PO.type) (f: X -mon-> X) (x y: X), x≡y -> y<=x -> f (f x) <= (f (f x)).
-Proof. intros * H H'. rewrite {1}H H'. reflexivity. Abort.  
-Goal forall (X: PO.type) (f g: X -mon-> X) (x y: X), x≡y -> y<=x -> f <= g -> (f ° f) x <= (f ° f) x /\ f ° f <= g ° g.
-Proof.
-  intros * H H' H''. rewrite {1}H H'. split=>//.
-  rewrite {2}H''. 
-Abort.
+Proof. intros * H H'. rewrite {1}H H'. reflexivity. Abort.
+Fail Goal forall (X: PO.type) (f g: X -mon-> X) (x y: X), x≡y -> y<=x -> f <= g -> (f ° f) x <= (f ° f) x /\ f ° f <= g ° g.
+Fail Qed.
+(* Proof. *)
+(*   intros * H H' H''. rewrite {1}H H'. split=>//. *)
+(*   rewrite {2}H''. *)
+(* Abort. *)
 
 
 

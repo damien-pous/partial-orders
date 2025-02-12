@@ -55,7 +55,7 @@ Definition is_true'_eq_true b : is_true' b -> true = b
 Definition eq_true_is_true' b (H: true=b) : is_true' b
   := match H in _ = x return is_true' x with eq_refl => stt end.
 Lemma is_true'_leq: forall b c, implb b c -> is_true' b -> is_true' c. 
-Proof. by move=>[][]//=_ []. Qed.
+Proof. (* by case; case. *) by destruct b; destruct c. Qed.
 Notation sEmpty_rect := sEmpty_rect.
   
 (** automatically apply reflexivity *)

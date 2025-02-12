@@ -202,7 +202,7 @@ Module BourbakiWitt.
      move=>c Ec. apply: tower.
      - move=>T IH t Ht.
        case: (choose T Datatypes.id c (next c)).
-         by move=>x Tx; apply IH.
+         by move=>x Tx; apply: IH.
        -- move=>F. left. by apply Ht.
        -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
      - move=>x [xc|cx].
@@ -215,7 +215,7 @@ Module BourbakiWitt.
      apply: tower.
      - move=>T IH b Hb x xb.
        case: (choose T next x x).
-         move=>z Tz. rewrite or_comm. apply M=>//. by apply IH.
+         move=>z Tz. rewrite or_comm. apply M=>//. by apply: IH.
        -- move=>F. left. apply Hb=>y Ty. rewrite ->(id_next y). by apply F.
        -- move=>[c [Tc xc]].
           case: (IH _ Tc x xc)=>cx; swap 1 2.
@@ -236,14 +236,14 @@ Module BourbakiWitt.
    apply: tower.
    - move=>T IH t Ht c.
        case: (choose T Datatypes.id c (next c)).
-         by move=>x Tx; apply IH.
+         by move=>x Tx; apply: IH.
        -- move=>F. left. by apply Ht.
        -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
    - move=>x IHx y. 
      have H: next x <= y \/ y <= x. {
        revert y. apply: tower.
        -- move=>T IH t Ht. case: (choose T Datatypes.id x (next x)).
-          by move=>y Ty/=; rewrite or_comm; apply IH.
+          by move=>y Ty/=; rewrite or_comm; apply: IH.
           --- move=>F. right. by apply Ht.
           --- move=>[y [Ty xy]]. left. rewrite xy. by apply Ht. 
        -- move=>y IHy. case: (IHx y); auto=>xy. left. 
@@ -300,7 +300,7 @@ Module BourbakiWitt.
        case: (choose T Datatypes.id z z).
        by move=>*; apply total_chain.
        -- move=>H. apply proj2 in zx. contradict zx. by apply Ht, H. 
-       -- move=>[u [Tu /=zu]]. by apply IH with u.
+       -- move=>[u [Tu /=zu]]. by apply: (IH u).
      - move=>x IH y yx. constructor=>z zy. apply IH.
        apply lt_leq. eapply ltle_lt; eassumption.
    }
@@ -424,7 +424,7 @@ Section b.
  Lemma leq_next: forall x y, (forall z, next z <= x -> z <= y) -> x <= next y.
  Proof.
    apply: tower.
-   - move=>T IH t Ht y H. apply Ht=>x Tx. apply IH=>//z zx.
+   - move=>T IH t Ht y H. apply Ht=>x Tx. apply: IH=>//z zx.
      apply H. rewrite zx. by apply Ht.
    - move=>x IH y H. by apply next, H.
  Qed.
@@ -438,7 +438,7 @@ Section b.
    (** but the following proof is simpler and requires only [choose _ id x x] *)
    apply: tower.
    - move=>T IH t Ht y.
-     case: (choose T Datatypes.id y y). by move=>*; apply IH.
+     case: (choose T Datatypes.id y y). by move=>*; apply: IH.
      -- move=>F. left. apply Ht=>x Tx. by apply F.
      -- move=>[x [Tx yx]]. right. rewrite yx. by apply Ht.
    - move=>x IH y.
@@ -485,6 +485,10 @@ Module Pataraia.
 
 Section s.
  Context {l} {C: SPO.type l} {L: sED<<l}.
+
+ (* TMP *)
+ Infix "°" := (comp (c:=POS)).
+ Notation id := po_id.
 
  (** the largest monotone and extensive function on [C] *)
  Program Definition h: C-mon->C := dsup (fun f => id ≦ f) _.

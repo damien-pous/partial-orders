@@ -21,7 +21,7 @@ Proof.
   intros * H.
   Fail rewrite H -H.
   change (f ∘ g ≡[_-eqv->_] h).
-  rewrite H -H.  
+  Fail rewrite H -H.            (* was working before *)
 Abort.
 
 Goal forall X, forall h: X-eqv->X, forall x y: X, x ≡ y -> const x ≡ h.

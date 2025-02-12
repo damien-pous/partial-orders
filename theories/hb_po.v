@@ -21,6 +21,20 @@ HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 
+HB.mixin Record isPO' X := {
+    #[canonical=no] leq: relation X;
+    #[canonical=no] PreOrder_leq: PreOrder leq;
+  }.
+HB.builders Context X of isPO' X.
+  Definition eqv (x y: X) := leq x y /\ leq y x.
+  Lemma Equivalence_eqv: Equivalence eqv.
+  Proof. split. Admitted.  
+  HB.instance Definition _ := isSetoid.Build X Equivalence_eqv.
+  Lemma PO_axm: po_axm leq.
+  Proof. split. apply PreOrder_leq. reflexivity. Qed.
+  HB.instance Definition _ := isPO.Build X PO_axm.
+HB.end.
+
 (* those two projections need to be Defined in order kernel composition to behave well *)
 #[export] Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
 Proof. apply PO_axm. Defined.
@@ -412,12 +426,18 @@ Qed.
 #[export] Instance PO_covered: PartialOrder bicovered covered.
 Proof. by []. Qed.
 #[export] Instance leq_covered: subrelation leq covered.
-Proof. move=>P Q H x Px. exists x; split=>//. by apply H. Qed.
+Proof. move=>P Q H x Px. exists x; split=>//. by apply: H. Qed.
 #[export] Instance eqv_covered: subrelation eqv bicovered.
 Proof. move=>P Q. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
 (* TOTHINK: infer [is_sup] using typeclasses? *)
 Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
+
+Lemma is_sup_alt P z: is_sup P z <-> (forall y, P y -> y <= z) /\ (forall z', (forall y, P y -> y <= z') -> z <= z').
+Proof.
+  split; intro H. by split; apply H.
+  intro x. split. intros E y. by rewrite -E; apply H. apply H.
+Qed.
 
 Lemma leq_is_sup P x: is_sup P x -> forall y, P y -> y <= x.
 Proof. move=>H y Py. by apply H. Qed.
@@ -452,15 +472,15 @@ Lemma sup_closed_impl (P Q: X -> Prop): Proper (leq --> leq) P -> sup_closed Q -
 Proof.
   intros HP HQ T TPQ x Tx Px.
   eapply HQ. 2: apply Tx.
-  intros y Ty. apply TPQ=>//.
-  eapply HP. 2: apply Px.
+  intros y Ty. apply: TPQ=>//.
+  apply: HP. 2: apply Px.
   by apply Tx. 
 Qed.
 
 Lemma sup_closed_leq (f: X -mon-> X): sup_closed (fun x => x <= f x).
 Proof.
   intros T HT x Tx. apply Tx=>y Ty. 
-  transitivity (f y). by apply HT.
+  transitivity (f y). by apply: HT.
   by apply f, Tx.
 Qed.
 
@@ -482,18 +502,37 @@ Proof.
   apply: Proper_forall=>z.
   apply: Proper_iff=>//{x}.
   split=>H x Px.
-  - by apply H, sc_inj.
+  - by apply H; apply: sc_inj.
   - elim: Px=>//Q QP IH y Hy. by apply Hy, IH. 
 Qed.
 
 (** greateast (post-)fixpoints of monotone functions,
     essentially Knaster-Tarski, also known as Lambek lemma in category theory *)
 Definition is_gfp (f: X -> X) := is_sup (fun x => x <= f x). 
+
+Lemma is_gfp_alt (f: X -mon-> X) (z: X): is_gfp f z <-> z <= f z /\ forall y, y <= f y -> y <= z.
+Proof.    
+  rewrite /is_gfp is_sup_alt. split; move=>[H H']; split=>//. 2: firstorder.
+  apply H'=>y Y. rewrite Y. by apply f, H.
+Qed.
+
 Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
 Proof.
   move=>H. symmetry; apply: antisym'.
   apply H=>y Hy. rewrite Hy. apply f. by apply H.
   move=>P. apply H=>//. by apply f.
+Qed.
+
+Lemma is_gfp_leq (f g: X -mon-> X): f <= g -> forall x y, is_gfp f x -> is_gfp g y -> x <= y.
+Proof.
+  intros fg x y Hx Hy. apply Hy=>//.
+  rewrite -(fg _). by rewrite (gfp_fixpoint _ Hx).
+Qed.
+
+#[export] Instance is_gfp_eqv: Proper (eqv ==> eqv ==> eqv) is_gfp.
+Proof.
+  intros f g fg. apply: Proper_is_sup.
+  split=>x Hx; exists x; split=>//. by rewrite -(fg x). by rewrite (fg x).
 Qed.
 
 Definition directed P :=
@@ -525,6 +564,8 @@ Definition cocovered P := covered (P: dual X -> Prop).
 Definition cobicovered P Q := bicovered (P: dual X -> Prop) Q.
 
 Definition is_inf P x := forall z, z <= x <-> forall y, P y -> z <= y.
+Lemma is_inf_alt P z: is_inf P z <-> (forall y, P y -> z <= y) /\ (forall z', (forall y, P y -> z' <= y) -> z' <= z).
+Proof. dual @is_sup_alt. Qed.
 Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
 Proof. dual @leq_is_sup. Qed.
 Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
@@ -546,8 +587,14 @@ Lemma is_inf_closure P: is_inf (inf_closure P) ≡ is_inf P.
 Proof. dual @is_sup_closure. Qed.
 
 Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
+Lemma is_lfp_alt (f: X -mon-> X) (z: X): is_lfp f z <-> f z <= z /\ forall y, f y <= y -> z <= y.
+Proof. apply (is_gfp_alt (dualf f)). Qed.  
 Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
 Proof. apply (gfp_fixpoint (dualf f)). Qed.
+#[export] Instance is_lfp_eqv: Proper (eqv ==> eqv ==> eqv) is_lfp.
+Proof. dual @is_gfp_eqv. Qed.
+Lemma is_lfp_leq (f g: X -mon-> X): f <= g -> forall x y, is_lfp f x -> is_lfp g y -> x <= y.
+Proof. intros fg x y Hx Hy. by apply (@is_gfp_leq _ (dualf g) (dualf f)). Qed.
 
 Definition codirected P :=
   forall x y, P x -> P y -> exists z, P z /\ z <= x /\ z <= y.
@@ -576,7 +623,7 @@ Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
   image f P <= Q <-> forall x, P x -> Q (f x).
 Proof.
   split=>H.
-  - move=>x Px. apply H. by exists x.
+  - move=>x Px. apply: H. by exists x.
   - move=>y [x [Px ->]]; auto. 
 Qed.
 Section s.
@@ -591,7 +638,7 @@ Qed.
 #[export] Instance covered_image: Proper (leq ==> leq ==> covered) (@image X Y).
 Proof.
   move=>f g fg P Q PQ. apply forall_image=>x Px.
-  exists (g x); split. exists x; split=>//. by apply PQ. by apply fg.
+  exists (g x); split. exists x; split=>//. by apply: PQ. by apply: fg.
 Qed.  
 End s.
 
@@ -601,7 +648,7 @@ Lemma dprod_sup {A} {X: A -> PO.type} (P: (forall a, X a)->Prop) (f: forall a, X
 Proof.
   move=>H g; split=>fg.
   - move=>h Ph. rewrite -fg=>a. apply H=>//. by exists h.
-  - move=>a. apply H=>_ [h [Ph ->]]. by apply fg. 
+  - move=>a. apply H=>_ [h [Ph ->]]. by apply: fg. 
 Qed.
 (** actually they *must* be computed pointwise, but not clear we can prove it without using decidability of equality on [A] *)
 Lemma dprod_sup' {A} {X: A -> PO.type}
@@ -610,7 +657,7 @@ Lemma dprod_sup' {A} {X: A -> PO.type}
   is_sup P f -> forall a, is_sup (image (fun h => h a) P) (f a).
 Proof.
   move=>Pf a. split=>az.
-  - move=>_ [b [Pb ->]]. rewrite -az. by apply Pf.
+  - move=>_ [b [Pb ->]]. rewrite -az. by apply: (leq_is_sup Pf).
   - set h := fun b =>
                match A_dec a b return X b with
                | left E => match E in _=c return X c with
@@ -623,10 +670,10 @@ Proof.
       have E: e = eq_refl by apply Eqdep_dec.UIP_dec.
       by rewrite E.
     }
-    rewrite -ha. apply Pf=>g Pg b.
+    rewrite -ha. apply: (proj2 (Pf h))=>g Pg b.
     unfold h. case A_dec=>ab. destruct ab.
     -- apply az. by exists g.
-    -- by apply Pf. 
+    -- by apply: (leq_is_sup Pf). 
 Qed.
 
 (** sups are computed pointwise in products
