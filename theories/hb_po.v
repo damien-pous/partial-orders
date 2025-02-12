@@ -11,6 +11,7 @@ Set Primitive Projections.
 
 (** ** class *)
 
+(** PO on top of a Setoid *)
 Definition po_axm {X: Setoid.type} (leq: relation X) :=
   PreOrder leq /\ forall x y, eqv x y <-> (leq x y /\ leq y x).
 HB.mixin Record isPO X of Setoid X := {
@@ -21,20 +22,6 @@ HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 
-HB.mixin Record isPO' X := {
-    #[canonical=no] leq: relation X;
-    #[canonical=no] PreOrder_leq: PreOrder leq;
-  }.
-HB.builders Context X of isPO' X.
-  Definition eqv (x y: X) := leq x y /\ leq y x.
-  Lemma Equivalence_eqv: Equivalence eqv.
-  Proof. split. Admitted.  
-  HB.instance Definition _ := isSetoid.Build X Equivalence_eqv.
-  Lemma PO_axm: po_axm leq.
-  Proof. split. apply PreOrder_leq. reflexivity. Qed.
-  HB.instance Definition _ := isPO.Build X PO_axm.
-HB.end.
-
 (* those two projections need to be Defined in order kernel composition to behave well *)
 #[export] Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
 Proof. apply PO_axm. Defined.
@@ -43,6 +30,45 @@ Proof. apply PO_axm. Defined.
 
 (** testing that two partial orders are definitionally equal *)
 Notation unify_pos X Y := (unify (X: PO.type) (Y: PO.type)).
+
+(** PO from scratch, with [eqv] derived from [leq] *)
+HB.mixin Record isPO' X := {
+    #[canonical=no] leq: relation X;
+    #[canonical=no] PreOrder_leq: PreOrder leq;
+  }.
+HB.builders Context X of isPO' X.
+  Definition eqv (x y: X) := leq x y /\ leq y x.
+  Lemma Equivalence_eqv: Equivalence eqv.
+  Proof.
+    move: PreOrder_leq. split.
+    - by split.
+    - by move=>??[]; split.
+    - by move=>x y z[??][??]; split; transitivity y. 
+  Qed.
+  HB.instance Definition _ := isSetoid.Build X Equivalence_eqv.
+  Lemma PO_axm: po_axm leq.
+  Proof. split. apply PreOrder_leq. reflexivity. Qed.
+  HB.instance Definition _ := isPO.Build X PO_axm.
+HB.end.
+
+(** antisymmetric preorders, with [eqv=eq] *)
+HB.mixin Record isStrictPO X := {
+    #[canonical=no] leq: relation X;
+    #[canonical=no] PreOrder_leq: PreOrder leq;
+    #[canonical=no] antisym: forall x y, leq x y -> leq y x -> x = y;
+  }.
+HB.builders Context X of isStrictPO X.
+  HB.instance Definition _ := eq_setoid X.
+  Lemma PO_axm: po_axm leq.
+  Proof.
+    move: PreOrder_leq.
+    split=>//. 
+    move=>x y; split.
+    by move=>H; destruct H.
+    case; exact: antisym. 
+  Qed.
+  HB.instance Definition _ := isPO.Build X PO_axm.
+HB.end.
 
 
 (** ** morphisms *)
@@ -67,17 +93,19 @@ Qed.
 HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
-(** inheritance: po morphisms are setoid morphisms *)
+
+(** monotonicity implies extensionality *)
 HB.builders Context X Y f (F : isMonotone X Y f).
   HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
 HB.end.
+
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=
-  isMonotone.Build X X types_id (fun _ _ H => H). 
+  isMonotone.Build X X types_id (fun _ _ H => H).
 Notation po_id := (types_id: _ -mon-> _) (only parsing). 
 
 (** composition of morphisms *)
@@ -91,7 +119,6 @@ Program Definition po_const {X Y: PO.type} (y: Y) :=
   isMonotone.Build X Y (const y) _.
 Next Obligation. move=>/=_ _ _. apply PreOrder_leq. Qed.
 HB.instance Definition _ {X Y} y := @po_const X Y y.
-
 
 (** ** immediate properties *)
 
@@ -109,7 +136,7 @@ Proof. reflexivity. Qed.
 Section dual.
  Context {X: PO.type}.
  Lemma po_dual: po_axm (flip (@leq X)).
- Proof. split. by typeclasses eauto. by move=>??/=; rewrite eqv_of_leq; tauto. Qed.
+ Proof. split. by typeclasses eauto. move=>??/=; rewrite eqv_of_leq; exact: and_comm. Qed.
  HB.instance Definition _ := isPO.Build (dual X) po_dual.
 End dual.
 Program Definition po_dualf {X Y} (f: X -mon-> Y)
@@ -117,32 +144,9 @@ Program Definition po_dualf {X Y} (f: X -mon-> Y)
 Next Obligation. move=>x y. apply f. Qed.
 HB.instance Definition _ {X Y} f := @po_dualf X Y f.
 
-(** ** instances *)
+Fail Check fun X: PO.type => unify_pos X (dual (dual X)). (* dommage *)
 
-(** building partial orders from bare preorders
-    unused so far,
-    it could be used to declare the partial order on Prop, but we may want to get access to its associated setoid before loading the po module.  *)
-HB.mixin Record isPO_from_PreOrder X := {
-    #[canonical=no] leq: relation X;
-    #[canonical=no] PreOrder_leq: PreOrder leq;
-}.
-HB.builders Context X (PO: isPO_from_PreOrder X).
-  Definition leq_kernel (x y: X) := leq x y /\ leq y x. 
-  Fact Equivalence_leq_kernel : Equivalence leq_kernel. 
-  Proof.
-    pose proof PreOrder_leq. unfold leq_kernel.
-    constructor; repeat intro.
-    - split; reflexivity. 
-    - tauto.
-    - split; transitivity y; tauto.
-  Qed.
-  HB.instance
-  Definition _ :=
-    isSetoid.Build X Equivalence_leq_kernel. 
-  HB.instance
-  Definition _ :=
-    isPO.Build X (conj PreOrder_leq (fun _ _ => reflexivity _)).
-HB.end.
+(** ** instances *)
 
 (** discrete partial order on top of a setoid *)
 Definition discrete (X: Type) := X.
@@ -214,14 +218,19 @@ Section s.
  (** we use an alias for product to guide structure inferrence *)
  (** TOREPORT? we need to eta expand this alias otherwise we run into universe problems with SPOs... *)
  Definition lex_prod X Y := prod X Y. 
- Definition leq_lex_prod: relation (X*Y) :=
-   fun p q => fst p <= fst q /\ (fst q <= fst q -> snd p <= snd q).
+ HB.instance Definition _ := Setoid.copy (lex_prod X Y) (prod X Y).
+ Definition leq_lex_prod: relation (lex_prod X Y) :=
+   fun p q => fst p <= fst q /\ (fst q <= fst p -> snd p <= snd q).
  Lemma po_lex_prod: po_axm leq_lex_prod.
  Proof.
-   split. constructor=>//. unfold leq_lex_prod.
-   move=>[x x'][y y'][z z']/=.
-   intuition solve [transitivity y; auto|transitivity y'; auto].
-   unfold eqv, leq_lex_prod=>??/=. rewrite 2!eqv_of_leq. intuition.
+   split; unfold leq_lex_prod.
+   - constructor=>//.
+     move=>[x x'][y y'][z z']/=[xy xy'][yz yz']. split.
+     by transitivity y.
+     move=>zx. transitivity y'.
+     apply: xy'. by transitivity z. 
+     apply: yz'. by transitivity x.
+   - move=>[??][??]. cbn. rewrite 2!eqv_of_leq. intuition.
  Qed.
  HB.instance Definition _ := isPO.Build (lex_prod X Y) po_lex_prod.
 
@@ -247,7 +256,8 @@ Section s.
 
  (** sequential sum *)
  Definition sequential_sum := sum. 
- Definition leq_sequential_sum: relation (X+Y) :=
+ HB.instance Definition _ := Setoid.copy (sequential_sum X Y) (sum X Y).
+ Definition leq_sequential_sum: relation (sequential_sum X Y) :=
    fun p q => match p,q with
            | inl x,inl y | inr x,inr y => x<=y
            | inl _,inr _ => True
@@ -310,7 +320,7 @@ HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   isMonotone.Build (sig P) X (@proj1_sig X P) (fun p q pq => pq).
 
-(** extensional functions as a special case (already declared as a setoid) *)
+(** extensional functions as a special case *)
 HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
   PO.copy (X-eqv->Y) (kernel (fun f: X-eqv->Y => f: X -> Y)).
 
@@ -650,7 +660,8 @@ Proof.
   - move=>h Ph. rewrite -fg=>a. apply H=>//. by exists h.
   - move=>a. apply H=>_ [h [Ph ->]]. by apply: fg. 
 Qed.
-(** actually they *must* be computed pointwise, but not clear we can prove it without using decidability of equality on [A] *)
+(** actually they *must* be computed pointwise,
+    but not clear we can prove it without using decidability of equality on [A] *)
 Lemma dprod_sup' {A} {X: A -> PO.type}
       (A_dec: forall a b: A, {a=b} + {a<>b})
       (P: (forall a, X a)->Prop) (f: forall a, X a):

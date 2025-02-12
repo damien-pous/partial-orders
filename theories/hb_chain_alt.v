@@ -623,7 +623,7 @@ Section s.
    - by rewrite -I.
  Qed.
  
- Lemma h_ext: id ≦ h.
+ Lemma h_ext: id <= h.
  Proof. by apply: leq_dsup. Qed.
 
  Lemma h_invol: h ° h <= h.

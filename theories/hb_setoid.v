@@ -38,7 +38,7 @@ Notation "X '-eqv->' Y" := (setoid_morphism.type X Y) (at level 99, Y at level 2
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=
-  isExtensional.Build X X types_id (fun _ _ H => H). 
+  isExtensional.Build X X types_id (fun _ _ H => H).
 Notation setoid_id := (types_id: _ -eqv-> _) (only parsing). 
 
 (** composition of morphisms *)
@@ -55,9 +55,9 @@ HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 (** ** properties *)
 
 Lemma eqv_refl {X: Setoid.type} (x: X): x ≡ x.
-Proof. reflexivity. Qed.
+Proof. done. Qed.
 Lemma eqv_sym {X: Setoid.type} (x y: X): x ≡ y -> y ≡ x.
-Proof. apply symmetry. Qed.
+Proof. exact: symmetry. Qed.
 #[export] Hint Extern 0 (_ ≡ _)=> exact: (eqv_refl _) || apply: eqv_sym; assumption: core.
 
 (** ** duality *)
@@ -95,7 +95,7 @@ HB.instance Definition _ X := setoid_trivial X.
 HB.instance Definition _ := Setoid.copy unit (trivial unit). 
 
 (** setoid of extensional propositions *)
-HB.instance Definition _ := isSetoid.Build Prop _. 
+HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
 
 (** (dependent) function space *)
 Section dprod.
@@ -215,4 +215,4 @@ Proof. move=>/=y y' yy x. apply yy. Qed.
     provided the outer function is extensive *)
 Lemma types_comp_eqv {X Y Z: Setoid.type}:
   Proper (@eqv (Y-eqv->Z) ==> eqv ==> eqv) (@types_comp X Y Z).
-Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.
+Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). exact: ff'. Qed.

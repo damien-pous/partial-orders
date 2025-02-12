@@ -499,7 +499,7 @@ Section s.
    - by rewrite -I.
  Qed.
  
- Lemma h_ext: id ≦ h.
+ Lemma h_ext: id <= h.
  Proof. by apply: leq_dsup. Qed.
 
  Lemma h_invol: h ° h <= h.
@@ -511,9 +511,9 @@ Section s.
  Definition extensive_fixpoint := locked (h bot).
 
  Variable f: C-mon->C.
- Hypothesis f_ext: id ≦ f. 
+ Hypothesis f_ext: id <= f. 
  
- Lemma h_prefixpoint: f ° h ≦ h.
+ Lemma h_prefixpoint: f ° h <= h.
  Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
