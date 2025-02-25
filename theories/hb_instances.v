@@ -1,7 +1,7 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Import Arith.
-Require Export hb_gpo.
+Require Export hb_lattice.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -10,13 +10,12 @@ Set Primitive Projections.
 
 (** ** natural numbers *)
 
-HB.instance Definition _ := eq_setoid nat.
 Lemma po_nat: po_axm Peano.le.
 Proof.
-  split. apply PeanoNat.Nat.le_preorder .
+  apply: mk_po_axm. 
   split. now intros <-. intros. now apply Nat.le_antisymm.
 Qed.
-HB.instance Definition _ := isPO.Build nat po_nat.
+HB.instance Definition _ := Setoid_isPO.Build nat po_nat.
 
 (** ** lists *)
 
@@ -43,13 +42,13 @@ Section s.
    match h,k with cons x h,cons y k => x<=y /\ leq_list h k | nil,_ => True | _,_ => False end.
  Lemma po_list: po_axm leq_list.
  Proof.
-   split. constructor.
+  apply: mk_po_axm. split. 
    - by elim=>//.
    - by elim=>[|x h IH][|y k][|z l]//=[? ?][? ?]; split; try etransitivity; eauto.
    - elim=>[|x h IH][|y k]; cbn; try tauto.
      rewrite eqv_of_leq. setoid_rewrite IH. tauto.
  Qed.
- HB.instance Definition _ := isPO.Build (list X) po_list.
+ HB.instance Definition _ := Setoid_isPO.Build (list X) po_list.
 End s.
 Arguments leq_list [_] _ _/.
 

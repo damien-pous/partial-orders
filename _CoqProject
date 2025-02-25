@@ -1,19 +1,26 @@
 -arg -w -arg -undo-batch-mode
 -arg -w -arg -deprecated-missing-stdlib
+-arg -w -arg +HB.no-new-instance
 
 # end-user library
 -R theories/ PartialOrders
 theories/preliminaries.v
 theories/hb_setoid.v
 theories/hb_po.v
-theories/hb_spo.v
-theories/hb_ipo.v
-theories/hb_gpo.v
-theories/hb_instances.v
+theories/hb_total.v
 theories/hb_adjunctions.v
-theories/hb_categories.v
-theories/hb_chain.v
-theories/hb_chain_alt.v
+theories/hb_sup.v
+theories/hb_inf.v
+theories/hb_lattice.v
+theories/hb_instances.v
+theories/hb_lfp.v
+theories/hb_gfp.v
+# theories/hb_spo.v
+# theories/hb_ipo.v
+# theories/hb_gpo.v
+# theories/hb_categories.v
+# theories/hb_chain.v
+# theories/hb_chain_alt.v
 theories/cs_setoid.v
 theories/cs_po.v
 theories/cs_adjunctions.v

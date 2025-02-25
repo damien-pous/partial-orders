@@ -1,15 +1,74 @@
 # MENU
 
- setoids, partial orders, more or less sups/infs
- - (bounded) lattices + modular/distributive
- - (pointed) CPOs, by chains or directed sets
- setoid morphisms, monotone functions, linear / sup-preserving functions (adjunctions)
+preliminaries
+ 
+setoids
+ strict [dec]
+ setoid morphism
+ instances (trivial (0,1), strict (2,nat), Prop, dprod, +, *, sig, sigT?, extfun)
+ 
+partial orders
+ discrete
+ po morphisms
+ instances (discrete (0,1), 2, nat, Prop, dprod, +s, *s, sig, sigT?, extfun, monfun)
  duality
- Pataraia
- Knaster-Tarski
+ chains, directed sets
 
+total
+ chain classic [dec]
+
+adjunctions
+ 
+sups (colimites en catégories)
+ is_sup
+ generic sups and their constructions
+ {bot,cup,csup,dsup,isup}
+
+infs (by duality)
+ is_inf
+ generic infs and their constructions
+ {top,cap,cinf,dinf,iinf}
+ 
+lattices
+ [modular, distributive, residuated, completely distributive]
+
+fixpoints (lfp/gfp)
+ Bourbaki-Witt, Pataria
+
+closures
+
+# DUALITY/GENERICITY
+
+in sup,    gsup    <=> std sups
+            dprod       +
+            mon/ext     + 
+
+in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon functions)
+            dprod      (copypaste)
+			mon/ext    (copypaste)
+			
+           std sup <-> std inf (easy but HB bug)
+		    dprod       +
+			mon/ext     ?
+			
+		   ginf    <=> std inf (boring, unless duality)
+			dprod       +
+			mon/ext     +
+			
 # FILES
 
+- theories/preliminaries.v   elementary helpers
+- theories/--_setoid.v          setoids
+- theories/--_po.v              partial orders
+- theories/--_sup.v             partial orders with (some) supremums
+- theories/--_inf.v             partial orders with (some) infimums
+- theories/--_lattice.v         partial orders with (some) supremums & infimums 
+- theories/--_lfp.v             least fixpoint theorems, study of the chain of a function (BourbakiWitt/Pataraia)
+- theories/--_gfp.v             greatest fixpoint theorems, by duality
+- theories/--_adjunctions.v     adjunctions
+- theories/--_instances.v       instances (e.g, natural numbers with min, max, 0)
+
+previous:
 - theories/preliminaries.v   elementary helpers
 - theories/--_setoid.v          setoids
 - theories/--_po.v              partial orders
