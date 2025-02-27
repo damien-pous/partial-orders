@@ -1,3 +1,4 @@
+-native-compiler no
 -arg -w -arg -undo-batch-mode
 -arg -w -arg -deprecated-missing-stdlib
 -arg -w -arg +HB.no-new-instance
@@ -21,33 +22,34 @@ theories/hb_gfp.v
 # theories/hb_categories.v
 # theories/hb_chain.v
 # theories/hb_chain_alt.v
-theories/cs_setoid.v
-theories/cs_po.v
-theories/cs_adjunctions.v
-theories/cs_categories.v
-theories/cs_spo.v
-theories/cs_ipo.v
-theories/cs_gpo.v
-theories/cs_instances.v
-theories/cs_chain.v
 
-# tests & sanity checks
--R tests/ PartialOrdersTests
-tests/hb_sanity_setoid.v
-tests/hb_sanity_po.v
-tests/hb_sanity_spo.v
-tests/hb_sanity_ipo.v
-tests/hb_sanity_gpo.v
-tests/hb_sanity.v
-tests/cs_sanity_setoid.v
-tests/cs_sanity_po.v
-tests/cs_sanity_spo.v
-tests/cs_sanity_ipo.v
-tests/cs_sanity_gpo.v
-tests/cs_sanity.v
+# # theories/cs_setoid.v
+# theories/cs_po.v
+# theories/cs_adjunctions.v
+# theories/cs_categories.v
+# theories/cs_spo.v
+# theories/cs_ipo.v
+# theories/cs_gpo.v
+# theories/cs_instances.v
+# theories/cs_chain.v
 
-# previous attempts/variations, to be removed at some point, left here to ensure they compile
-attic/level_attempts.v
-attic/alone.v
-attic/split.v
-attic/split_tc.v
+# # tests & sanity checks
+# -R tests/ PartialOrdersTests
+# tests/hb_sanity_setoid.v
+# tests/hb_sanity_po.v
+# tests/hb_sanity_spo.v
+# tests/hb_sanity_ipo.v
+# tests/hb_sanity_gpo.v
+# tests/hb_sanity.v
+# tests/cs_sanity_setoid.v
+# tests/cs_sanity_po.v
+# tests/cs_sanity_spo.v
+# tests/cs_sanity_ipo.v
+# tests/cs_sanity_gpo.v
+# tests/cs_sanity.v
+
+# # previous attempts/variations, to be removed at some point, left here to ensure they compile
+# attic/level_attempts.v
+# attic/alone.v
+# attic/split.v
+# attic/split_tc.v

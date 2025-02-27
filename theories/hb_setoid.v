@@ -21,6 +21,7 @@ HB.structure Definition Setoid :=
   { X of isSetoid X }.
 Infix "≡" := eqv (at level 70).
 Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
+Notation unify_setoids X Y := (same Setoid.type X Y).
 
 (** ** properties *)
 

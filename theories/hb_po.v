@@ -34,6 +34,7 @@ HB.mixin Record Setoid_isPO X of Setoid X := {
 HB.structure Definition PO := { X of Setoid_isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
+Notation unify_pos X Y := (same PO.type X Y).
   
 (** PO from scratch, with [eqv] derived from [leq] *)
 HB.factory Record isPO X := {
