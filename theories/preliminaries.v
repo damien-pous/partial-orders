@@ -9,7 +9,7 @@ Notation types_id := Datatypes.id.
 Notation types_comp := compose.
 (** we setup a notation "∘" (\circ) for plain composition, consistently with the one in program_scope
     (we may restrict its scope to a libray-specific one later on)
-    in subsequent modules, we also setup "°" (degree) for categorical composition *)
+    in subsequent modules, we also setup "°" (degree) for composition of monotone functions *)
 Infix "∘" := types_comp (at level 40, left associativity). 
 Reserved Infix "°" (at level 40, left associativity).
 (** we let [comp] and [const] reduce more easily than in Basics

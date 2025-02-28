@@ -165,3 +165,20 @@ Definition iso_retract A (X: PO.type) (r: A -> X) (i: X -> A) (ri: r ∘ i ≡ t
   X ≃ kernel r.
   exists i r=>??; cbn; by setoid_rewrite (ri _).
 Defined.
+
+
+
+
+(* Definition bool_dfun {X Y: Setoid.type} (x: X) (y: Y): forall b, bool_fun X Y b := fun b => if b return bool_fun X Y b then y else x. *)
+(* Section prod_dprod_bool. *)
+(*   Context {X Y: Setoid.type}. *)
+(*   Program Definition iso_prod_dprod_bool: prod X Y ≃[SETOIDS] forall b, bool_fun X Y b := *)
+(*     {| *)
+(*       fwd := mk_ext (fun p => (bool_dfun p.1 p.2)) _; *)
+(*       bwd := mk_ext (fun h => (h false, h true)) _; *)
+(*     |}. *)
+(*   Next Obligation. by move=>p q [??][]. Qed. *)
+(*   Next Obligation. by move=>h g; split; apply: H. Qed. *)
+(*   Next Obligation. by move => ?[]. Qed. *)
+(*   Next Obligation. by split. Qed. *)
+(* End prod_dprod_bool. *)

@@ -66,35 +66,14 @@ Lemma kern_inf {A} {X: PO.type} (f: A -> X) (P: kernel f -> Prop) (a: kernel f):
   is_inf (image f P) (f a) -> is_inf P a.
 Proof. exact: (@kern_sup A (dual X)). Qed.
 
-(* (** dualising predicates on monotone functions *) *)
-(* (* TODO: generalise? *) *)
-(* Definition dual_mon_pred {X Y} (F: (X -mon-> Y) -> Prop): (dual X -mon-> dual Y) -> Prop := *)
-(*   fun f' => exists f, F f /\ @eq (X->Y) f f'. *)
-(* Lemma image_dual_mon_pred {X Y} (F: (X -mon-> Y) -> Prop): image pobody F ≡ image pobody (dual_mon_pred F). *)
-(* Proof. *)
-(*   move=>f. split; move=>[{}f [Ff ->]]. *)
-(*   - exists (dualf f); split=>//. exists f; split=>//. *)
-(*   - case: Ff=>[f' [Ff' E]]. exists f'; split=>//. *)
-(* Qed. *)
-(* Lemma is_inf_image_dual_mon {X Y Z: PO.type} (F: (X -mon-> Y) -> Prop) (h: (X->Y) -> Z) z: *)
-(*   is_inf (image (types_comp h pobody) F) z <-> *)
-(*     is_inf (image (types_comp h (@pobody (dual X) (dual Y))) (dual_mon_pred F)) z. *)
-(* Proof. *)
-(*   apply: Proper_is_inf=>//.  *)
-(*   by rewrite 2!image_comp image_dual_mon_pred. *)
-(* Qed. *)
-
 Definition po_morphism' (X Y: PO.type) := po_morphism.type (dual X) (dual Y).
 Notation "X -mon'-> Y" := (po_morphism' X Y) (at level 99, Y at level 200).
 
 (** pointwise sups of monotone functions yield monotone functions *)
 Lemma pointwise_inf_mon' {X Y} (F: (X-mon'-> Y) -> Prop) (g: X -> Y):
-  (forall x, @is_inf Y(image (types_comp (app x) pobody) F) (g x)) ->
+  (forall x, @is_inf Y(image (app x ∘ pobody) F) (g x)) ->
   Proper (flip leq ==> flip leq) g.
 Proof. exact: (@pointwise_sup_mon (dual X) (dual Y)). Qed.
-(*   setoid_rewrite is_inf_image_dual_mon. *)
-(*   move=>H. apply/Proper_dual_leq. move: H. *)
-(* Qed. *)
   
 
 
@@ -113,12 +92,12 @@ HB.instance Definition _ k (X: gsupPO.type k) := @PO_ginf.Build k (dual X) (@gsu
 
 
 (** infs of a given kind are closed under dependent product formations *)
-HB.instance Definition a k A (X: A -> ginfPO.type k) := ginfPO.copy (forall a, X a) (dual (forall a, dual (X a))).
+HB.instance Definition _ k A (X: A -> ginfPO.type k) := ginfPO.copy (forall a, X a) (dual (forall a, dual (X a))).
 (* explicit definition instead below, in case the above line breaks again
    (it needs [same PO.type (forall a, X a) (dual (forall a, dual (X a)))]) *)
 (*
 Program Definition dprod_ginf k A (X: A -> ginfPO.type k)
-  := @PO_ginf.Build k (forall a, X a) (fun I P kIP h a => ginf I P kIP (types_comp (dualf (app a)) h)) _.
+  := @PO_ginf.Build k (forall a, X a) (fun I P kIP h a => ginf I P kIP (dualf (app a) ∘ h)) _.
 Next Obligation.
   apply: dprod_inf=>a. rewrite -image_comp. exact: ginf_spec. 
 Qed.
@@ -135,7 +114,7 @@ Section r.
  *)
  (*
  Definition retract_ginf I P kIP (h: I -mon-> dual (kernel r)): kernel r :=
-   i (@ginf k X I P kIP (types_comp (dualf (kernelf r)) h)). 
+   i (@ginf k X I P kIP (dualf (kernelf r) ∘ h)). 
  Lemma retract_ginf_spec I P kIP (h: I -mon-> dual (kernel r)):
    @is_inf (kernel r) (image h P) (@retract_ginf I P kIP h).
  Proof. exact: (@retract_gsup_spec A k (dual X)). Qed.

@@ -146,7 +146,7 @@ Qed.
 (** pointwise sups of monotone functions yield monotone functions *)
 (* can be skipped, cf. only occurrence below *)
 Lemma pointwise_sup_mon {X Y} (F: (X-mon->Y) -> Prop) (g: X -> Y):
-  (forall x, is_sup (image (types_comp (app x) pobody) F) (g x)) ->
+  (forall x, is_sup (image (app x ∘ pobody) F) (g x)) ->
   Proper (leq ==> leq) g.
 Proof.
   move=>Fg x y xy.
@@ -169,7 +169,7 @@ HB.structure Definition gsupPO k := {X of PO_gsup k X & }.
 
 (** sups of a given kind are closed under dependent product formations *)
 Program Definition dprod_gsup k A (X: A -> gsupPO.type k)
-  := PO_gsup.Build k (forall a, X a) (fun I P kIP h a => gsup I P kIP (types_comp (app a) h)) _.
+  := PO_gsup.Build k (forall a, X a) (fun I P kIP h a => gsup I P kIP (app a ∘ h)) _.
 Next Obligation. 
   apply: dprod_sup=>a. rewrite -image_comp. exact: gsup_spec. 
 Qed.
@@ -183,7 +183,7 @@ HB.factory Record madjoint_gsup (k: gkind) Y of PO Y := {
   }.
 HB.builders Context k Y of madjoint_gsup k Y.
  Definition gsup I P kIP (h: I -mon-> Y): Y :=
-   ladj i (@gsup k X I P kIP (types_comp (radj i) h)).
+   ladj i (@gsup k X I P kIP (radj i ∘ h)).
  Lemma gsup_spec I P kIP (h: I -mon-> Y):
    is_sup (image h P) (@gsup I P kIP h).
  Proof. apply: madjoint_sup. exact: m. rewrite -image_comp. exact: gsup_spec. Qed.
@@ -203,24 +203,23 @@ Definition retract_of {A} {X: Setoid.type}
   (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id) := kernel r.
 (* HB.instance Definition _ A (X: Setoid.type) r i ri := Setoid.on (@retract_of A X r i ri). *)
 HB.instance Definition _ A (X: PO.type) r i ri := PO.on (@retract_of A X r i ri).
-(* BUG: sadly, if we use the instance below, things become super long in [hb_lfp.v] *)
-(* HB.instance Definition _ A k (X: gsupPO.type k) r i ri := *)
-(*   gsupPO.copy (@retract_of A X r i ri) (through_iso _ _ (iso_retract ri)). *)
-(* THUS we give a slightly more direct proof of it *)
-Section r.
- Context {A: Type} {k} (X: gsupPO.type k).
- Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id).
- Definition retract_gsup I P kIP (h: I -mon-> kernel r): kernel r :=
-   i (@gsup k X I P kIP (types_comp (kernelf r) h)).
- Lemma retract_gsup_spec I P kIP (h: I -mon-> kernel r):
-   is_sup (image h P) (@retract_gsup I P kIP h).
- Proof.
-   apply: kern_sup.
-   rewrite -image_comp. setoid_rewrite (ri _).
-   exact: gsup_spec.
- Qed.
- HB.instance Definition _ := PO_gsup.Build k (retract_of ri) _ retract_gsup_spec.
-End r.
+HB.instance Definition _ A k (X: gsupPO.type k) r i ri :=
+  gsupPO.copy (@retract_of A X r i ri) (through_iso _ _ (iso_retract ri)).
+(* BELOW: slightly more direct proof, in case it becomes slow again *)
+(* Section r. *)
+(*  Context {A: Type} {k} (X: gsupPO.type k). *)
+(*  Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id). *)
+(*  Definition retract_gsup I P kIP (h: I -mon-> kernel r): kernel r := *)
+(*    i (@gsup k X I P kIP (kernelf r ∘ h)). *)
+(*  Lemma retract_gsup_spec I P kIP (h: I -mon-> kernel r): *)
+(*    is_sup (image h P) (@retract_gsup I P kIP h). *)
+(*  Proof. *)
+(*    apply: kern_sup. *)
+(*    rewrite -image_comp. setoid_rewrite (ri _). *)
+(*    exact: gsup_spec. *)
+(*  Qed. *)
+(*  HB.instance Definition _ := PO_gsup.Build k (retract_of ri) _ retract_gsup_spec. *)
+(* End r. *)
 
 (** sups on sub-spaces *)
 Section sub.
@@ -237,7 +236,7 @@ Section sub.
  Definition sup_closed_sig P (HP: gsup_closed P) := sig P.
  Variables (P: X -> Prop) (HP: gsup_closed P). 
  Program Definition sig_gsup I Q (kIQ: k I Q) (h: I -mon-> sig P): sig P :=
-   exist P (gsup I Q kIQ (types_comp sval h)) _.
+   exist P (gsup I Q kIQ (sval ∘ h)) _.
  Next Obligation. apply: HP. apply/forall_image=>i Qi. exact: proj2_sig. Qed.
  Lemma sig_gsup_spec I Q kIQ (h: I -mon-> sig P):
    is_sup (image h Q) (@sig_gsup I Q kIQ h).
@@ -265,7 +264,7 @@ Section s.
  Proof.
    (* proof with [pointwise_sup_mon] *)
    move=>I Q kIQ h hQ.
-   apply: (pointwise_sup_mon (F:=types_comp (image h Q) pobody))=>x. 
+   apply: (pointwise_sup_mon (F:=image h Q ∘ pobody))=>x. 
    eapply Proper_is_sup. 2: reflexivity. 2: exact: gsup_spec.
    split.
    - move=>? [g [[i [Qi E]] ->]]. eexists; split. exists i; split=>//. by rewrite /app/= E.
@@ -477,7 +476,7 @@ Section dprod.
  HB.instance Definition _ X := dprod_dsup X. 
 
  Program Definition dprod_isup (X: A -> supCL.type) :=
-   PO_isup.Build (forall a, X a) (fun I P F a => isup I P (types_comp (app a) F)) _. 
+   PO_isup.Build (forall a, X a) (fun I P F a => isup I P (app a ∘ F)) _. 
  Next Obligation. apply: dprod_sup=>a. rewrite -image_comp. exact: isup_spec. Qed.
  HB.instance Definition _ X := dprod_isup X. 
  

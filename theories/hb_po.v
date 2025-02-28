@@ -152,9 +152,11 @@ HB.instance Definition _ {X} :=
 Notation po_id := (types_id: _ -mon-> _) (only parsing). 
 
 (** composition of morphisms *)
-Definition po_comp {X Y Z} (f: Y-mon->Z) (g: X-mon->Y) := 
-  isMonotone.Build X Z (f ∘ g) _.
+Definition po_comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := 
+  isMonotone.Build X Z (g ∘ f) _.
 HB.instance Definition _ {X Y Z} f g := @po_comp X Y Z f g.
+Definition comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := g ∘ f: X-mon->Z.
+Infix "°" := comp. 
 
 (** constant morphism *)
 Program Definition po_const {X Y: PO.type} (y: Y) :=
@@ -462,21 +464,11 @@ End test.
 Lemma types_comp_leq {X Y Z}:
   Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.
+
 Lemma types_comp_leq_eqv {X Y} {Z: PO.type}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
-(** the category of partial orders and monotone functions *)
-Program Canonical Structure POS :=
-  {|
-    ob := PO.type;
-    (* below: want to write [X -mon-> Y], but then the canonical projection is on "reversible coercions"; *)
-    hom X Y := po_morphism_type__canonical__hb_setoid_Setoid X Y; 
-    comp := @types_comp;
-    id := @types_id;
-    comp_eqv := @types_comp_eqv;
-  |}.
-
-Instance comp_leq {X Y Z: PO.type}: Proper (leq ==> leq ==> leq) (@comp POS X Y Z).
+Instance comp_leq {X Y Z: PO.type}: Proper (leq ==> leq ==> leq) (@comp X Y Z).
 Proof. apply: types_comp_leq. Qed.
 
 
