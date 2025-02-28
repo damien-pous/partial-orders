@@ -51,13 +51,14 @@ Proof. by firstorder subst. Qed.
 Lemma forall_pair {X} (P: X -> Prop) x y: (forall z, pair x y z -> P z) <-> P x /\ P y.
 Proof. by firstorder subst. Qed.
 
-Lemma forall_iff_and X (P Q R: X -> Prop) (H: forall a, P a <-> Q a /\ R a):
-  (forall a, P a) <-> (forall a, Q a) /\ (forall a, R a).
+Lemma forall_iff X (P Q: X -> Prop) (H: forall a, P a <-> Q a): (forall a, P a) <-> (forall a, Q a).
 Proof. firstorder. Qed.
 Lemma forall_and X (Q R: X -> Prop):
   (forall a, Q a /\ R a) <-> (forall a, Q a) /\ (forall a, R a).
-Proof. by apply: forall_iff_and. Qed.
-
+Proof. firstorder. Qed.
+Lemma forall_iff_and X (P Q R: X -> Prop) (H: forall a, P a <-> Q a /\ R a):
+  (forall a, P a) <-> (forall a, Q a) /\ (forall a, R a).
+Proof. firstorder. Qed.
 
 (** testing that two structures are definitionally equal *)
 Notation same T X Y := (eq_refl: @eq T X Y).

@@ -335,15 +335,18 @@ Arguments id {_ _}.
 Arguments comp {_ _ _ _}.
 Infix "°" := comp.
 
-Record Iso {C} (X Y: ob C) := {
-    fwd: hom X Y; 
-    bwd: hom Y X; 
-    isoE: fwd ° bwd ≡ id;
-    isoE': bwd ° fwd ≡ id
-  }.
-Infix "≃" := Iso (at level 70). 
-Infix "≃[ C ] " := (@Iso C) (at level 70, only parsing). 
+(* Record Iso {C} (X Y: ob C) := { *)
+(*     fwd: hom X Y;  *)
+(*     bwd: hom Y X;  *)
+(*     isoE: fwd ° bwd ≡ id; *)
+(*     isoE': bwd ° fwd ≡ id *)
+(*   }. *)
+(* Infix "≃" := Iso (at level 70).  *)
+(* Infix "≃[ C ] " := (@Iso C) (at level 70, only parsing).  *)
 
+(* Definition iso_sym {C} (X Y: ob C): X ≃ Y -> Y ≃ X. *)
+(*   move=>i. exists (bwd i) (fwd i). exact: isoE'. exact: isoE. *)
+(* Defined. *)
 
 (** the category of setoids and extensional functions *)
 Program Canonical Structure SETOIDS :=
@@ -361,19 +364,19 @@ Program Canonical Structure SETOIDS :=
 (* Check forall f: Prop -eqv-> Prop, f ° f ≡ f ° f. *)
 
 
-Definition bool_dfun {X Y: Setoid.type} (x: X) (y: Y): forall b, bool_fun X Y b := fun b => if b return bool_fun X Y b then y else x.
-Section prod_dprod_bool.
-  Context {X Y: Setoid.type}.
-  Program Definition iso_prod_dprod_bool: prod X Y ≃[SETOIDS] forall b, bool_fun X Y b :=
-    {|
-      fwd := mk_ext (fun p => (bool_dfun p.1 p.2)) _;
-      bwd := mk_ext (fun h => (h false, h true)) _;
-    |}.
-  Next Obligation. by move=>p q [??][]. Qed.
-  Next Obligation. by move=>h g; split; apply: H. Qed.
-  Next Obligation. by move => ?[]. Qed.
-  Next Obligation. by split. Qed.
-End prod_dprod_bool.
+(* Definition bool_dfun {X Y: Setoid.type} (x: X) (y: Y): forall b, bool_fun X Y b := fun b => if b return bool_fun X Y b then y else x. *)
+(* Section prod_dprod_bool. *)
+(*   Context {X Y: Setoid.type}. *)
+(*   Program Definition iso_prod_dprod_bool: prod X Y ≃[SETOIDS] forall b, bool_fun X Y b := *)
+(*     {| *)
+(*       fwd := mk_ext (fun p => (bool_dfun p.1 p.2)) _; *)
+(*       bwd := mk_ext (fun h => (h false, h true)) _; *)
+(*     |}. *)
+(*   Next Obligation. by move=>p q [??][]. Qed. *)
+(*   Next Obligation. by move=>h g; split; apply: H. Qed. *)
+(*   Next Obligation. by move => ?[]. Qed. *)
+(*   Next Obligation. by split. Qed. *)
+(* End prod_dprod_bool. *)
 
 
 (*

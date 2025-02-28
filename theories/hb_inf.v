@@ -100,7 +100,6 @@ Proof. exact: (@pointwise_sup_mon (dual X) (dual Y)). Qed.
 
 (** ** generic infimum operation *)
 
-#[primitive]
 HB.mixin Record PO_ginf (k: gkind) X of PO X := {
     #[canonical=no] ginf: forall I P, k I P -> (I -mon-> dual X) -> X;
     #[canonical=no] ginf_spec: forall I P kIP (h: I -mon-> dual X), @is_inf X (image h P) (ginf I P kIP h);
@@ -209,14 +208,12 @@ End s.
 (** ** standard infimum operations *)
 
 
-#[primitive]
 HB.mixin Record PO_top X of PO X := {
     #[canonical=no] top: X;
     #[canonical=no] top_spec: is_inf empty top;
   }.
 HB.structure Definition topPO := {X of PO_top X & }.
 
-#[primitive]
 HB.mixin Record PO_cap X of PO X := {
     #[canonical=no] cap: X -> X -> X;
     #[canonical=no] cap_spec: forall x y, is_inf (pair x y) (cap x y);
@@ -224,7 +221,6 @@ HB.mixin Record PO_cap X of PO X := {
 HB.structure Definition meetSemiLattice := {X of PO_cap X & }.
 HB.structure Definition topmeetSemiLattice := {X of PO_top X & meetSemiLattice X }.
 
-#[primitive]
 HB.mixin Record PO_cinf X of PO X := {
     #[canonical=no] cinf: forall P: X -> Prop, cochain P -> X;
     #[canonical=no] cinf_spec: forall P C, is_inf P (cinf P C);
@@ -234,7 +230,6 @@ HB.builders Context X of PO_cinf X.
 HB.end.
 HB.structure Definition CPO' := {X of PO_cinf X & }.
 
-#[primitive]
 HB.mixin Record PO_dinf X of PO X := {
     #[canonical=no] dinf: forall P: X -> Prop, codirected P -> X;
     #[canonical=no] dinf_spec: forall P D, is_inf P (dinf P D);
@@ -244,7 +239,6 @@ HB.builders Context X of PO_dinf X.
 HB.end.
 HB.structure Definition dCPO' := {X of PO_dinf X & }.
 
-#[primitive]
 HB.mixin Record PO_iinf X of PO X := {
     #[canonical=no] iinf: forall I, (I -> Prop) -> (I -> X) -> X;
     #[canonical=no] iinf_spec: forall I P h, is_inf (image h P) (iinf I P h);

@@ -58,11 +58,10 @@ HB.end.
 
 (** ** basic properties *)
 
-(* those two projections need to be Defined in order kernel composition to behave well *)
 Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
-Proof. split; apply PO_axm. Defined.
+Proof. split; apply PO_axm. Qed.
 Lemma eqv_of_leq {X: PO.type} (x y: X): x ≡ y <-> x <= y /\ y <= x. 
-Proof. apply PO_axm. Defined.
+Proof. apply PO_axm. Qed.
 
 Instance PartialOrder_eqv_leq {X: PO.type}: @PartialOrder X eqv _ leq _.
 Proof. exact: eqv_of_leq. Qed.
@@ -166,7 +165,7 @@ HB.instance Definition _ {X Y} y := @po_const X Y y.
 (** dual morphism  *)
 Program Definition po_dualf {X Y} (f: X -mon-> Y)
   := isMonotone.Build (dual X) (dual Y) (dualf f) _.
-Next Obligation. move=>x y. apply f. Defined.
+Next Obligation. move=>x y. apply f. Qed.
 HB.instance Definition _ {X Y} f := @po_dualf X Y f.
 
 HB.instance Definition _ {X Y} (f: X-mon->Y) :=

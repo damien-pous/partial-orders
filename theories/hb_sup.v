@@ -1,6 +1,7 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Export hb_po.
+Require Import hb_adjunctions.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -160,7 +161,6 @@ Qed.
 
 Definition gkind := forall X: PO.type, (X -> Prop) -> Type.
 
-#[primitive]
 HB.mixin Record PO_gsup (k: gkind) X of PO X := {
     #[canonical=no] gsup: forall I P, k I P -> (I -mon-> X) -> X;
     #[canonical=no] gsup_spec: forall I P kIP (h: I -mon-> X), is_sup (image h P) (gsup I P kIP h);
@@ -175,16 +175,43 @@ Next Obligation.
 Qed.
 HB.instance Definition _ k A X := @dprod_gsup k A X.
 
+(** sups from monadic adjunctions *)
+HB.factory Record madjoint_gsup (k: gkind) Y of PO Y := {
+    X: gsupPO.type k;
+    i: X ⊣ Y;
+    m: adj_counit i ≡ types_id;
+  }.
+HB.builders Context k Y of madjoint_gsup k Y.
+ Definition gsup I P kIP (h: I -mon-> Y): Y :=
+   ladj i (@gsup k X I P kIP (types_comp (radj i) h)).
+ Lemma gsup_spec I P kIP (h: I -mon-> Y):
+   is_sup (image h P) (@gsup I P kIP h).
+ Proof. apply: madjoint_sup. exact: m. rewrite -image_comp. exact: gsup_spec. Qed.
+ HB.instance Definition _ := PO_gsup.Build k Y (@gsup) (@gsup_spec).
+HB.end.
+Definition through_iso X Y (i: X ≃ Y) := Y: Type.
+Arguments through_iso: clear implicits.
+(* HB.instance Definition _ (X Y: PO.type) (i: X ≃ Y) := *)
+(*   Setoid.on (through_iso X Y i). *)
+HB.instance Definition _ (X Y: PO.type) (i: X ≃ Y) :=
+  PO.on (through_iso X Y i).
+HB.instance Definition _ k (X: gsupPO.type k) (Y: PO.type) (i: X ≃ Y) :=
+  @madjoint_gsup.Build k (through_iso X Y i) X (iso_trans i (etaI Y)) (iso_counit _).
+
 (** sups from retractions (in fact isomorphisms given the induced order on [A]) *)
 Definition retract_of {A} {X: Setoid.type}
   (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id) := kernel r.
-HB.instance Definition _ A X r i ri := Setoid.on (@retract_of A X r i ri).
+(* HB.instance Definition _ A (X: Setoid.type) r i ri := Setoid.on (@retract_of A X r i ri). *)
 HB.instance Definition _ A (X: PO.type) r i ri := PO.on (@retract_of A X r i ri).
+(* BUG: sadly, if we use the instance below, things become super long in [hb_lfp.v] *)
+(* HB.instance Definition _ A k (X: gsupPO.type k) r i ri := *)
+(*   gsupPO.copy (@retract_of A X r i ri) (through_iso _ _ (iso_retract ri)). *)
+(* THUS we give a slightly more direct proof of it *)
 Section r.
  Context {A: Type} {k} (X: gsupPO.type k).
  Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id).
  Definition retract_gsup I P kIP (h: I -mon-> kernel r): kernel r :=
-   i (@gsup k X I P kIP (types_comp (kernelf r) h)). 
+   i (@gsup k X I P kIP (types_comp (kernelf r) h)).
  Lemma retract_gsup_spec I P kIP (h: I -mon-> kernel r):
    is_sup (image h P) (@retract_gsup I P kIP h).
  Proof.
@@ -292,7 +319,6 @@ End s.
 (** ** standard supremum operations *)
 
 (** *** bottom element *)
-#[primitive]
 HB.mixin Record PO_bot X of PO X := {
     #[canonical=no] bot: X;
     #[canonical=no] bot_spec: is_sup empty bot;
@@ -300,7 +326,6 @@ HB.mixin Record PO_bot X of PO X := {
 HB.structure Definition botPO := {X of PO_bot X & }.
 
 (** *** binary joins *)
-#[primitive]
 HB.mixin Record PO_cup X of PO X := {
     #[canonical=no] cup: X -> X -> X;
     #[canonical=no] cup_spec: forall x y, is_sup (pair x y) (cup x y);
@@ -309,7 +334,6 @@ HB.structure Definition joinSemiLattice := {X of PO_cup X & }.
 HB.structure Definition botjoinSemiLattice := {X of PO_bot X & joinSemiLattice X }.
 
 (** *** chain suprema (CPOs) *)
-#[primitive]
 HB.mixin Record PO_csup X of PO X := {
     #[canonical=no] csup: forall P: X -> Prop, chain P -> X;
     #[canonical=no] csup_spec: forall P C, is_sup P (csup P C);
@@ -320,7 +344,6 @@ HB.end.
 HB.structure Definition CPO := {X of PO_csup X & }.
 
 (** *** directed suprema (dCPOs) *)
-#[primitive]
 HB.mixin Record PO_dsup X of PO X := {
     #[canonical=no] dsup: forall P: X -> Prop, directed P -> X;
     #[canonical=no] dsup_spec: forall P D, is_sup P (dsup P D);
@@ -332,7 +355,6 @@ HB.structure Definition dCPO := {X of PO_dsup X & }.
 
 (** *** all suprema (complete lattices -- derivable infima arrive later, in po_inf.v and then po_lattice.v) *)
 (** using `indexed' sups, which is convenient in practice *)
-#[primitive]
 HB.mixin Record PO_isup X of PO X := {
     #[canonical=no] isup: forall I, (I -> Prop) -> (I -> X) -> X;
     #[canonical=no] isup_spec: forall I P h, is_sup (image h P) (isup I P h);

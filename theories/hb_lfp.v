@@ -563,9 +563,11 @@ Section s.
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
  Proof.
    apply antisym. unlock extensive_fixpoint.
-   (* BUG: apply: h_prefixpoint hangs *)
-   move: (h_prefixpoint bot)=>/=. exact. 
+   (* BUG: following line hangs *)
+   (* exact: h_prefixpoint. *)
+   move: (h_prefixpoint bot)=>/=. exact.
    exact: f_ext.
+   (* BUG: Qed super long *)
  Qed.
 End s.
 

@@ -98,6 +98,11 @@ old attempts
 
 # TODO
 
+rethink:
+- use of categories / comp ° \circ
+- isomorphisms
+
+
 rework&sync sanity checks
 
 don't use HB for morphisms?
