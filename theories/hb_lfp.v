@@ -534,7 +534,7 @@ Section s.
  Notation id := po_id.
 
  (** the largest monotone and extensive function on [C] *)
- Program Definition h: C-mon->C := dsup (fun f => id <= f) _.
+ Program Definition h: C-mon->C := locked (dsup (fun f => id <= f) _).
  Next Obligation.
    (* TOFIX: types of i,j are not nice (include [dsup_gen]) *)
    move=>/=i j I J. exists (i°j). split; last split.
@@ -544,30 +544,29 @@ Section s.
  Qed.
  
  Lemma h_ext: id <= h.
- Proof. by apply: leq_dsup. Qed.
+ Proof. unlock h. by apply: leq_dsup. Qed.
 
  Lemma h_invol: h ° h <= h.
  Proof.
+   unlock {3}h. 
    apply: leq_dsup.
    by rewrite -h_ext.
  Qed.
 
- Definition extensive_fixpoint := locked (h bot).
+ Definition extensive_fixpoint := h bot.
 
  Variable f: C-mon->C.
  Hypothesis f_ext: id <= f. 
- 
+
  Lemma h_prefixpoint: f ° h <= h.
- Proof. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
+ Proof. unlock {2}h. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
 
  Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
  Proof.
-   apply antisym. unlock extensive_fixpoint.
-   (* BUG: following line hangs *)
-   (* exact: h_prefixpoint. *)
-   move: (h_prefixpoint bot)=>/=. exact.
+   apply antisym. 
+   (* BUG: hangs, and/or Qed super long if [h] is not locked *)
+   exact: h_prefixpoint.
    exact: f_ext.
-   (* BUG: Qed super long *)
  Qed.
 End s.
 
