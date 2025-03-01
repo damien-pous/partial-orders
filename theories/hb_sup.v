@@ -456,8 +456,10 @@ Section s.
   Lemma bot_gsup_spec: is_sup (image h P) bot.
   Proof. rewrite (image_empty_kind H). exact: bot_spec. Qed.
  End t.
- HB.instance Definition _ := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec. 
+ Definition __bot_gen := PO_gsup.Build empty_kind X _ bot_gsup_spec.
+ HB.instance Definition _bot_gen := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec.
 End s.
+Notation "[gbot_for X ]" := (HB.pack_for (gsupPO.type empty_kind) X (@__bot_gen X)) (only parsing).
 Lemma bot_gsup_closed {X: botPO.type} (P: X -> Prop) (Pbot: P bot): @gsup_closed empty_kind (bot_gen X) P.
 Proof. done. Qed.
 HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: X ⊣· Y; }.
@@ -612,6 +614,13 @@ HB.builders Context Y of comonadic_isup Y.
  HB.instance Definition _ := PO_gisup.Build Y.
 HB.end.
 
+(* TODO: below, we should to avoid that *_gen decorations escape instance definitions.
+   we could use HB.pack (cf [gbot_for X] notation above, but a bug makes it painful:
+   we have to first make a definition and then HB.instance it, otherwise we get
+   Error: Not Yet Implemented: (glob)HOAS for GGenarg
+ *)
+Fail HB.instance Definition _ I (X: I -> botPO.type) := PO_gbot.Build (forall i, [gbot_for X i]).
+
 (** liftings to dependent products [forall i, X i] follow generically *)
 HB.instance Definition _ I (X: I -> botPO.type) := PO_gbot.Build (forall i, bot_gen (X i)).
 HB.instance Definition _ I (X: I -> joinSemiLattice.type) := PO_gcup.Build (forall i, cup_gen (X i)). 
@@ -632,8 +641,6 @@ HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := PO_gcup.Build
 HB.instance Definition _ (X: PO.type) (Y: CPO.type) := PO_gcsup.Build (X -mon-> csup_gen Y). 
 HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := PO_gdsup.Build (X -mon-> dsup_gen Y). 
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := PO_gisup.Build (X -mon-> isup_gen Y). 
-
-(* TODO: above, how to avoid that *_gen decorations escape instance definitions? *)
 
 
 (* Check ((nat->bool)-mon->(nat->Prop)): supCL.type. *)
