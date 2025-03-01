@@ -175,51 +175,19 @@ Next Obligation.
 Qed.
 HB.instance Definition _ k A X := @dprod_gsup k A X.
 
-(** sups from monadic adjunctions *)
-HB.factory Record madjoint_gsup (k: gkind) Y of PO Y := {
+(** sups from comonadic adjunctions *)
+HB.factory Record comonadic_gsup (k: gkind) Y of PO Y := {
     X: gsupPO.type k;
-    a: X ⊣ Y;
-    m: adj_counit a ≡ types_id;
+    f: X ⊣· Y;
   }.
-HB.builders Context k Y of madjoint_gsup k Y.
+HB.builders Context k Y of comonadic_gsup k Y.
  Definition gsup I P kIP (h: I -mon-> Y): Y :=
-   ladj a (@gsup k X I P kIP (radj a ∘ h)).
+   f (@gsup k X I P kIP (radj f ∘ h)).
  Lemma gsup_spec I P kIP (h: I -mon-> Y):
    is_sup (image h P) (@gsup I P kIP h).
- Proof. apply: madjoint_sup. exact: m. rewrite -image_comp. exact: gsup_spec. Qed.
+ Proof. apply: comonadic_sup. rewrite -image_comp. exact: gsup_spec. Qed.
  HB.instance Definition _ := PO_gsup.Build k Y (@gsup) (@gsup_spec).
- HB.end.
- 
-(** sups from isomorphisms *)
-HB.factory Record iso_gsup (k: gkind) Y of PO Y := {
-    X: gsupPO.type k;
-    i: X ≃ Y;
-  }.
-HB.builders Context k Y of iso_gsup k Y.
-  HB.instance Definition _ := madjoint_gsup.Build k Y (iso_counit i).
 HB.end.
-
-(** sups from retractions (in fact isomorphisms given the induced order on [A]) *)
-Definition retract_of {A} {X: Setoid.type}
-  (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id) := kernel r.
-(* HB.instance Definition _ A (X: Setoid.type) r i ri := Setoid.on (@retract_of A X r i ri). *)
-HB.instance Definition _ A (X: PO.type) r i ri := PO.on (@retract_of A X r i ri).
-HB.instance Definition _ A k (X: gsupPO.type k) r i ri := iso_gsup.Build k (@retract_of A X r i ri) (iso_retract ri).
-(* BELOW: slightly more direct proof, in case it becomes slow again *)
-(* Section r. *)
-(*  Context {A: Type} {k} (X: gsupPO.type k). *)
-(*  Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id). *)
-(*  Definition retract_gsup I P kIP (h: I -mon-> kernel r): kernel r := *)
-(*    i (@gsup k X I P kIP (kernelf r ∘ h)). *)
-(*  Lemma retract_gsup_spec I P kIP (h: I -mon-> kernel r): *)
-(*    is_sup (image h P) (@retract_gsup I P kIP h). *)
-(*  Proof. *)
-(*    apply: kern_sup. *)
-(*    rewrite -image_comp. setoid_rewrite (ri _). *)
-(*    exact: gsup_spec. *)
-(*  Qed. *)
-(*  HB.instance Definition _ := PO_gsup.Build k (retract_of ri) _ retract_gsup_spec. *)
-(* End r. *)
 
 (** sups on sub-spaces *)
 Section sub.
@@ -248,18 +216,7 @@ Arguments gsup_closed _ {_}.
 
 (** sups of monotone functions *)
 Section s.
- Context {X: PO.type}.
- Section s'.
- Context {Y: PO.type}.
- Definition po_morphism_to_sig (f: X-mon->Y): sig (Proper (leq==>leq)) :=
-   exist (Proper (leq ==> leq)) f monotone.
- Definition sig_to_po_morphism (f: sig (Proper (leq==>leq))): X-mon->Y :=
-   mk_mon (sval f) (proj2_sig f).
- Definition po_morphism_as_sig: (sig (Proper (@leq X==>@leq Y))) ≃ (X-mon->Y).
-   by exists sig_to_po_morphism po_morphism_to_sig=>f g.
- Defined.
- End s'.
- Context {k} {Y: gsupPO.type k}.
+ Context {k} {X: PO.type} {Y: gsupPO.type k}.
  Lemma gsup_closed_monotone: gsup_closed k (Proper (@leq X ==> @leq Y)).
  Proof.
    (* proof with [pointwise_sup_mon] *)
@@ -282,31 +239,20 @@ Section s.
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
  HB.instance Definition _ :=
-   iso_gsup.Build k (X-mon->Y) (X:=sup_closed_sig gsup_closed_monotone) po_morphism_as_sig. 
+   comonadic_gsup.Build k (X-mon->Y) (X:=sup_closed_sig gsup_closed_monotone) po_morphism_as_sig. 
 End s.
 
 (** sups of extensional functions *)
 Section s.
- Context {X: Setoid.type}.
- Section s'.
- Context {Y: PO.type}.
- Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
-   exist (Proper (eqv ==> eqv)) f extensional.
- Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
-   @mk_ext X Y (sval f) (proj2_sig f).
- Definition setoid_morphism_as_sig: (sig (Proper (@eqv X==>@eqv Y))) ≃ (X-eqv->Y).
-   by exists sig_to_setoid_morphism setoid_morphism_to_sig=>f g/=.
- Defined.
- End s'.
- Context {k} {Y: gsupPO.type k}.
+ Context {k} {X: Setoid.type} {Y: gsupPO.type k}.
  Lemma gsup_closed_extensional: gsup_closed k (Proper (@eqv X ==> @eqv Y)).
  Proof.
    rewrite Proper_eqv_leq. 
-   exact: (@gsup_closed_monotone (discrete X) k Y). 
+   exact: (@gsup_closed_monotone k (discrete X) Y). 
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
  HB.instance Definition _ :=
-   iso_gsup.Build k (X-eqv->Y) (X:=sup_closed_sig gsup_closed_extensional) setoid_morphism_as_sig. 
+   comonadic_gsup.Build k (X-eqv->Y) (X:=sup_closed_sig gsup_closed_extensional) setoid_morphism_as_sig. 
 End s.
 
 

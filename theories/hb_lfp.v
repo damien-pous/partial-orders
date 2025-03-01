@@ -1,7 +1,7 @@
 From HB Require Import structures.
 From Stdlib Require Classical.
 Require Import ssreflect ssrfun ssrbool.
-Require Export hb_sup.
+Require Export hb_sup hb_adjunctions.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -151,15 +151,16 @@ End c.
 Arguments tower {_}.  
 Arguments next {_}.
 
-Lemma Chain_as_sig {X: PO.type} (f: X->X):
+Lemma Chain_as_sig_ {X: PO.type} (f: X->X):
   (fun c: Chain f => exist (C f) (elem c) (Celem c))
     ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ types_id.
 Proof. by case. Qed.
+Definition Chain_as_sig {X: PO.type} (f: X->X): sig (C f) ≃ Chain f := iso_retract (@Chain_as_sig_  X f). 
 
 HB.instance Definition _ k {X: gsupPO.type k} (f: X -> X) :=
-  gsupPO.copy (sig (C f)) (sup_closed_sig (@sup_gsup_closed _ X (C f) (@Csup _ f))).
-HB.instance Definition _ k {X: gsupPO.type k} (f: X -> X) :=
-  gsupPO.copy (Chain f) (retract_of (@Chain_as_sig X f)).
+  comonadic_gsup.Build k (Chain f)
+    (X:=sup_closed_sig (@sup_gsup_closed _ X (C f) (@Csup _ f)))
+    (@Chain_as_sig X f).
 
 HB.instance Definition _ {X: CPO.type} (f: X -> X) :=
   PO_gcsup.Build (@Chain (csup_gen X) f). 

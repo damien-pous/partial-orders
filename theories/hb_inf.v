@@ -86,66 +86,26 @@ HB.mixin Record PO_ginf (k: gkind) X of PO X := {
   }.
 HB.structure Definition ginfPO k := {X of PO_ginf k X & }.
 
-
 (** duality with generic suprema *)
 HB.instance Definition _ k (X: ginfPO.type k) := @PO_gsup.Build k (dual X) (@ginf k X) (@ginf_spec k X).
 HB.instance Definition _ k (X: gsupPO.type k) := @PO_ginf.Build k (dual X) (@gsup k X) (@gsup_spec k X).
 
-
 (** infs of a given kind are closed under dependent product formations *)
 HB.instance Definition _ k A (X: A -> ginfPO.type k) := ginfPO.copy (forall a, X a) (dual (forall a, dual (X a))).
-(* explicit definition instead below, in case the above line breaks again
-   (it needs [same PO.type (forall a, X a) (dual (forall a, dual (X a)))]) *)
-(*
-Program Definition dprod_ginf k A (X: A -> ginfPO.type k)
-  := @PO_ginf.Build k (forall a, X a) (fun I P kIP h a => ginf I P kIP (dualf (app a) ∘ h)) _.
-Next Obligation.
-  apply: dprod_inf=>a. rewrite -image_comp. exact: ginf_spec. 
-Qed.
-HB.instance Definition _ k A X := @dprod_ginf k A X.
- *)
 
 (** infs from monadic adjunctions *)
-HB.factory Record madjoint_ginf (k: gkind) Y of PO Y := {
+HB.factory Record monadic_ginf (k: gkind) Y of PO Y := {
     X: ginfPO.type k;
-    a: Y ⊣ X;
-    m: adj_unit a ≡ types_id;
+    a: Y ·⊣ X;
   }.
-HB.builders Context k Y of madjoint_ginf k Y.
+HB.builders Context k Y of monadic_ginf k Y.
  Definition ginf I P kIP (h: I -mon-> dual Y): Y :=
    radj a (@ginf k X I P kIP (radj (dual_adj a) ∘ h)).
  Lemma ginf_spec I P kIP (h: I -mon-> dual Y):
    @is_inf Y (image h P) (@ginf I P kIP h).
- Proof. apply: madjoint_inf. exact: m. rewrite -image_comp. exact: ginf_spec. Qed.
+ Proof. apply: monadic_inf. rewrite -image_comp. exact: ginf_spec. Qed.
  HB.instance Definition _ := PO_ginf.Build k Y (@ginf) (@ginf_spec).
 HB.end.
- 
-(** infs from isomorphisms *)
-HB.factory Record iso_ginf (k: gkind) Y of PO Y := {
-    X: ginfPO.type k;
-    i: X ≃ Y;
-  }.
-HB.builders Context k Y of iso_ginf k Y.
-  HB.instance Definition _ := madjoint_ginf.Build k Y (iso_unit (iso_sym i)).
-HB.end.
-
-(** infs from retractions (in fact isomorphisms given the induced order on [A]) *)
-Section r.
- Context {A: Type} {k} (X: ginfPO.type k).
- Variables (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id).
- HB.instance Definition _ := ginfPO.copy (retract_of ri) (dual (@retract_of A (dual X) r i ri)).
- (* explicit definition instead below, in case the above line breaks
-    (this explicit def could also be useful because it uses [ginf] rather than [gsup])
- *)
- (*
- Definition retract_ginf I P kIP (h: I -mon-> dual (kernel r)): kernel r :=
-   i (@ginf k X I P kIP (dualf (kernelf r) ∘ h)). 
- Lemma retract_ginf_spec I P kIP (h: I -mon-> dual (kernel r)):
-   @is_inf (kernel r) (image h P) (@retract_ginf I P kIP h).
- Proof. exact: (@retract_gsup_spec A k (dual X)). Qed.
- HB.instance Definition _ := PO_ginf.Build k (retract_of ri) _ retract_ginf_spec.
-*)
-End r.
 
 (** infs on sub-spaces *)
 Section sub.
@@ -159,18 +119,6 @@ Section sub.
  Definition inf_closed_sig P (HP: ginf_closed P) := sig P.
  Variables (P: X -> Prop) (HP: ginf_closed P). 
  HB.instance Definition _ := ginfPO.copy (inf_closed_sig HP) (dual (@sup_closed_sig k (dual X) P HP)).
- (* explicit definition instead below, in case the above line breaks
-    (this explicit def could also be useful because it uses [ginf] rather than [gsup])
- *)
- (* 
- Definition sig_ginf I Q (kIQ: k I Q) (h: I -mon-> dual (sig P)): sig P :=
-   @sig_gsup k (dual X) P HP I Q kIQ h.
- Lemma sig_ginf_spec I Q kIQ (h: I -mon-> dual (sig P)):
-   @is_inf (sig P) (image h Q) (@sig_ginf I Q kIQ h).
- Proof. exact: (@sig_gsup_spec k (dual X)). Qed.
- HB.instance Definition _ := PO.on (inf_closed_sig HP).
- HB.instance Definition _ := PO_ginf.Build k (inf_closed_sig HP) _ sig_ginf_spec.
-  *)
 End sub.
 Arguments ginf_closed _ {_}. 
 
@@ -180,33 +128,20 @@ Section s.
  Lemma ginf_closed_monotone: ginf_closed k (Proper (@leq X ==> @leq Y)).
  Proof.
    rewrite -Proper_dual_leq.
-   exact: (@gsup_closed_monotone (dual X) k (dual Y)).
+   exact: (@gsup_closed_monotone k (dual X) (dual Y)).
  Qed.
- (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
- HB.instance Definition _ := iso_ginf.Build k (X-mon->Y) (iso_dual_mon X Y).
- (* ALTERNATIVES: *)
- (* HB.instance Definition _ := *)
- (*   iso_ginf.Build k (X-mon->Y) (X:=inf_closed_sig ginf_closed_monotone) po_morphism_as_sig.  *)
+ HB.instance Definition _ := monadic_ginf.Build k (X-mon->Y) (iso_dual_mon X Y).
 End s.
 
 (** infs of extensional functions *)
 Section s.
  Context {X: Setoid.type} {k} {Y: ginfPO.type k}.
- (* lemma below kept, but no longer necessary *)
  Lemma ginf_closed_extensional: ginf_closed k (Proper (@eqv X ==> @eqv Y)).
  Proof.
    rewrite Proper_eqv_leq. 
    exact: (@ginf_closed_monotone (discrete X) k Y). 
  Qed.
- (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
  HB.instance Definition _ := ginfPO.copy (X-eqv->Y) (dual (X-eqv->dual Y)).
- (* ALTERNATIVES: *)
- (* HB.instance Definition _ := *)
- (*   iso_ginf.Build k (X-eqv->Y) (X:=inf_closed_sig ginf_closed_extensional) setoid_morphism_as_sig.  *)
- (* HB.instance Definition _ := *)
- (*   ginfPO.copy (X-eqv->Y) *)
- (*     (retract_of (X:=inf_closed_sig ginf_closed_extensional) *)
- (*        (@setoid_morphism_as_sig X Y)). *)
 End s.
 
 
