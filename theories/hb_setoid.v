@@ -161,6 +161,7 @@ HB.instance Definition _ X := trivial_setoid (trivial X).
 (** trivial & strict setoid for the empty type *)
 HB.instance Definition _ := trivial_setoid False.
 HB.instance Definition _ := Setoid_isStrict.Build False (fun x y _ => False_eq x y).
+HB.instance Definition _ (X: Setoid.type) := StrictThusExtensional.Build False X empty_fun.
 
 (** trivial & strict setoid for the unit type *)
 HB.instance Definition _ := trivial_setoid unit.
@@ -169,6 +170,7 @@ HB.instance Definition _ := Setoid_isStrict.Build unit (fun x y _ => unit_eq x y
 (** strict setoid for [bool] and [nat] *)
 HB.instance Definition _ := strict_setoid bool.
 HB.instance Definition _ := strict_setoid nat.
+HB.instance Definition _ (X: Setoid.type) (x y: X) := StrictThusExtensional.Build bool X (bool_fun x y).
 
 (** setoid of extensional propositions *)
 HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 

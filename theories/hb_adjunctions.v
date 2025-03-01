@@ -147,7 +147,12 @@ Proof. exact: isoK. Qed.
 Lemma iso_unit {X Y: PO.type} (i: X ≃ Y): adj_unit i ≡ types_id.
 Proof. exact: isoK'. Qed.
 
-Definition etaI (X: PO.type): X ≃ eta X.
+Definition iso_retract A (X: PO.type) (r: A -> X) (i: X -> A) (ri: r ∘ i ≡ types_id):
+  X ≃ kernel r.
+  exists i r=>??; cbn; by setoid_rewrite (ri _).
+Defined.
+
+Definition iso_eta (X: PO.type): X ≃ eta X.
   unshelve eexists. 1,2: exact types_id. all: exact: adj_id.
 Defined.
 
@@ -155,30 +160,52 @@ Definition dualI (X: PO.type): dual (dual X) ≃ X.
   unshelve eexists. 1,2: exact types_id. all: exact: adj_id. 
 Defined.
 
-Definition mon_alt (X Y: PO.type): dual (dual X -mon-> dual Y) ≃ (X -mon-> Y).
+Definition iso_dual_mon (X Y: PO.type): dual (dual X -mon-> dual Y) ≃ (X -mon-> Y).
   unshelve eexists. 2: exact: dualf. 
   move=>f. apply: (mk_mon (f: X -> Y)). by apply/Proper_dual_leq.
   1,2: done.
 Defined.
 
-Definition iso_retract A (X: PO.type) (r: A -> X) (i: X -> A) (ri: r ∘ i ≡ types_id):
-  X ≃ kernel r.
-  exists i r=>??; cbn; by setoid_rewrite (ri _).
-Defined.
+Section s.
+ Context {X: Setoid.type} {Y: PO.type}.
+ Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
+   exist (Proper (eqv ==> eqv)) f extensional.
+ Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
+   mk_ext (sval f) (proj2_sig f).
+ Definition setoid_morphism_as_sig: (sig (Proper (@eqv X==>@eqv Y))) ≃ (X-eqv->Y).
+   by exists sig_to_setoid_morphism setoid_morphism_to_sig=>f g.
+ Defined.
+End s.
+
+Section s.
+ Context {X Y: PO.type}.
+ Definition po_morphism_to_sig (f: X-mon->Y): sig (Proper (leq==>leq)) :=
+   exist (Proper (leq ==> leq)) f monotone.
+ Definition sig_to_po_morphism (f: sig (Proper (leq==>leq))): X-mon->Y :=
+   mk_mon (sval f) (proj2_sig f).
+ Definition po_morphism_as_sig: (sig (Proper (@leq X==>@leq Y))) ≃ (X-mon->Y).
+   by exists sig_to_po_morphism po_morphism_to_sig=>f g.
+ Defined.
+End s.
 
 
-
-
-(* Definition bool_dfun {X Y: Setoid.type} (x: X) (y: Y): forall b, bool_fun X Y b := fun b => if b return bool_fun X Y b then y else x. *)
-(* Section prod_dprod_bool. *)
-(*   Context {X Y: Setoid.type}. *)
-(*   Program Definition iso_prod_dprod_bool: prod X Y ≃[SETOIDS] forall b, bool_fun X Y b := *)
-(*     {| *)
-(*       fwd := mk_ext (fun p => (bool_dfun p.1 p.2)) _; *)
-(*       bwd := mk_ext (fun h => (h false, h true)) _; *)
-(*     |}. *)
-(*   Next Obligation. by move=>p q [??][]. Qed. *)
-(*   Next Obligation. by move=>h g; split; apply: H. Qed. *)
-(*   Next Obligation. by move => ?[]. Qed. *)
-(*   Next Obligation. by split. Qed. *)
-(* End prod_dprod_bool. *)
+Section prod_dprod_bool.
+  Context {X Y: PO.type}.
+  Definition bool_dfun (x: X) (y: Y): PO.sort (forall b, bool_fun X Y b) :=
+    fun b => if b return bool_fun X Y b then y else x.
+  Program Definition prod_as_dprod_bool: prod X Y ≃ forall b, bool_fun X Y b :=
+    {|
+      fwd p := bool_dfun p.1 p.2;
+      bwd h := (h false, h true);
+    |}.
+  Next Obligation.
+    move=>p h. split=>H.
+    split. exact: (H false). exact: (H true).
+    by case; apply H.
+  Qed.
+  Next Obligation.
+    move=>h p. split=>H. 
+    by case; apply H.
+    split. exact: (H false). exact: (H true).
+  Qed.
+End prod_dprod_bool.

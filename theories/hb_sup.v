@@ -178,33 +178,33 @@ HB.instance Definition _ k A X := @dprod_gsup k A X.
 (** sups from monadic adjunctions *)
 HB.factory Record madjoint_gsup (k: gkind) Y of PO Y := {
     X: gsupPO.type k;
-    i: X ⊣ Y;
-    m: adj_counit i ≡ types_id;
+    a: X ⊣ Y;
+    m: adj_counit a ≡ types_id;
   }.
 HB.builders Context k Y of madjoint_gsup k Y.
  Definition gsup I P kIP (h: I -mon-> Y): Y :=
-   ladj i (@gsup k X I P kIP (radj i ∘ h)).
+   ladj a (@gsup k X I P kIP (radj a ∘ h)).
  Lemma gsup_spec I P kIP (h: I -mon-> Y):
    is_sup (image h P) (@gsup I P kIP h).
  Proof. apply: madjoint_sup. exact: m. rewrite -image_comp. exact: gsup_spec. Qed.
  HB.instance Definition _ := PO_gsup.Build k Y (@gsup) (@gsup_spec).
+ HB.end.
+ 
+(** sups from isomorphisms *)
+HB.factory Record iso_gsup (k: gkind) Y of PO Y := {
+    X: gsupPO.type k;
+    i: X ≃ Y;
+  }.
+HB.builders Context k Y of iso_gsup k Y.
+  HB.instance Definition _ := madjoint_gsup.Build k Y (iso_counit i).
 HB.end.
-Definition through_iso X Y (i: X ≃ Y) := Y: Type.
-Arguments through_iso: clear implicits.
-(* HB.instance Definition _ (X Y: PO.type) (i: X ≃ Y) := *)
-(*   Setoid.on (through_iso X Y i). *)
-HB.instance Definition _ (X Y: PO.type) (i: X ≃ Y) :=
-  PO.on (through_iso X Y i).
-HB.instance Definition _ k (X: gsupPO.type k) (Y: PO.type) (i: X ≃ Y) :=
-  @madjoint_gsup.Build k (through_iso X Y i) X (iso_trans i (etaI Y)) (iso_counit _).
 
 (** sups from retractions (in fact isomorphisms given the induced order on [A]) *)
 Definition retract_of {A} {X: Setoid.type}
   (r: A->X) (i: X->A) (ri: r ∘ i ≡ types_id) := kernel r.
 (* HB.instance Definition _ A (X: Setoid.type) r i ri := Setoid.on (@retract_of A X r i ri). *)
 HB.instance Definition _ A (X: PO.type) r i ri := PO.on (@retract_of A X r i ri).
-HB.instance Definition _ A k (X: gsupPO.type k) r i ri :=
-  gsupPO.copy (@retract_of A X r i ri) (through_iso _ _ (iso_retract ri)).
+HB.instance Definition _ A k (X: gsupPO.type k) r i ri := iso_gsup.Build k (@retract_of A X r i ri) (iso_retract ri).
 (* BELOW: slightly more direct proof, in case it becomes slow again *)
 (* Section r. *)
 (*  Context {A: Type} {k} (X: gsupPO.type k). *)
@@ -255,9 +255,9 @@ Section s.
    exist (Proper (leq ==> leq)) f monotone.
  Definition sig_to_po_morphism (f: sig (Proper (leq==>leq))): X-mon->Y :=
    mk_mon (sval f) (proj2_sig f).
- Lemma po_morphism_as_sig:
-  po_morphism_to_sig ∘ sig_to_po_morphism ≡ types_id. 
- Proof. by case. Qed.
+ Definition po_morphism_as_sig: (sig (Proper (@leq X==>@leq Y))) ≃ (X-mon->Y).
+   by exists sig_to_po_morphism po_morphism_to_sig=>f g.
+ Defined.
  End s'.
  Context {k} {Y: gsupPO.type k}.
  Lemma gsup_closed_monotone: gsup_closed k (Proper (@leq X ==> @leq Y)).
@@ -282,23 +282,21 @@ Section s.
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
  HB.instance Definition _ :=
-   gsupPO.copy (X-mon->Y)
-     (retract_of (X:=sup_closed_sig gsup_closed_monotone)
-        (@po_morphism_as_sig Y)).
+   iso_gsup.Build k (X-mon->Y) (X:=sup_closed_sig gsup_closed_monotone) po_morphism_as_sig. 
 End s.
 
 (** sups of extensional functions *)
 Section s.
  Context {X: Setoid.type}.
  Section s'.
- Context {Y: Setoid.type}.
+ Context {Y: PO.type}.
  Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
    exist (Proper (eqv ==> eqv)) f extensional.
  Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
    @mk_ext X Y (sval f) (proj2_sig f).
- Lemma setoid_morphism_as_sig:
-  setoid_morphism_to_sig ∘ sig_to_setoid_morphism ≡ types_id. 
- Proof. by case. Qed.
+ Definition setoid_morphism_as_sig: (sig (Proper (@eqv X==>@eqv Y))) ≃ (X-eqv->Y).
+   by exists sig_to_setoid_morphism setoid_morphism_to_sig=>f g/=.
+ Defined.
  End s'.
  Context {k} {Y: gsupPO.type k}.
  Lemma gsup_closed_extensional: gsup_closed k (Proper (@eqv X ==> @eqv Y)).
@@ -308,9 +306,7 @@ Section s.
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
  HB.instance Definition _ :=
-   gsupPO.copy (X-eqv->Y)
-     (retract_of (X:=sup_closed_sig gsup_closed_extensional)
-        (@setoid_morphism_as_sig Y)).
+   iso_gsup.Build k (X-eqv->Y) (X:=sup_closed_sig gsup_closed_extensional) setoid_morphism_as_sig. 
 End s.
 
 
@@ -492,8 +488,6 @@ Definition False_empty_kind: empty_kind False empty.
 Proof. done. Defined.
 Lemma image_empty_kind I P (H: empty_kind I P) X (f: I -> X): image f P ≡ empty.
 Proof. split=>//[[? _]]. exact: H. Qed. 
-Definition empty_fun {X} := False_rect X.
-HB.instance Definition _ (X: PO.type) := isMonotone.Build False X empty_fun (fun x _ _ => False_rect _ x).
 HB.factory Record PO_gbot X of gsupPO empty_kind X := {}.
 HB.builders Context X of PO_gbot X.
  Section s.
@@ -532,13 +526,11 @@ Proof.
   - move=>[i [Pi ->]]. rewrite /pair; case: (all_there H i)=>->; auto.
   - move=>[->|->]; apply: in_image; apply H.
 Qed. 
-Definition bool_fun X (x y: X) (b: discrete bool): X := if b then y else x.
-HB.instance Definition _ (X: PO.type) (x y: X) := isMonotone.Build (discrete bool) X (bool_fun x y) _.
 HB.factory Record PO_gcup X of gsupPO pair_kind X := {}.
 HB.builders Context X of PO_gcup X.
  Section s.
-  Variables x y: X. 
-  Definition cup := gsup (discrete bool) full bool_pair_kind (bool_fun x y).
+  Variables x y: X.
+  Definition cup := gsup (discrete bool) full bool_pair_kind (@discretemon (discrete bool) X (bool_fun x y)).
   Lemma cup_spec: is_sup (pair x y) cup.
   Proof.
     rewrite -(image_pair_kind bool_pair_kind (bool_fun x y)).

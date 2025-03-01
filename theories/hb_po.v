@@ -243,12 +243,11 @@ HB.builders Context X Y f of DiscreteThusMonotone X Y f.
   Proof. by move=>x y /leq_eqv/=->. Qed.
   HB.instance Definition _ := isMonotone.Build X Y f monotone. 
 HB.end.
-Definition discretemon {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) := f.
-(* TOFIX *)
-(* HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) := *)
-(*   setoid_morphism.copy f (@discretemon X Y f). *)
-(* HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) := *)
-(*   DiscreteThusMonotone.Build X Y (@discretemon X Y f). *)
+Definition discretemon {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) := f: X -> Y.
+HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) :=
+  setoid_morphism.on (@discretemon X Y f).
+HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) :=
+  DiscreteThusMonotone.Build X Y (@discretemon X Y f).
 
 
 (** ** instances *)
@@ -257,8 +256,9 @@ Definition discretemon {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) := f.
 HB.instance Definition _ (X: Type) := PO.copy (trivial X) (discrete (trivial X)).
 
 (** in particular on the empty and unit type *)
-HB.instance Definition _ := PO.copy False (trivial False).
-HB.instance Definition _ := PO.copy unit (trivial unit).
+HB.instance Definition _ := DiscretePO.copy False (discrete False).
+HB.instance Definition _ := DiscretePO.copy unit (discrete unit).
+HB.instance Definition _ (X: PO.type) := @DiscreteThusMonotone.Build False X empty_fun.
 
 (** Booleans with [false <= true] *)
 Lemma PreOrder_bool: PreOrder Bool.le.

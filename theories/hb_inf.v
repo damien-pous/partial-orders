@@ -1,6 +1,7 @@
 From HB Require Import structures.
 Require Import ssreflect ssrfun ssrbool.
 Require Export hb_sup.
+Require Import hb_adjunctions.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -104,6 +105,30 @@ Qed.
 HB.instance Definition _ k A X := @dprod_ginf k A X.
  *)
 
+(** infs from monadic adjunctions *)
+HB.factory Record madjoint_ginf (k: gkind) Y of PO Y := {
+    X: ginfPO.type k;
+    a: Y ⊣ X;
+    m: adj_unit a ≡ types_id;
+  }.
+HB.builders Context k Y of madjoint_ginf k Y.
+ Definition ginf I P kIP (h: I -mon-> dual Y): Y :=
+   radj a (@ginf k X I P kIP (radj (dual_adj a) ∘ h)).
+ Lemma ginf_spec I P kIP (h: I -mon-> dual Y):
+   @is_inf Y (image h P) (@ginf I P kIP h).
+ Proof. apply: madjoint_inf. exact: m. rewrite -image_comp. exact: ginf_spec. Qed.
+ HB.instance Definition _ := PO_ginf.Build k Y (@ginf) (@ginf_spec).
+HB.end.
+ 
+(** infs from isomorphisms *)
+HB.factory Record iso_ginf (k: gkind) Y of PO Y := {
+    X: ginfPO.type k;
+    i: X ≃ Y;
+  }.
+HB.builders Context k Y of iso_ginf k Y.
+  HB.instance Definition _ := madjoint_ginf.Build k Y (iso_unit (iso_sym i)).
+HB.end.
+
 (** infs from retractions (in fact isomorphisms given the induced order on [A]) *)
 Section r.
  Context {A: Type} {k} (X: ginfPO.type k).
@@ -158,17 +183,15 @@ Section s.
    exact: (@gsup_closed_monotone (dual X) k (dual Y)).
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
- (* TOTHINK: alternative path, via explicit equivalence between [X-mon->Y] and [dual X-mon->dual Y] *)
- HB.instance Definition _ :=
-   ginfPO.copy (X-mon->Y)
-     (retract_of (X:=inf_closed_sig ginf_closed_monotone)
-        (@po_morphism_as_sig X Y)).
+ HB.instance Definition _ := iso_ginf.Build k (X-mon->Y) (iso_dual_mon X Y).
+ (* ALTERNATIVES: *)
+ (* HB.instance Definition _ := *)
+ (*   iso_ginf.Build k (X-mon->Y) (X:=inf_closed_sig ginf_closed_monotone) po_morphism_as_sig.  *)
 End s.
 
 (** infs of extensional functions *)
 Section s.
  Context {X: Setoid.type} {k} {Y: ginfPO.type k}.
- HB.instance Definition _ := ginfPO.copy (X-eqv->Y) (dual (X-eqv->dual Y)).
  (* lemma below kept, but no longer necessary *)
  Lemma ginf_closed_extensional: ginf_closed k (Proper (@eqv X ==> @eqv Y)).
  Proof.
@@ -176,6 +199,10 @@ Section s.
    exact: (@ginf_closed_monotone (discrete X) k Y). 
  Qed.
  (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
+ HB.instance Definition _ := ginfPO.copy (X-eqv->Y) (dual (X-eqv->dual Y)).
+ (* ALTERNATIVES: *)
+ (* HB.instance Definition _ := *)
+ (*   iso_ginf.Build k (X-eqv->Y) (X:=inf_closed_sig ginf_closed_extensional) setoid_morphism_as_sig.  *)
  (* HB.instance Definition _ := *)
  (*   ginfPO.copy (X-eqv->Y) *)
  (*     (retract_of (X:=inf_closed_sig ginf_closed_extensional) *)
@@ -372,20 +399,29 @@ HB.instance Definition _ (X: Setoid.type) (Y: CPO'.type) := CPO'.copy (X -eqv-> 
 HB.instance Definition _ (X: Setoid.type) (Y: dCPO'.type) := dCPO'.copy (X -eqv-> Y) (dual (X -eqv-> dual Y)).
 HB.instance Definition _ (X: Setoid.type) (Y: infCL.type) := infCL.copy (X -eqv-> Y) (dual (X -eqv-> dual Y)).
 
+(** restriction to monotone functions cannot be done as above,
+    because [dual (X -mon-> dual Y)] is not definitionally equivalent to [X -mon-> Y]
+    still need to transfer standard sups over monadic adjunctions
+ *)
+(* HB.instance Definition _ (X: PO.type) (Y: topPO.type) := topPO.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
+(* HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := meetSemiLattice.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
+(* HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := CPO'.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
+(* HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := dCPO'.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
+(* HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
+
+
 (** ** link between generic and standard operations *)
 
 (** *** top elements as generic infs over empty domains *)
 HB.factory Record PO_gtop X of ginfPO empty_kind X := {}.
 HB.builders Context X of PO_gtop X.
- Section s.
   Definition top: X := ginf False empty False_empty_kind empty_fun.
   Lemma top_spec: is_inf empty top.
   Proof.
     rewrite -(image_empty_kind False_empty_kind empty_fun).
     exact: ginf_spec.
   Qed.
- End s.
- HB.instance Definition _ := PO_top.Build X top_spec.
+  HB.instance Definition _ := PO_top.Build X top_spec.
 HB.end.
 Definition top_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (top_gen X).
@@ -406,7 +442,7 @@ HB.factory Record PO_gcap X of ginfPO pair_kind X := {}.
 HB.builders Context X of PO_gcap X.
  Section s.
   Variables x y: X. 
-  Definition cap := ginf (discrete bool) full bool_pair_kind (bool_fun x y).
+  Definition cap := ginf (discrete bool) full bool_pair_kind (@discretemon (discrete bool) (dual X) (bool_fun x y)).
   Lemma cap_spec: is_inf (pair x y) cap.
   Proof.
     rewrite -(image_pair_kind bool_pair_kind (bool_fun x y)).
