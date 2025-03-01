@@ -227,7 +227,7 @@ Canonical Structure _dCPO_on_dual (X: dCPO'.type) :=
   dCPO.class :=
     {|
       dCPO.hb_setoid_isSetoid_mixin := _setoid_on_dual X;
-      dCPO.hb_po_Setoid_isPO_mixin := _setoid_is_po_on_dual;
+      dCPO.hb_po_isPO_mixin := _po_on_dual;
       dCPO.hb_sup_PO_bot_mixin := _po_bot_on_dual X;
       dCPO.hb_sup_PO_csup_mixin := _po_csup_on_dual X;
       dCPO.hb_sup_PO_dsup_mixin := _po_dsup_on_dual X;
@@ -244,7 +244,7 @@ Canonical Structure _supCL_on_dual (X: infCL.type) :=
   supCL.class :=
     {|
       supCL.hb_setoid_isSetoid_mixin := _setoid_on_dual X;
-      supCL.hb_po_Setoid_isPO_mixin := _setoid_is_po_on_dual;
+      supCL.hb_po_isPO_mixin := _po_on_dual;
       supCL.hb_sup_PO_bot_mixin := _po_bot_on_dual X;
       supCL.hb_sup_PO_cup_mixin := _po_cup_on_dual X;
       supCL.hb_sup_PO_csup_mixin := _po_csup_on_dual X;

@@ -26,22 +26,22 @@ Proof.
   move=>P E. split=>//. apply P. by move=>x y; rewrite and_comm.
 Qed.
 #[primitive]
-HB.mixin Record Setoid_isPO X of Setoid X := {
+HB.mixin Record isPO X of Setoid X := {
     #[canonical=no] leq: relation X;
     #[canonical=no] PO_axm: po_axm leq;
 }.
 (* #[primitive] *)
-HB.structure Definition PO := { X of Setoid_isPO X & }.
+HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
 Notation unify_pos X Y := (same PO.type X Y).
   
 (** PO from scratch, with [eqv] derived from [leq] *)
-HB.factory Record isPO X := {
+HB.factory Record Type_isPO X := {
     #[canonical=no] leq: relation X;
     #[canonical=no] PreOrder_leq: PreOrder leq;
   }.
-HB.builders Context X of isPO X.
+HB.builders Context X of Type_isPO X.
   Definition eqv (x y: X) := leq x y /\ leq y x.
   Lemma Equivalence_eqv: Equivalence eqv.
   Proof.
@@ -53,7 +53,7 @@ HB.builders Context X of isPO X.
   HB.instance Definition _ := isSetoid.Build X Equivalence_eqv.
   Lemma PO_axm: po_axm leq.
   Proof. apply: mk_po_axm=>//. exact: PreOrder_leq. Qed.
-  HB.instance Definition _ := Setoid_isPO.Build X PO_axm.
+  HB.instance Definition _ := isPO.Build X PO_axm.
 HB.end.
 
 (** ** basic properties *)
@@ -95,7 +95,7 @@ Section dual.
   exact: (eqv_of_geq_ (@PO_axm X)).
   exact: (eqv_of_leq_ (@PO_axm X)).
  Defined.
- HB.instance Definition _setoid_is_po_on_dual := Setoid_isPO.Build (dual X) po_dual.
+ HB.instance Definition _po_on_dual := isPO.Build (dual X) po_dual.
 End dual.
 
 Section s.
@@ -127,22 +127,28 @@ Qed.
 
 (** class of monotone functions (i.e., po morphisms) *)
 #[primitive]
-HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
+HB.mixin Record isMonotone (X Y: PO.type) f of setoid_morphism X Y f := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
-HB.builders Context X Y f (F : isMonotone X Y f).
-  HB.instance Definition _ :=
-    isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
-HB.end.
 (* #[primitive] *)
-HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
+HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f & }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 Existing Instance monotone.
+
+HB.factory Record Fun_isMonotone (X Y: PO.type) (f: X -> Y) := {
+    #[canonical=no] monotone: Proper (leq ==> leq) f
+  }.
+HB.builders Context X Y f (F : Fun_isMonotone X Y f).
+  HB.instance Definition _ :=
+    isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
+  HB.instance Definition _ :=
+    isMonotone.Build X Y f monotone.
+HB.end.
 
 Section s.
   Context {X Y: PO.type}.
   Definition mk_mon (f: X -> Y) (Hf: Proper (leq ==> leq) f) := f.
-  HB.instance Definition _ f Hf := isMonotone.Build X Y (@mk_mon f Hf) Hf.
+  HB.instance Definition _ f Hf := Fun_isMonotone.Build X Y (@mk_mon f Hf) Hf.
 End s.
 Arguments mk_mon {_ _}. 
 
@@ -196,7 +202,7 @@ End s.
 
 #[primitive]
 HB.structure Definition StrictPO :=
-  { X of Setoid_isPO X & isSetoid X & isStrictSetoid X}.
+  { X of isPO X & isStrictSetoid X}.
 
 HB.factory Record isStrictPO X := {
     #[canonical=no] leq: relation X;
@@ -213,25 +219,25 @@ HB.builders Context X of isStrictPO X.
     by move=>H; destruct H.
     case; exact: antisym. 
   Qed.
-  HB.instance Definition _ := Setoid_isPO.Build X PO_axm.
+  HB.instance Definition _ := isPO.Build X PO_axm.
 HB.end.
 
 
 (** ** discrete partial orders, where [leq=eqv] *)
 
 #[primitive]
-HB.mixin Record PO_isDiscrete X of PO X := {
+HB.mixin Record isDiscrete X of PO X := {
     #[canonical=no] leq_eqv: subrelation leq (@eqv X);
   }.
 HB.structure Definition DiscretePO :=
-  { X of PO_isDiscrete X & }.
+  { X of isDiscrete X & }.
 
 HB.factory Record Setoid_isDiscretePO X of Setoid X := {}.
 HB.builders Context X of Setoid_isDiscretePO X.
   Lemma po_axm: po_axm (@eqv X). 
   Proof. apply: mk_po_axm. intuition. Qed.
-  HB.instance Definition _ := Setoid_isPO.Build X po_axm.
-  HB.instance Definition _ := PO_isDiscrete.Build X _.
+  HB.instance Definition _ := isPO.Build X po_axm.
+  HB.instance Definition _ := isDiscrete.Build X _.
 HB.end.
 Definition discrete (X: Type) := X.
 HB.instance Definition _ (X: Setoid.type) := Setoid.on (discrete X).
@@ -270,7 +276,7 @@ HB.instance Definition _ := isStrictPO.Build bool PreOrder_bool antisym_bool.
 (** propositions ordered by implication *)
 Lemma po_Prop: po_axm impl. 
 Proof. apply: mk_po_axm=>//. split; cbv; tauto. Qed.
-HB.instance Definition _ := Setoid_isPO.Build Prop po_Prop.
+HB.instance Definition _ := isPO.Build Prop po_Prop.
 
 (** (dependent) function space, ordered pointwise *)
 Section dprod.
@@ -284,12 +290,11 @@ Section dprod.
    - move=>f g. apply: forall_iff_and=>a. exact: (eqv_of_leq_ (@PO_axm (X a))).
    - move=>f g. apply: forall_iff_and=>a. exact: (eqv_of_geq_ (@PO_axm (X a))).
  Defined.
- HB.instance Definition _ := Setoid_isPO.Build (forall a, X a) po_dprod.
+ HB.instance Definition _ := isPO.Build (forall a, X a) po_dprod.
 End dprod.
 Arguments leq_dprod {_ _} _ _/. 
-Definition po_app {A} {X: A -> PO.type} (a: A) :=
+HB.instance Definition _ {A} {X: A -> PO.type} (a: A) :=
   isMonotone.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
-HB.instance Definition _ A X a := @po_app A X a.
 
 Section test.
   (* above [po_dprod] lemma is defined carefully, so that we get *)
@@ -315,7 +320,7 @@ Section s.
    by move=>???[??][]; split; etransitivity; eassumption.
    unfold eqv, leq_prod=>??/=. rewrite 2!eqv_of_leq. tauto. 
  Qed.
- HB.instance Definition _ := Setoid_isPO.Build (prod X Y) po_prod.
+ HB.instance Definition _ := isPO.Build (prod X Y) po_prod.
  HB.instance Definition _ :=
    isMonotone.Build (prod X Y) X fst (fun p q pq => proj1 pq).
  HB.instance Definition _ :=
@@ -340,7 +345,7 @@ Section s.
      apply: yz'. by transitivity x.
    - move=>[??][??]. cbn. rewrite 2!eqv_of_leq. intuition.
  Qed.
- HB.instance Definition _ := Setoid_isPO.Build (lex_prod X Y) po_lex_prod.
+ HB.instance Definition _ := isPO.Build (lex_prod X Y) po_lex_prod.
 
  (** direct sum (called "parallel" by opposition with the sequential operation below) *)
  Definition leq_parallel_sum: relation (X+Y) :=
@@ -356,7 +361,7 @@ Section s.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
  HB.instance Definition _ :=
-   Setoid_isPO.Build (sum X Y) po_parallel_sum.
+   isPO.Build (sum X Y) po_parallel_sum.
  HB.instance Definition _ :=
    isMonotone.Build X (sum X Y) inl (fun p q pq => pq).
  HB.instance Definition _ :=
@@ -378,7 +383,7 @@ Section s.
    by case=>?; case=>y; case=>?//=; transitivity y.
    case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
  Qed.
- HB.instance Definition _ := Setoid_isPO.Build (sequential_sum X Y) po_sequential_sum.
+ HB.instance Definition _ := isPO.Build (sequential_sum X Y) po_sequential_sum.
 
  (** [option] type, adding [None] as top element *)
  (* TODO: propose the other variant;
@@ -392,7 +397,7 @@ Section s.
    by move=>[?|][y|][?|]??//=; transitivity y. 
    case=>[?|]; case=>[?|]; cbn; rewrite ?eqv_of_leq; tauto.
  Qed.
- HB.instance Definition _ := Setoid_isPO.Build (option X) po_option.
+ HB.instance Definition _ := isPO.Build (option X) po_option.
 End s. 
 Arguments leq_prod [_ _] _ _/.
 Arguments leq_lex_prod [_ _] _ _/.
@@ -412,7 +417,7 @@ Section kernel.
    - cbn=>??. exact: (eqv_of_leq_ (@PO_axm X)).
    - cbn=>??. exact: (eqv_of_geq_ (@PO_axm X)).
  Defined.
- HB.instance Definition _ := Setoid_isPO.Build (kernel f) kern_po.  
+ HB.instance Definition _ := isPO.Build (kernel f) kern_po.  
  HB.instance Definition _ := isMonotone.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
 Arguments leq_kern [_ _] _ _ _/.

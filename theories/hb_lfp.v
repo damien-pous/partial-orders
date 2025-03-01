@@ -103,7 +103,7 @@ Section c.
  Variable f: X -mon-> X.
  Lemma next_leq: Proper (leq ==> leq) (next f).   
  Proof. by move =>???; apply f. Qed.
- HB.instance Definition _ := isMonotone.Build _ _ _ next_leq.
+ HB.instance Definition _ := isMonotone.Build _ _ (next f) next_leq.
 
  (** elements of the chain are post-fixpoints of [f] *)
  Lemma chain_postfixpoint: forall c: Chain f, c <= next f c.
@@ -124,7 +124,7 @@ Section c.
  Qed.
 
  (** if the chain contains a pre-fixpoint, then this is the least (pre-)fixpoint *)
- Theorem lpfp_of_chain_prefixpoint (c: Chain f): f c <= (c: X) -> is_lfp f c.
+ Theorem lpfp_of_chain_prefixpoint (c: Chain f): f (elem c) <= c -> is_lfp f c.
  Proof.
    move=>Hc x. split=>H.
    - move=>y Hy. rewrite H. by apply chain_below_prefixpoints.
