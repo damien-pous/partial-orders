@@ -336,13 +336,7 @@ HB.instance Definition _ (X: Setoid.type) (Y: infCL.type) := infCL.copy (X -eqv-
 
 (** restriction to monotone functions cannot be done as above,
     because [dual (X -mon-> dual Y)] is not definitionally equivalent to [X -mon-> Y]
-    still need to transfer standard sups over monadic adjunctions
  *)
-(* HB.instance Definition _ (X: PO.type) (Y: topPO.type) := topPO.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
-(* HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := meetSemiLattice.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
-(* HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := CPO'.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
-(* HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := dCPO'.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
-(* HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -mon-> Y) (dual (X -mon-> dual Y)). *)
 
 
 (** ** link between generic and standard operations *)
@@ -371,6 +365,11 @@ Section s.
 End s.
 Lemma top_ginf_closed {X: topPO.type} (P: X -> Prop) (Ptop: P top): @ginf_closed empty_kind (top_gen X) P.
 Proof. done. Qed.
+HB.factory Record monadic_top Y of PO Y := { X: topPO.type; f: Y ·⊣ X; }.
+HB.builders Context Y of monadic_top Y.
+ HB.instance Definition _ := monadic_ginf.Build empty_kind Y (X:=top_gen X) f.
+ HB.instance Definition _ := PO_gtop.Build Y.
+HB.end.
 
 (** *** binary meets as generic infs over 2-element domains *)
 HB.factory Record PO_gcap X of ginfPO pair_kind X := {}.
@@ -401,6 +400,11 @@ End s.
 Lemma cap_ginf_closed {X: meetSemiLattice.type} (P: X -> Prop) (Pcap: forall x y, P x -> P y -> P (cap x y)):
   @ginf_closed pair_kind (cap_gen X) P.
 Proof. move=>I Q kIQ h /forall_image H. apply: Pcap; apply: H; apply kIQ. Qed.
+HB.factory Record monadic_cap Y of PO Y := { X: meetSemiLattice.type; f: Y ·⊣ X; }.
+HB.builders Context Y of monadic_cap Y.
+ HB.instance Definition _ := monadic_ginf.Build pair_kind Y (X:=cap_gen X) f.
+ HB.instance Definition _ := PO_gcap.Build Y.
+HB.end.
 
 (** *** chain infs as generic infs over chain domains *)
 HB.factory Record PO_gcinf X of ginfPO (@chain) X := {}.
@@ -428,6 +432,11 @@ End s.
 Lemma cinf_ginf_closed {X: CPO'.type} (P: X -> Prop) (Pcinf: forall Q (C: cochain Q), Q <= P -> P (cinf Q C)):
   @ginf_closed (@chain) (cinf_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcinf. Qed.
+HB.factory Record monadic_cinf Y of PO Y := { X: CPO'.type; f: Y ·⊣ X; }.
+HB.builders Context Y of monadic_cinf Y.
+ HB.instance Definition _ := monadic_ginf.Build (@chain) Y (X:=cinf_gen X) f.
+ HB.instance Definition _ := PO_gcinf.Build Y.
+HB.end.
 
 (** *** directed infs as generic infs over directed domains *)
 HB.factory Record PO_gdinf X of ginfPO (@directed) X := {}.
@@ -455,6 +464,11 @@ End s.
 Lemma dinf_ginf_closed {X: dCPO'.type} (P: X -> Prop) (Pdinf: forall Q (D: codirected Q), Q <= P -> P (dinf Q D)):
   @ginf_closed (@directed) (dinf_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdinf. Qed.
+HB.factory Record monadic_dinf Y of PO Y := { X: dCPO'.type; f: Y ·⊣ X; }.
+HB.builders Context Y of monadic_dinf Y.
+ HB.instance Definition _ := monadic_ginf.Build (@directed) Y (X:=dinf_gen X) f.
+ HB.instance Definition _ := PO_gdinf.Build Y.
+HB.end.
 
 (** *** indexed arbitrary infs as generic infs of arbitrary kind *)
 HB.factory Record PO_giinf X of ginfPO any_kind X := {}.
@@ -484,13 +498,24 @@ End s.
 Lemma iinf_ginf_closed {X: infCL.type} (P: X -> Prop) (Piinf: forall I Q h, image h Q <= P -> P (iinf I Q h)):
   @ginf_closed any_kind (iinf_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Piinf. Qed.
+HB.factory Record monadic_iinf Y of PO Y := { X: infCL.type; f: Y ·⊣ X; }.
+HB.builders Context Y of monadic_iinf Y.
+ HB.instance Definition _ := monadic_ginf.Build any_kind Y (X:=iinf_gen X) f.
+ HB.instance Definition _ := PO_giinf.Build Y.
+HB.end.
 
-(** restriction to monotone functions follow generically *)
-(** TOTHINK: alternatively, use [(X -mon-> Y)  ≃ dual (dual X -mon-> dual Y)] *)
-HB.instance Definition _ (X: PO.type) (Y: topPO.type) := PO_gtop.Build (X -mon-> top_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := PO_gcap.Build (X -mon-> cap_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := PO_gcinf.Build (X -mon-> cinf_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := PO_gdinf.Build (X -mon-> dinf_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: infCL.type) := PO_giinf.Build (X -mon-> iinf_gen Y). 
+(** restriction to monotone functions follow by explicit duality *)
+HB.instance Definition _ (X: PO.type) (Y: topPO.type) := monadic_top.Build (X -mon-> Y) (iso_dual_mon X Y).
+HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := monadic_cap.Build (X -mon-> Y) (iso_dual_mon X Y).
+HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := monadic_cinf.Build (X -mon-> Y) (iso_dual_mon X Y).
+HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := monadic_dinf.Build (X -mon-> Y) (iso_dual_mon X Y).
+HB.instance Definition _ (X: PO.type) (Y: infCL.type) := monadic_iinf.Build (X -mon-> Y) (iso_dual_mon X Y).
+
+(** ALTERNATIVE: by genericity *)
+(* HB.instance Definition _ (X: PO.type) (Y: topPO.type) := PO_gtop.Build (X -mon-> top_gen Y).  *)
+(* HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := PO_gcap.Build (X -mon-> cap_gen Y).  *)
+(* HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := PO_gcinf.Build (X -mon-> cinf_gen Y).  *)
+(* HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := PO_gdinf.Build (X -mon-> dinf_gen Y).  *)
+(* HB.instance Definition _ (X: PO.type) (Y: infCL.type) := PO_giinf.Build (X -mon-> iinf_gen Y).  *)
 
 (* Check ((nat->bool)-mon->(nat->Prop)): infCL.type. *)

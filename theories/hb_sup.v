@@ -322,6 +322,7 @@ HB.builders Context X of PO_sup X.
 HB.end.
 
 
+
 (** ** theory *)
 
 Notation sup P := (isup _ P types_id).
@@ -459,6 +460,12 @@ Section s.
 End s.
 Lemma bot_gsup_closed {X: botPO.type} (P: X -> Prop) (Pbot: P bot): @gsup_closed empty_kind (bot_gen X) P.
 Proof. done. Qed.
+HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: X ⊣· Y; }.
+HB.builders Context Y of comonadic_bot Y.
+ HB.instance Definition _ := comonadic_gsup.Build empty_kind Y (X:=bot_gen X) f.
+ HB.instance Definition _ := PO_gbot.Build Y.
+HB.end.
+
 
 (** *** binary joins as generic sups over 2-element domains *)
 Record pair_kind (X: PO.type) (P: X -> Prop): Type :=
@@ -500,6 +507,11 @@ End s.
 Lemma cup_gsup_closed {X: joinSemiLattice.type} (P: X -> Prop) (Pcup: forall x y, P x -> P y -> P (cup x y)):
   @gsup_closed pair_kind (cup_gen X) P.
 Proof. move=>I Q kIQ h /forall_image H. apply: Pcup; apply: H; apply kIQ. Qed.
+HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: X ⊣· Y; }.
+HB.builders Context Y of comonadic_cup Y.
+ HB.instance Definition _ := comonadic_gsup.Build pair_kind Y (X:=cup_gen X) f.
+ HB.instance Definition _ := PO_gcup.Build Y.
+HB.end.
 
 (** *** chain sups as generic sups over chain domains *)
 HB.factory Record PO_gcsup X of gsupPO (@chain) X := {}.
@@ -527,6 +539,11 @@ End s.
 Lemma csup_gsup_closed {X: CPO.type} (P: X -> Prop) (Pcsup: forall Q (C: chain Q), Q <= P -> P (csup Q C)):
   @gsup_closed (@chain) (csup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcsup. Qed.
+HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: X ⊣· Y; }.
+HB.builders Context Y of comonadic_csup Y.
+ HB.instance Definition _ := comonadic_gsup.Build (@chain) Y (X:=csup_gen X) f.
+ HB.instance Definition _ := PO_gcsup.Build Y.
+HB.end.
 
 (** *** directed sups as generic sups over directed domains *)
 HB.factory Record PO_gdsup X of gsupPO (@directed) X := {}.
@@ -554,6 +571,11 @@ End s.
 Lemma dsup_gsup_closed {X: dCPO.type} (P: X -> Prop) (Pdsup: forall Q (D: directed Q), Q <= P -> P (dsup Q D)):
   @gsup_closed (@directed) (dsup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdsup. Qed.
+HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: X ⊣· Y; }.
+HB.builders Context Y of comonadic_dsup Y.
+ HB.instance Definition _ := comonadic_gsup.Build (@directed) Y (X:=dsup_gen X) f.
+ HB.instance Definition _ := PO_gdsup.Build Y.
+HB.end.
 
 (** *** indexed arbitrary sups as generic sups of arbitrary kind *)
 Definition any_kind: gkind := fun _ _ => True.
@@ -584,6 +606,11 @@ End s.
 Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I Q h, image h Q <= P -> P (isup I Q h)):
   @gsup_closed any_kind (isup_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Pisup. Qed.
+HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: X ⊣· Y; }.
+HB.builders Context Y of comonadic_isup Y.
+ HB.instance Definition _ := comonadic_gsup.Build any_kind Y (X:=isup_gen X) f.
+ HB.instance Definition _ := PO_gisup.Build Y.
+HB.end.
 
 (** liftings to dependent products [forall i, X i] follow generically *)
 HB.instance Definition _ I (X: I -> botPO.type) := PO_gbot.Build (forall i, bot_gen (X i)).
