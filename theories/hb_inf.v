@@ -157,14 +157,14 @@ HB.structure Definition topPO := {X of PO_top X & }.
 
 HB.mixin Record PO_cap X of PO X := {
     #[canonical=no] cap: X -> X -> X;
-    #[canonical=no] cap_spec: forall x y, is_inf (pair x y) (cap x y);
+    #[canonical=no] cap_spec: forall x y: X, is_inf (pair x y) (cap x y);
   }.
 HB.structure Definition meetSemiLattice := {X of PO_cap X & }.
 HB.structure Definition topmeetSemiLattice := {X of PO_top X & meetSemiLattice X }.
 
 HB.mixin Record PO_cinf X of PO X := {
     #[canonical=no] cinf: forall P: X -> Prop, cochain P -> X;
-    #[canonical=no] cinf_spec: forall P C, is_inf P (cinf P C);
+    #[canonical=no] cinf_spec: forall (P: X -> Prop) C, is_inf P (cinf P C);
   }.
 HB.builders Context X of PO_cinf X.
   HB.instance Definition _ := PO_top.Build X (cinf_spec cochain_empty).
@@ -173,7 +173,7 @@ HB.structure Definition CPO' := {X of PO_cinf X & }.
 
 HB.mixin Record PO_dinf X of PO X := {
     #[canonical=no] dinf: forall P: X -> Prop, codirected P -> X;
-    #[canonical=no] dinf_spec: forall P D, is_inf P (dinf P D);
+    #[canonical=no] dinf_spec: forall (P: X -> Prop) D, is_inf P (dinf P D);
   }.
 HB.builders Context X of PO_dinf X.
   HB.instance Definition _ := PO_cinf.Build X _ (fun P C => dinf_spec (cochain_codirected C)).
@@ -182,11 +182,11 @@ HB.structure Definition dCPO' := {X of PO_dinf X & }.
 
 HB.mixin Record PO_iinf X of PO X := {
     #[canonical=no] iinf: forall I, (I -> Prop) -> (I -> X) -> X;
-    #[canonical=no] iinf_spec: forall I P h, is_inf (image h P) (iinf I P h);
+    #[canonical=no] iinf_spec: forall I P (h: I -> X), is_inf (image h P) (iinf I P h);
   }.
 HB.builders Context X of PO_iinf X.
   Definition inf (P: X -> Prop) := iinf P types_id.
-  Lemma inf_spec P: is_inf P (inf P).
+  Lemma inf_spec (P: X -> Prop): is_inf P (inf P).
   Proof. move: (iinf_spec P types_id). by rewrite image_id. Qed.
   HB.instance Definition _ := PO_cap.Build X _ (fun x y => inf_spec (pair x y)).
   HB.instance Definition _ := PO_dinf.Build X _ (fun D _ => inf_spec D).
@@ -195,7 +195,7 @@ HB.structure Definition infCL := {X of PO_iinf X & }.
 
 HB.factory Record PO_inf X of PO X := {
     #[canonical=no] inf: (X -> Prop) -> X;
-    #[canonical=no] inf_spec: forall P, is_inf P (inf P);
+    #[canonical=no] inf_spec: forall P: X -> Prop, is_inf P (inf P);
   }.
 HB.builders Context X of PO_inf X.
   Definition iinf I P (h: I -> X) := inf (image h P).

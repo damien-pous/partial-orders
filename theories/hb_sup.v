@@ -269,7 +269,7 @@ HB.structure Definition botPO := {X of PO_bot X & }.
 (** *** binary joins *)
 HB.mixin Record PO_cup X of PO X := {
     #[canonical=no] cup: X -> X -> X;
-    #[canonical=no] cup_spec: forall x y, is_sup (pair x y) (cup x y);
+    #[canonical=no] cup_spec: forall x y: X, is_sup (pair x y) (cup x y);
   }.
 HB.structure Definition joinSemiLattice := {X of PO_cup X & }.
 HB.structure Definition botjoinSemiLattice := {X of PO_bot X & joinSemiLattice X }.
@@ -277,7 +277,7 @@ HB.structure Definition botjoinSemiLattice := {X of PO_bot X & joinSemiLattice X
 (** *** chain suprema (CPOs) *)
 HB.mixin Record PO_csup X of PO X := {
     #[canonical=no] csup: forall P: X -> Prop, chain P -> X;
-    #[canonical=no] csup_spec: forall P C, is_sup P (csup P C);
+    #[canonical=no] csup_spec: forall (P: X -> Prop) C, is_sup P (csup P C);
   }.
 HB.builders Context X of PO_csup X.
   HB.instance Definition _ := PO_bot.Build X (csup_spec chain_empty).
@@ -287,7 +287,7 @@ HB.structure Definition CPO := {X of PO_csup X & }.
 (** *** directed suprema (dCPOs) *)
 HB.mixin Record PO_dsup X of PO X := {
     #[canonical=no] dsup: forall P: X -> Prop, directed P -> X;
-    #[canonical=no] dsup_spec: forall P D, is_sup P (dsup P D);
+    #[canonical=no] dsup_spec: forall (P: X -> Prop) D, is_sup P (dsup P D);
   }.
 HB.builders Context X of PO_dsup X.
   HB.instance Definition _ := PO_csup.Build X _ (fun P C => dsup_spec (chain_directed C)).
@@ -298,11 +298,11 @@ HB.structure Definition dCPO := {X of PO_dsup X & }.
 (** using `indexed' sups, which is convenient in practice *)
 HB.mixin Record PO_isup X of PO X := {
     #[canonical=no] isup: forall I, (I -> Prop) -> (I -> X) -> X;
-    #[canonical=no] isup_spec: forall I P h, is_sup (image h P) (isup I P h);
+    #[canonical=no] isup_spec: forall I P (h: I -> X), is_sup (image h P) (isup I P h);
   }.
 HB.builders Context X of PO_isup X.
   Definition sup (P: X -> Prop) := isup P types_id.
-  Lemma sup_spec P: is_sup P (sup P).
+  Lemma sup_spec (P: X -> Prop): is_sup P (sup P).
   Proof. move: (isup_spec P types_id). by rewrite image_id. Qed.
   HB.instance Definition _ := PO_cup.Build X _ (fun x y => sup_spec (pair x y)).
   HB.instance Definition _ := PO_dsup.Build X _ (fun D _ => sup_spec D).
@@ -312,7 +312,7 @@ HB.structure Definition supCL := {X of PO_isup X & }.
 (** non-indexed sups are equivalent to indexed sups *)
 HB.factory Record PO_sup X of PO X := {
     #[canonical=no] sup: (X -> Prop) -> X;
-    #[canonical=no] sup_spec: forall P, is_sup P (sup P);
+    #[canonical=no] sup_spec: forall P: X -> Prop, is_sup P (sup P);
   }.
 HB.builders Context X of PO_sup X.
   Definition isup I P (h: I -> X) := sup (image h P).
