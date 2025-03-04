@@ -606,6 +606,9 @@ Proof.
   intro x. split. intros E y. by rewrite -E; apply H. apply H.
 Qed.
 
+Lemma max_is_sup P x: P x -> (forall y, P y -> y <= x) -> is_sup P x.
+Proof. rewrite is_sup_alt=>Px Sx. split=>//z Sz. by apply: Sz. Qed.
+
 Definition covered: relation (X -> Prop) := fun P Q => forall x, P x -> exists y, Q y /\ x <= y.
 #[export] Instance PreOrder_covered: PreOrder covered.
 Proof.
@@ -737,6 +740,8 @@ Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
 Proof. dual @leq_is_sup. Qed.
 Lemma is_inf_alt P z: is_inf P z <-> (forall y, P y -> z <= y) /\ (forall z', (forall y, P y -> z' <= y) -> z' <= z).
 Proof. dual @is_sup_alt. Qed.
+Lemma min_is_inf P x: P x -> (forall y, P y -> x <= y) -> is_inf P x.
+Proof. dual @max_is_sup. Qed.
 
 Definition cocovered P Q := @covered (dual X) P Q.
 Definition cobicovered P Q := @bicovered (dual X) P Q.

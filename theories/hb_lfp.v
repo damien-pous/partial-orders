@@ -20,7 +20,7 @@ Implicit Types x y z: X.
 Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
 
 Lemma is_lfp_alt (f: X -mon-> X) (z: X): is_lfp f z <-> f z <= z /\ forall y, f y <= y -> z <= y.
-Proof.    
+Proof.
   rewrite /is_lfp is_inf_alt. split; move=>[H H']; split=>//. 2: firstorder.
   apply H'=>y Y. rewrite -Y. by apply f, H.
 Qed.
@@ -57,32 +57,33 @@ Section c.
  Inductive C: X -> Prop :=
  | Cf: forall x, C x -> C (f x)
  | Csup: forall P, P <= C -> forall x, is_sup P x -> C x.
- 
- (** a type for the elements of the chain *)
- Structure Chain := chn { elem:> X; #[canonical=no] Celem: C elem}.
 
- (** the chain inherits the partial order structure from X *)
- HB.instance Definition _ := PO.copy Chain (kernel elem).
+ (** a type for the elements of the chain *)
+ Definition Chain := sig C.
+ Definition chn c (Cc: C c): Chain := exist _ c Cc.
+ Arguments chn: clear implicits.
+ Lemma Celem (c: Chain): C (sval c).
+ Proof. exact: proj2_sig. Qed.
 
  (** the chain is closed under [f] *)
- Canonical Structure next (x: Chain) := {| elem := f x; Celem := Cf (Celem x) |}.
+ Definition next (x: Chain) := chn (f (sval x)) (Cf (Celem x)).
 
  (** the chain is closed under (existing) sups *)
- Lemma Csup' (P: Chain -> Prop) (x: X): is_sup (fun x => exists Cx, P (@chn x Cx)) x -> C x.
+ Lemma Csup' (P: Chain -> Prop) (x: X): is_sup (fun x => exists Cx, P (chn x Cx)) x -> C x.
  Proof. move=>H. by apply: (Csup _ H)=>y [Cy _]. Qed.
 
  (** the chain is inductively generated *)
  Proposition tower: forall (P: Chain -> Prop), sup_closed P -> (forall x, P x -> P (next x)) -> forall x, P x.
  Proof.
    move=>P Psup Pnext.
-   suff H: forall x, C x -> forall Cx: C x, P (chn Cx). by move=>[??]; apply H. 
+   suff H: forall x, C x -> forall Cx, P (chn x Cx). by move=>[??]; apply H.
    induction 1 as [x Cx IH|T TC IH t Ht]=>[Cfx|Ct].
-   - move: (Pnext (chn Cx) (IH _)). by apply sup_closed_Proper.
-   - apply (Psup (fun t => T t)).
+   - move: (Pnext (chn x Cx) (IH _)). by apply sup_closed_Proper.
+   - apply (Psup (fun t => T (sval t))).
      -- move=>[x Cx] Tx. by apply IH.
      -- move=>/=[x Cx]. etransitivity. apply Ht.
         split. clear; firstorder.
-        move=>H y Ty. by apply (H (chn (TC _ Ty))).
+        move=>H y Ty. by apply (H (chn _ (TC _ Ty))).
  Qed.
 
  (** the chain is equivalence preserving *)
@@ -113,7 +114,7 @@ Section c.
  Qed.
 
  (** they are below all pre-fixpoints of [f] *)
- Theorem chain_below_prefixpoints x: f x <= x -> forall c: Chain f, (c: X) <= x.
+ Theorem chain_below_prefixpoints x: f x <= x -> forall c: Chain f, sval c <= x.
  Proof.
    (* we would like to use [tower], but this requires closure under sups in [Chain f],
       and [sup_closed_leq] does not apply... *)
@@ -124,7 +125,7 @@ Section c.
  Qed.
 
  (** if the chain contains a pre-fixpoint, then this is the least (pre-)fixpoint *)
- Theorem lpfp_of_chain_prefixpoint (c: Chain f): f (elem c) <= c -> is_lfp f c.
+ Theorem lpfp_of_chain_prefixpoint (c: Chain f): f (sval c) <= sval c -> is_lfp f (sval c).
  Proof.
    move=>Hc x. split=>H.
    - move=>y Hy. rewrite H. by apply chain_below_prefixpoints.
@@ -132,10 +133,10 @@ Section c.
  Qed.
 
  (** if the chain has a supremum, then this is the least (pre-)fixpoint *)
- Theorem lpfp_of_chain_supremum c: is_sup (C f) c -> is_lfp f c.
+ Theorem lpfp_of_chain_supremum x: is_sup (C f) x -> is_lfp f x.
  Proof.
    intro Hc.
-   have Cc: C f c by eapply Csup.
+   have Cc: C f x by eapply Csup.
    apply (@lpfp_of_chain_prefixpoint (chn Cc))=>/=. 
    apply Hc=>//. by apply Cf. 
  Qed.
@@ -151,17 +152,9 @@ End c.
 Arguments tower {_}.  
 Arguments next {_}.
 
-Lemma Chain_as_sig_ {X: PO.type} (f: X->X):
-  (fun c: Chain f => exist (C f) (elem c) (Celem c))
-    ∘ (fun c: sig (C f) => chn (proj2_sig c)) ≡ types_id.
-Proof. by case. Qed.
-Definition Chain_as_sig {X: PO.type} (f: X->X): sig (C f) ≃ Chain f := iso_retract (@Chain_as_sig_  X f). 
-
+(** being sup-closed, the chain inherits sups from the starting partial order *)
 HB.instance Definition _ k {X: gsupPO.type k} (f: X -> X) :=
-  comonadic_gsup.Build k (Chain f)
-    (X:=sup_closed_sig (@sup_gsup_closed _ X (C f) (@Csup _ f)))
-    (@Chain_as_sig X f).
-
+  gsupPO.copy (Chain f) (sup_closed_sig (@sup_gsup_closed _ X (C f) (@Csup _ f))).
 HB.instance Definition _ {X: CPO.type} (f: X -> X) :=
   CPO.copy (Chain f) (csup_gen (@Chain (csup_gen X) f)). 
 HB.instance Definition _ {X: dCPO.type} (f: X -> X) :=
@@ -530,72 +523,61 @@ End BourbakiWitt'.
 
 Module Pataraia. 
 Section s.
- Context {C: dCPO.type}.
+ Context (C: dCPO.type).
 
  Notation id := po_id.
 
  (** the largest monotone and extensive function on [C] *)
  Program Definition h: C-mon->C := locked (dsup (fun f => id <= f) _).
  Next Obligation.
-   (* TOFIX: types of i,j are not nice (include [dsup_gen]) *)
-   move=>/=i j I J. exists (i°j). split; last split.
+   move=>/=f g I J. exists (f°g). split; last split.
    - by rewrite -I.
-   - by rewrite -J.             (* !! need [kern_po _ ° kern po _ = kern_po (_°_)] *)
+   - by rewrite -J.
    - by rewrite -I.
  Qed.
  
  Lemma h_ext: id <= h.
  Proof. unlock h. by apply: leq_dsup. Qed.
 
- Lemma h_invol: h ° h <= h.
- Proof.
-   unlock {3}h. 
-   apply: leq_dsup.
-   by rewrite -h_ext.
- Qed.
-
- Definition extensive_fixpoint := h bot.
-
  Variable f: C-mon->C.
  Hypothesis f_ext: id <= f. 
 
- Lemma h_prefixpoint: f ° h <= h.
+ Lemma ext_h: f ° h <= h.
  Proof. unlock {2}h. apply: leq_dsup. by rewrite -f_ext -h_ext. Qed.
-
- Theorem is_extensive_fixpoint: f extensive_fixpoint ≡ extensive_fixpoint. 
- Proof.
-   apply antisym. 
-   (* BUG: hangs, and/or Qed super long if [h] is not locked *)
-   exact: h_prefixpoint.
-   exact: f_ext.
- Qed.
+ 
+ Lemma h_prefixpoint: forall c, f (h c) <= h c.
+ Proof. exact: ext_h. Qed.
+ 
 End s.
 
 Section s.
  Context {X: dCPO.type}.
  Variable f: X-mon->X.
 
- Definition lfp := locked (elem (extensive_fixpoint (C:=Chain f))).
-   
+ Definition lfp := locked (sval (h (Chain f) bot)).
+
+ Fact Clfp: C f lfp.
+ Proof. unlock lfp. exact: Celem. Qed.
+ 
  Theorem is_least_fixpoint: is_lfp f lfp. 
  Proof.
    unlock lfp.
-   apply lpfp_of_chain_prefixpoint. 
-   apply eqv_leq.
-   exact (is_extensive_fixpoint (chain_postfixpoint f)).
+   apply: lpfp_of_chain_prefixpoint.
+   exact: (h_prefixpoint (chain_postfixpoint f)).
  Qed.
-
- (* note: we could also prove that [C f] has a supremum and is thus trivially directed, 
-    so that we could define [lfp] as [dsup (C f) _], uniformly with the definitions in [Bourbakiwitt'.lfp]
-
-    we proceed more directly, and prove a posteriori that [lfp] as defined above is indeed the sup of [C f] *)
- Proposition lfp_is_sup_C: is_sup (C f) lfp. 
+ 
+ Proposition lfp_is_sup_C: is_sup (C f) lfp.
  Proof.
-   move=>x. split=>H.
-   - move=>c Cc. rewrite -H.
+   apply: max_is_sup. exact: Clfp. 
+   move=>c Cc. 
      apply: (chain_below_prefixpoints f _ _ (chn Cc)).
      apply eqv_leq, lfp_fixpoint, is_least_fixpoint.
-   - apply H. unlock lfp. apply Celem.
+ Qed.
+
+ Corollary Cdirected: directed (C f).
+ Proof.
+   move=>c c' Cc Cc'. exists lfp; split. exact: Clfp.
+   split; by apply: (leq_is_sup lfp_is_sup_C).
  Qed.
 
  Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
@@ -604,14 +586,6 @@ Section s.
    apply: is_inf_eqv. apply H. apply is_least_fixpoint. split; reflexivity. 
    rewrite E; clear.
    apply Csup with (C f)=>//. apply lfp_is_sup_C. 
- Qed.
-
- (** as a consequence, any property holding on the whole chain holds on the least fixpoint 
-     (this is the starting point for the [coinduction] tactic) *)
- Corollary lfp_prop (P: X -> Prop): (forall c: Chain f, P (elem c)) -> P lfp.
- Proof.
-   move=>H.
-   exact (H (chn (any_lfp_in_chain is_least_fixpoint))).
  Qed.
  
 End s.
