@@ -10,38 +10,41 @@ Set Primitive Projections.
 
 (** * least fixpoint theorems *)
 
-
 Section s.
 Context {X: PO.type}.
 Implicit Types x y z: X.
+Implicit Types f g: X -> X.
 
-(** least (pre-)fixpoints of monotone functions,
-    essentially Knaster-Tarski, also known as Lambek lemma in category theory *)
-Definition is_lfp (f: X -> X) := is_inf (fun x => f x <= x). 
+(** least (pre-)fixpoints *)
+Definition is_lfp f z := f z <= z /\ forall y, f y <= y -> z <= y. 
 
-Lemma is_lfp_alt (f: X -mon-> X) (z: X): is_lfp f z <-> f z <= z /\ forall y, f y <= y -> z <= y.
-Proof.
-  rewrite /is_lfp is_inf_alt. split; move=>[H H']; split=>//. 2: firstorder.
-  apply H'=>y Y. rewrite -Y. by apply f, H.
-Qed.
-
-Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
-Proof.
-  move=>H. apply: antisym'.
-  apply H=>y Hy. rewrite -Hy. apply f. by apply H.
-  move=>P. apply H=>//. by apply f.
-Qed.
-
-Lemma is_lfp_leq (f g: X -mon-> X): f <= g -> forall x y, is_lfp f x -> is_lfp g y -> x <= y.
+Lemma is_lfp_leq f g: f <= g -> forall x y, is_lfp f x -> is_lfp g y -> x <= y.
 Proof.
   intros fg x y Hx Hy. apply Hx=>//.
-  rewrite ->(fg y). by rewrite ->(lfp_fixpoint _ Hy).
+  rewrite ->(fg y). by apply Hy. 
 Qed.
 
-#[export] Instance is_lfp_eqv: Proper (eqv ==> eqv ==> eqv) is_lfp.
+Lemma is_lfp_unique f g: f ≡ g -> forall x y, is_lfp f x -> is_lfp g y -> x ≡ y.
 Proof.
-  intros f g fg. apply: Proper_is_inf.
-  split=>x Hx; exists x; split=>//. by rewrite -(fg x). by rewrite (fg x).
+  move=> /eqv_of_leq [fg gf] x y Hx Hy.
+  by apply: antisym; (apply: is_lfp_leq; [|eassumption|eassumption]).
+Qed.
+
+(** second half of Knaster-Tarski theorem on montone functions,
+    also known as Lambek lemma in category theory *)
+Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
+Proof.
+  move=>[H H']. apply: antisym'=>//_.
+  apply: H'. exact: monotone.
+Qed.
+
+(** characterisation as the infimum of all pre-fixpoints (again, for monotone functions) *)
+Proposition is_lfp_inf (f: X -mon-> X) (z: X): is_lfp f z <-> is_inf (fun x => f x <= x) z.
+Proof.
+  split.
+  - move=>[?]. exact: min_is_inf.
+  - move=>H. have E: forall y, f y <= y -> z <= y. by rewrite /is_inf in H=>y Hy; apply ->H. 
+    split=>//. apply/H=>y Hy. rewrite -Hy. apply: monotone. exact: E.
 Qed.
 
 End s.
@@ -127,9 +130,8 @@ Section c.
  (** if the chain contains a pre-fixpoint, then this is the least (pre-)fixpoint *)
  Theorem lpfp_of_chain_prefixpoint (c: Chain f): f (sval c) <= sval c -> is_lfp f (sval c).
  Proof.
-   move=>Hc x. split=>H.
-   - move=>y Hy. rewrite H. by apply chain_below_prefixpoints.
-   - by apply H.
+   move=>Hc. split=>//x H.
+   exact: chain_below_prefixpoints.
  Qed.
 
  (** if the chain has a supremum, then this is the least (pre-)fixpoint *)
@@ -509,14 +511,6 @@ Section b.
     we can drop this assumption assuming [X] contains some element x: 
     { y: X | x <= y } is a CPO with least element x.
   *)
-
- Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
- Proof.
-   move=>x H. have E: x≡lfp.
-   apply: is_inf_eqv. apply H. apply is_least_fixpoint. by split.
-   rewrite E; clear.
-   apply Csup with (C f)=>//. exact: csup_spec. 
- Qed.
  
 End b. 
 End BourbakiWitt'. 
@@ -578,14 +572,6 @@ Section s.
  Proof.
    move=>c c' Cc Cc'. exists lfp; split. exact: Clfp.
    split; by apply: (leq_is_sup lfp_is_sup_C).
- Qed.
-
- Corollary any_lfp_in_chain: forall x, is_lfp f x -> C f x.
- Proof.
-   move=>x H. have E: x≡lfp.
-   apply: is_inf_eqv. apply H. apply is_least_fixpoint. split; reflexivity. 
-   rewrite E; clear.
-   apply Csup with (C f)=>//. apply lfp_is_sup_C. 
  Qed.
  
 End s.

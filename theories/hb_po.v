@@ -594,12 +594,6 @@ Implicit Types P Q: X -> Prop.
 (* TOTHINK: infer [is_sup/is_inf] using typeclasses / declare hints  *)
 Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
 
-Lemma geq_is_sup P x: is_sup P x -> forall z, (forall y, P y -> y <= z) -> x <= z.
-Proof. by move=>H z Hz; apply H. Qed.
-
-Lemma leq_is_sup P x: is_sup P x -> forall y, P y -> y <= x.
-Proof. by move=>H y Py; apply H. Qed.
-
 Lemma is_sup_alt P z: is_sup P z <-> (forall y, P y -> y <= z) /\ (forall z', (forall y, P y -> y <= z') -> z <= z').
 Proof.
   split; intro H. by split; apply H.
@@ -634,30 +628,6 @@ Proof. move=>P Q H x Px. exists x; split=>//. by apply: H. Qed.
 #[export] Instance eqv_bicovered: subrelation eqv bicovered.
 Proof. move=>P Q. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
-Lemma is_sup_leq P p Q q: is_sup P p -> is_sup Q q -> covered P Q -> p<=q.
-Proof.
-  move=>Pp Qq PQ. apply Pp=>x Px.
-  case: (PQ x Px)=>y [Qy ->]. by apply Qq.
-Qed.
-
-Lemma is_sup_eqv P p Q q: is_sup P p -> is_sup Q q -> bicovered P Q -> p≡q.
-Proof. rewrite eqv_of_leq=>??[??]. eauto using is_sup_leq. Qed.
-
-Lemma supU (P: X -> Prop) x y: is_sup P x -> is_sup P y -> x ≡ y.
-Proof. intros; eapply is_sup_eqv; eauto. Qed.
-
-Lemma is_sup_single x: is_sup (eq x) x.
-Proof. intro. by firstorder subst. Qed.
-
-#[export] Instance Proper_is_sup: Proper (bicovered ==> eqv ==> eqv) is_sup.
-Proof.
-  rewrite /is_sup=> P Q PQ x y xy.
-  apply Proper_forall=>z. apply Proper_iff. by rewrite xy.
-  have E: forall P Q, covered P Q -> (forall t, Q t -> t <= z) <= (forall t, P t -> t <= z).
-   clear=>P Q PQ H t Pt. by case: (PQ _ Pt)=>s [? ->]; apply H. 
-  split; apply E; apply PQ. 
-Qed.
-
 Definition directed P :=
   forall x y, P x -> P y -> exists z, P z /\ x <= z /\ y <= z.
 Lemma directed_empty: directed empty.
@@ -689,6 +659,7 @@ Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
 Proof. by exists x. Qed.
 Hint Resolve in_image: core. 
 
+(* TODO: check usages and possibly unfold LHS *)
 Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
   image f P <= Q <-> forall x, P x -> Q (f x).
 Proof.
@@ -734,10 +705,6 @@ Proof. dual @from_above. Qed.
 
 Definition is_inf P x := forall z, z <= x <-> forall y, P y -> z <= y.
 
-Lemma leq_is_inf P x: is_inf P x -> forall z, (forall y, P y -> z <= y) -> z <= x.
-Proof. dual @geq_is_sup. Qed.
-Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
-Proof. dual @leq_is_sup. Qed.
 Lemma is_inf_alt P z: is_inf P z <-> (forall y, P y -> z <= y) /\ (forall z', (forall y, P y -> z' <= y) -> z' <= z).
 Proof. dual @is_sup_alt. Qed.
 Lemma min_is_inf P x: P x -> (forall y, P y -> x <= y) -> is_inf P x.
@@ -753,17 +720,6 @@ Definition cobicovered P Q := @bicovered (dual X) P Q.
 Proof. exact: @leq_covered (dual X). Qed.
 #[export] Instance eqv_cobicovered: subrelation eqv cobicovered.
 Proof. exact: @eqv_bicovered (dual X). Qed.
-
-Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
-Proof. dual @is_sup_leq. Qed.
-Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
-Proof. dual @is_sup_eqv. Qed.
-Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
-Proof. dual @supU. Qed.
-Lemma is_inf_single x: is_inf (eq x) x.
-Proof. dual @is_sup_single. Qed.
-#[export] Instance Proper_is_inf: Proper (cobicovered ==> eqv ==> eqv) is_inf.
-Proof. dual @Proper_is_sup. Qed.
 
 Definition codirected P :=
   forall x y, P x -> P y -> exists z, P z /\ z <= x /\ z <= y.

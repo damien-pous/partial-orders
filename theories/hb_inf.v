@@ -19,6 +19,22 @@ Context {X: PO.type}.
 Implicit Types x y z: X. 
 Implicit Types P Q: X -> Prop.
 
+Lemma leq_is_inf P x: is_inf P x -> forall z, (forall y, P y -> z <= y) -> z <= x.
+Proof. dual @geq_is_sup. Qed.
+Lemma geq_is_inf P x: is_inf P x -> forall y, P y -> x <= y.
+Proof. dual @leq_is_sup. Qed.
+
+Lemma is_inf_leq P p Q q: is_inf P p -> is_inf Q q -> cocovered P Q -> q<=p.
+Proof. dual @is_sup_leq. Qed.
+Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
+Proof. dual @is_sup_eqv. Qed.
+Lemma infU (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
+Proof. dual @supU. Qed.
+Lemma is_inf_single x: is_inf (eq x) x.
+Proof. dual @is_sup_single. Qed.
+#[export] Instance Proper_is_inf: Proper (cobicovered ==> eqv ==> eqv) (@is_inf X).
+Proof. dual @Proper_is_sup. Qed.
+
 Definition inf_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
 
 Lemma inf_closed_impl (P Q: X -> Prop): Proper (leq ==> leq) P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).

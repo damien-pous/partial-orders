@@ -14,20 +14,24 @@ Set Primitive Projections.
 Section s.
 Context {X: PO.type}.
 Implicit Types x y z: X.
+Implicit Types f g: X -> X.
 
-Definition is_gfp (f: X -> X) := is_sup (fun x => x <= f x). 
-
-Lemma is_gfp_alt (f: X -mon-> X) (z: X): is_gfp f z <-> z <= f z /\ forall y, y <= f y -> y <= z.
-Proof. exact: (is_lfp_alt (dualf f)). Qed.  
-
-Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
-Proof. exact: (lfp_fixpoint (dualf f)). Qed.
-
-#[export] Instance is_gfp_eqv: Proper (eqv ==> eqv ==> eqv) is_gfp.
-Proof. dual @is_lfp_eqv. Qed.
+(** greatest (post-)fixpoints *)
+Definition is_gfp f z := z <= f z /\ forall y, y <= f y -> y <= z. 
 
 Lemma is_gfp_leq (f g: X -mon-> X): f <= g -> forall x y, is_gfp f x -> is_gfp g y -> x <= y.
 Proof. intros; exact: (is_lfp_leq (f:=dualf g) (g:=dualf f)). Qed.
+Lemma is_gfp_unique (f g: X -mon-> X): f ≡ g -> forall x y, is_gfp f x -> is_gfp g y -> x ≡ y.
+Proof. intros; exact: (is_lfp_unique (f:=dualf f) (g:=dualf g)). Qed.
+
+(** second half of Knaster-Tarski theorem on montone functions,
+    also known as Lambek lemma in category theory *)
+Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
+Proof. exact: (lfp_fixpoint (dualf f)). Qed.
+
+(** characterisation as the supremum of all post-fixpoints (again, for monotone functions) *)
+Lemma is_gfp_sup (f: X -mon-> X) (z: X): is_gfp f z <-> is_sup (fun x => x <= f x) z.
+Proof. exact: (is_lfp_inf (dualf f)). Qed.  
 
 End s.
 
