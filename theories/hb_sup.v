@@ -481,20 +481,19 @@ Definition False_empty_kind: empty_kind False empty.
 Proof. done. Defined.
 Lemma image_empty_kind I P (H: empty_kind I P) X (f: I -> X): image f P ≡ empty.
 Proof. split=>//[[? _]]. exact: H. Qed. 
-HB.factory Record PO_gbot X of gsupPO empty_kind X := {}.
-HB.builders Context X of PO_gbot X.
- Section s.
-  Definition bot: X := gsup False empty False_empty_kind empty_fun.
-  Lemma bot_spec: is_sup empty bot.
-  Proof.
-    rewrite -(image_empty_kind False_empty_kind empty_fun).
-    exact: gsup_spec.
-  Qed.
- End s.
- HB.instance Definition _ := PO_bot.Build X bot_spec.
-HB.end.
+
 Definition bot_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (bot_gen X).
+Section s.
+ Context {X: gsupPO.type empty_kind}.
+ Definition gsup_bot: X := gsup False empty False_empty_kind empty_fun. 
+ Lemma gsup_bot_spec: is_sup empty gsup_bot.
+ Proof.
+   rewrite -(image_empty_kind False_empty_kind empty_fun).
+   exact: gsup_spec.
+ Qed.
+ HB.instance Definition _ := PO_bot.Build (bot_gen X) gsup_bot_spec.
+End s.
 Section s.
  Context {X: botPO.type}.
  Section t. 
@@ -506,14 +505,15 @@ Section s.
  HB.instance Definition _bot_gen := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec.
 End s.
 Notation "[gbot_for X ]" := (HB.pack_for (gsupPO.type empty_kind) X (@__bot_gen X)) (only parsing).
+
 Lemma bot_gsup_closed {X: botPO.type} (P: X -> Prop) (Pbot: P bot): @gsup_closed empty_kind (bot_gen X) P.
 Proof. done. Qed.
-HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: X ⊣· Y; }.
+
+HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: X ⊣· Y }.
 HB.builders Context Y of comonadic_bot Y.
  HB.instance Definition _ := comonadic_gsup.Build empty_kind Y (X:=bot_gen X) f.
- HB.instance Definition _ := PO_gbot.Build Y.
+ HB.instance Definition _ := botPO.copy Y (bot_gen Y).
 HB.end.
-
 
 (** *** binary joins as generic sups over 2-element domains *)
 Record pair_kind (X: PO.type) (P: X -> Prop): Type :=
@@ -526,22 +526,23 @@ Proof.
   split.
   - move=>[i [Pi ->]]. rewrite /pair; case: (all_there H i)=>->; auto.
   - move=>[->|->]; apply: in_image; apply H.
-Qed. 
-HB.factory Record PO_gcup X of gsupPO pair_kind X := {}.
-HB.builders Context X of PO_gcup X.
+Qed.
+
+Definition cup_gen (X: Type) := X.
+HB.instance Definition _ (X: PO.type) := PO.on (cup_gen X).
+Section s.
+ Context {X: gsupPO.type pair_kind}.
  Section s.
   Variables x y: X.
-  Definition cup := gsup (discrete bool) full bool_pair_kind (@discretemon (discrete bool) X (bool_fun x y)).
-  Lemma cup_spec: is_sup (pair x y) cup.
+  Definition gsup_cup := gsup (discrete bool) full bool_pair_kind (@discretemon (discrete bool) X (bool_fun x y)).
+  Lemma gsup_cup_spec: is_sup (pair x y) gsup_cup.
   Proof.
     rewrite -(image_pair_kind bool_pair_kind (bool_fun x y)).
     exact: gsup_spec.
   Qed.
  End s.
- HB.instance Definition _ := PO_cup.Build X _ cup_spec.
-HB.end.
-Definition cup_gen (X: Type) := X.
-HB.instance Definition _ (X: PO.type) := PO.on (cup_gen X).
+ HB.instance Definition _ := PO_cup.Build (cup_gen X) _ gsup_cup_spec.
+End s.
 Section s.
  Context {X: joinSemiLattice.type}.
  Section t. 
@@ -552,28 +553,30 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build pair_kind (cup_gen X) _ cup_gsup_spec. 
 End s.
+
 Lemma cup_gsup_closed {X: joinSemiLattice.type} (P: X -> Prop) (Pcup: forall x y, P x -> P y -> P (cup x y)):
   @gsup_closed pair_kind (cup_gen X) P.
 Proof. move=>I Q kIQ h /forall_image H. apply: Pcup; apply: H; apply kIQ. Qed.
-HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: X ⊣· Y; }.
+
+HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: X ⊣· Y }.
 HB.builders Context Y of comonadic_cup Y.
  HB.instance Definition _ := comonadic_gsup.Build pair_kind Y (X:=cup_gen X) f.
- HB.instance Definition _ := PO_gcup.Build Y.
+ HB.instance Definition _ := joinSemiLattice.copy Y (cup_gen Y).
 HB.end.
 
 (** *** chain sups as generic sups over chain domains *)
-HB.factory Record PO_gcsup X of gsupPO (@chain) X := {}.
-HB.builders Context X of PO_gcsup X.
- Section s.
-  Variables (P: X -> Prop) (D: chain P). 
-  Definition csup := gsup X P D types_id.
-  Lemma csup_spec: is_sup P csup.
-  Proof. move: (gsup_spec X P D types_id). by rewrite image_id. Qed.
- End s.
- HB.instance Definition _ := PO_csup.Build X _ csup_spec.
-HB.end.
 Definition csup_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (csup_gen X).
+Section s.
+ Context {X: gsupPO.type (@chain)}.
+ Section s.
+  Variables (P: X -> Prop) (D: chain P). 
+  Definition gsup_csup := gsup X P D types_id.
+  Lemma gsup_csup_spec: is_sup P gsup_csup.
+  Proof. move: (gsup_spec X P D types_id). by rewrite image_id. Qed.
+ End s.
+ HB.instance Definition _ := PO_csup.Build (csup_gen X) _ gsup_csup_spec.
+End s.
 Section s.
  Context {X: CPO.type}.
  Section t. 
@@ -584,28 +587,30 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build (@chain) (csup_gen X) _ csup_gsup_spec. 
 End s.
+
 Lemma csup_gsup_closed {X: CPO.type} (P: X -> Prop) (Pcsup: forall Q (C: chain Q), Q <= P -> P (csup Q C)):
   @gsup_closed (@chain) (csup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcsup. Qed.
-HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: X ⊣· Y; }.
+
+HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: X ⊣· Y }.
 HB.builders Context Y of comonadic_csup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@chain) Y (X:=csup_gen X) f.
- HB.instance Definition _ := PO_gcsup.Build Y.
+ HB.instance Definition _ := CPO.copy Y (csup_gen Y).
 HB.end.
 
 (** *** directed sups as generic sups over directed domains *)
-HB.factory Record PO_gdsup X of gsupPO (@directed) X := {}.
-HB.builders Context X of PO_gdsup X.
- Section s.
-  Variables (P: X -> Prop) (D: directed P). 
-  Definition dsup := gsup X P D types_id.
-  Lemma dsup_spec: is_sup P dsup.
-  Proof. move: (gsup_spec X P D types_id). by rewrite image_id. Qed.
- End s.
- HB.instance Definition _ := PO_dsup.Build X _ dsup_spec.
-HB.end.
 Definition dsup_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (dsup_gen X).
+Section s.
+ Context {X: gsupPO.type (@directed)}.
+ Section s.
+  Variables (P: X -> Prop) (D: directed P). 
+  Definition gsup_dsup := gsup X P D types_id.
+  Lemma gsup_dsup_spec: is_sup P gsup_dsup.
+  Proof. move: (gsup_spec X P D types_id). by rewrite image_id. Qed.
+ End s.
+ HB.instance Definition _ := PO_dsup.Build (dsup_gen X) _ gsup_dsup_spec.
+End s.
 Section s.
  Context {X: dCPO.type}.
  Section t. 
@@ -616,31 +621,34 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build (@directed) (dsup_gen X) _ dsup_gsup_spec. 
 End s.
+
 Lemma dsup_gsup_closed {X: dCPO.type} (P: X -> Prop) (Pdsup: forall Q (D: directed Q), Q <= P -> P (dsup Q D)):
   @gsup_closed (@directed) (dsup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdsup. Qed.
+
 HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: X ⊣· Y; }.
 HB.builders Context Y of comonadic_dsup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@directed) Y (X:=dsup_gen X) f.
- HB.instance Definition _ := PO_gdsup.Build Y.
+ HB.instance Definition _ := dCPO.copy Y (dsup_gen Y).
 HB.end.
 
 (** *** indexed arbitrary sups as generic sups of arbitrary kind *)
 Definition any_kind: gkind := fun _ _ => True.
-HB.factory Record PO_gisup X of gsupPO any_kind X := {}.
-HB.builders Context X of PO_gisup X.
- Section s.
-  Variables (I: Type) (P: I -> Prop) (h: I -> X). 
-  Definition isup :=
-    gsup (discrete (strict I)) P Logic.I
-      (@mk_mon (discrete (strict I)) X h _).
-  Lemma isup_spec: is_sup (image h P) isup.
-  Proof. exact: gsup_spec. Qed.
- End s.
- HB.instance Definition _ := PO_isup.Build X _ isup_spec.
-HB.end.
+
 Definition isup_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (isup_gen X).
+Section s.
+ Context {X: gsupPO.type any_kind}.
+ Section s.
+  Variables (I: Type) (P: I -> Prop) (h: I -> X). 
+  Definition gsup_isup :=
+    gsup (discrete (strict I)) P Logic.I
+      (@mk_mon (discrete (strict I)) X h _).
+  Lemma gsup_isup_spec: is_sup (image h P) gsup_isup.
+  Proof. exact: gsup_spec. Qed.
+ End s.
+ HB.instance Definition _ := PO_isup.Build (isup_gen X) _ gsup_isup_spec.
+End s.
 Section s.
  Context {X: supCL.type}.
  Section t. 
@@ -651,42 +659,37 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build any_kind (isup_gen X) _ isup_gsup_spec. 
 End s.
+
 Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I Q h, image h Q <= P -> P (isup I Q h)):
   @gsup_closed any_kind (isup_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Pisup. Qed.
-HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: X ⊣· Y; }.
+                                    
+HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: X ⊣· Y }.
 HB.builders Context Y of comonadic_isup Y.
  HB.instance Definition _ := comonadic_gsup.Build any_kind Y (X:=isup_gen X) f.
- HB.instance Definition _ := PO_gisup.Build Y.
+ HB.instance Definition _ := supCL.copy Y (isup_gen Y).
 HB.end.
 
-(* TODO: below, we should to avoid that *_gen decorations escape instance definitions.
-   we could use HB.pack (cf [gbot_for X] notation above, but a bug makes it painful:
-   we have to first make a definition and then HB.instance it, otherwise we get
-   Error: Not Yet Implemented: (glob)HOAS for GGenarg
- *)
-Fail HB.instance Definition _ I (X: I -> botPO.type) := PO_gbot.Build (forall i, [gbot_for X i]).
-
 (** liftings to dependent products [forall i, X i] follow generically *)
-HB.instance Definition _ I (X: I -> botPO.type) := PO_gbot.Build (forall i, bot_gen (X i)).
-HB.instance Definition _ I (X: I -> joinSemiLattice.type) := PO_gcup.Build (forall i, cup_gen (X i)). 
-HB.instance Definition _ I (X: I -> CPO.type) := PO_gcsup.Build (forall i, csup_gen (X i)). 
-HB.instance Definition _ I (X: I -> dCPO.type) := PO_gdsup.Build (forall i, dsup_gen (X i)). 
-HB.instance Definition _ I (X: I -> supCL.type) := PO_gisup.Build (forall i, isup_gen (X i)). 
+HB.instance Definition _ I (X: I -> botPO.type) := botPO.copy (forall i, X i) (bot_gen (forall i, bot_gen (X i))).
+HB.instance Definition _ I (X: I -> joinSemiLattice.type) := joinSemiLattice.copy (forall i, X i) (cup_gen (forall i, cup_gen (X i))).
+HB.instance Definition _ I (X: I -> CPO.type) := CPO.copy (forall i, X i) (csup_gen (forall i, csup_gen (X i))).
+HB.instance Definition _ I (X: I -> dCPO.type) := dCPO.copy (forall i, X i) (dsup_gen (forall i, dsup_gen (X i))).
+HB.instance Definition _ I (X: I -> supCL.type) := supCL.copy (forall i, X i) (isup_gen (forall i, isup_gen (X i))).
 
 (** restriction to extensive functions follow generically *)
-HB.instance Definition _ (X: Setoid.type) (Y: botPO.type) := PO_gbot.Build (X -eqv-> bot_gen Y). 
-HB.instance Definition _ (X: Setoid.type) (Y: joinSemiLattice.type) := PO_gcup.Build (X -eqv-> cup_gen Y). 
-HB.instance Definition _ (X: Setoid.type) (Y: CPO.type) := PO_gcsup.Build (X -eqv-> csup_gen Y). 
-HB.instance Definition _ (X: Setoid.type) (Y: dCPO.type) := PO_gdsup.Build (X -eqv-> dsup_gen Y). 
-HB.instance Definition _ (X: Setoid.type) (Y: supCL.type) := PO_gisup.Build (X -eqv-> isup_gen Y). 
+HB.instance Definition _ (X: Setoid.type) (Y: botPO.type) := botPO.copy (X -eqv-> Y) (bot_gen (X -eqv-> bot_gen Y)).
+HB.instance Definition _ (X: Setoid.type) (Y: joinSemiLattice.type) := joinSemiLattice.copy (X -eqv-> Y) (cup_gen (X -eqv-> cup_gen Y)).
+HB.instance Definition _ (X: Setoid.type) (Y: CPO.type) := CPO.copy (X -eqv-> Y) (csup_gen (X -eqv-> csup_gen Y)).
+HB.instance Definition _ (X: Setoid.type) (Y: dCPO.type) := dCPO.copy (X -eqv-> Y) (dsup_gen (X -eqv-> dsup_gen Y)).
+HB.instance Definition _ (X: Setoid.type) (Y: supCL.type) := supCL.copy (X -eqv-> Y) (isup_gen (X -eqv-> isup_gen Y)).
 
 (** restriction to monotone functions follow generically *)
-HB.instance Definition _ (X: PO.type) (Y: botPO.type) := PO_gbot.Build (X -mon-> bot_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := PO_gcup.Build (X -mon-> cup_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: CPO.type) := PO_gcsup.Build (X -mon-> csup_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := PO_gdsup.Build (X -mon-> dsup_gen Y). 
-HB.instance Definition _ (X: PO.type) (Y: supCL.type) := PO_gisup.Build (X -mon-> isup_gen Y). 
+HB.instance Definition _ (X: PO.type) (Y: botPO.type) := botPO.copy (X -mon-> Y) (bot_gen (X -mon-> bot_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := joinSemiLattice.copy (X -mon-> Y) (cup_gen (X -mon-> cup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -mon-> Y) (csup_gen (X -mon-> csup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -mon-> Y) (dsup_gen (X -mon-> dsup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -mon-> Y) (isup_gen (X -mon-> isup_gen Y)).
 
 
 (* Check ((nat->bool)-mon->(nat->Prop)): supCL.type. *)

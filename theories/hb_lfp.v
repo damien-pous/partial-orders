@@ -163,11 +163,11 @@ HB.instance Definition _ k {X: gsupPO.type k} (f: X -> X) :=
     (@Chain_as_sig X f).
 
 HB.instance Definition _ {X: CPO.type} (f: X -> X) :=
-  PO_gcsup.Build (@Chain (csup_gen X) f). 
+  CPO.copy (Chain f) (csup_gen (@Chain (csup_gen X) f)). 
 HB.instance Definition _ {X: dCPO.type} (f: X -> X) :=
-  PO_gdsup.Build (@Chain (dsup_gen X) f). 
+  dCPO.copy (Chain f) (dsup_gen (@Chain (dsup_gen X) f)). 
 HB.instance Definition _ {X: supCL.type} (f: X -> X) :=
-  PO_gisup.Build (@Chain (isup_gen X) f). 
+  supCL.copy (Chain f) (isup_gen (@Chain (isup_gen X) f)). 
 
 Section classical.
  Import Classical.
