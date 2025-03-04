@@ -255,7 +255,16 @@ Section s.
    comonadic_gsup.Build k (X-eqv->Y) (X:=sup_closed_sig gsup_closed_extensional) setoid_morphism_as_sig. 
 End s.
 
-
+(** left adjunctions preserve sups *)
+Lemma adj_gsup {k} {X Y: gsupPO.type k} (f: X ⊣ Y) I P kIP h:
+  f (@gsup k X I P kIP h) ≡ gsup I P kIP (f ∘ h). 
+Proof.
+  apply: from_above=>y.
+  rewrite adj 2!gsup_spec.
+  setoid_rewrite forall_image.
+  apply: forall_iff=>i.
+  by rewrite -adj. 
+Qed.
 
 (** ** standard supremum operations *)
 
@@ -333,6 +342,11 @@ Lemma geq_bot {X: botPO.type} (z: X): bot <= z.
 Proof. by rewrite bot_spec forall_empty. Qed.
 Lemma leq_bot {X: botPO.type} (z: X): z <= bot -> z ≡ bot. (* iff, reversed? *)
 Proof. move=>H. apply: antisym=>//. apply: geq_bot. Qed.
+Lemma adj_bot {X Y: botPO.type} (f: X ⊣ Y): f bot ≡ bot. 
+Proof.
+  apply: from_above=>y.
+  by rewrite adj 2!bot_spec 2!forall_empty.
+Qed.
 
 Lemma geq_cup {X: joinSemiLattice.type} (x y z: X): x <= z -> y <= z -> cup x y <= z.
 Proof. move=>xz yz. apply/geq_is_sup. exact:cup_spec. by rewrite forall_pair. Qed.
@@ -340,28 +354,60 @@ Lemma leq_cup_l {X: joinSemiLattice.type} (x y z: X): z <= x -> z <= cup x y.
 Proof. move=>->. apply/leq_is_sup. exact: cup_spec. by left. Qed.
 Lemma leq_cup_r {X: joinSemiLattice.type} (x y z: X): z <= y -> z <= cup x y.
 Proof. move=>->. apply/leq_is_sup. exact: cup_spec. by right. Qed.
+Lemma adj_cup {X Y: joinSemiLattice.type} (f: X ⊣ Y) (x y: X): f (cup x y) ≡ cup (f x) (f y). 
+Proof.
+  apply: from_above=>z.
+  by rewrite adj 2!cup_spec 2!forall_pair -2!adj.
+Qed.
 
 Lemma geq_csup {X: CPO.type} (P: X -> Prop) C (z: X): (forall x, P x -> x <= z) -> csup P C <= z.
 Proof. apply geq_is_sup, csup_spec. Qed.
 Lemma leq_csup {X: CPO.type} (P: X -> Prop) C: forall z, P z -> z <= csup P C.
 Proof. apply leq_is_sup, csup_spec. Qed.
+Lemma adj_csup {X Y: CPO.type} (f: X ⊣ Y) (P: X -> Prop) C: f (csup P C) ≡ csup (image f P) (chain_image f C). 
+Proof.
+  apply: from_above=>y.
+  rewrite adj 2!csup_spec /=.
+  setoid_rewrite forall_image.
+  apply: forall_iff=>x.
+  by rewrite -adj.
+Qed.
 
 Lemma geq_dsup {X: dCPO.type} (P: X -> Prop) D (z: X): (forall y, P y -> y <= z) -> dsup P D <= z.
 Proof. apply geq_is_sup, dsup_spec. Qed.
 Lemma leq_dsup {X: dCPO.type} (P: X -> Prop) D: forall z, P z -> z <= dsup P D.
 Proof. apply leq_is_sup, dsup_spec. Qed.
-
+Lemma adj_dsup {X Y: dCPO.type} (f: X ⊣ Y) (P: X -> Prop) D: f (dsup P D) ≡ dsup (image f P) (directed_image f D). 
+Proof.
+  apply: from_above=>y.
+  rewrite adj 2!dsup_spec /=.
+  setoid_rewrite forall_image.
+  apply: forall_iff=>x.
+  by rewrite -adj.
+Qed.
+  
 Lemma geq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) (z: X): (forall i, P i -> h i <= z) -> isup I P h <= z.
 Proof. move=>H. apply: geq_is_sup. exact: isup_spec. by setoid_rewrite forall_image. Qed.
 Lemma leq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) i: P i -> h i <= isup I P h.
 Proof. move=>Pi. apply: leq_is_sup. exact: isup_spec. exact: in_image. Qed.
+Lemma adj_isup {X Y: supCL.type} (f: X ⊣ Y) I P h:
+  f (isup I P h) ≡ isup I P (f ∘ h). 
+Proof.
+  apply: from_above=>y.
+  rewrite adj 2!isup_spec/=.
+  setoid_rewrite forall_image.
+  apply: forall_iff=>i.
+  by rewrite -adj. 
+Qed.
 
 Lemma geq_sup {X: supCL.type} (P: X -> Prop) (z: X): (forall y, P y -> y <= z) -> sup P <= z.
 Proof. apply geq_isup. Qed.
 Lemma leq_sup {X: supCL.type} (P: X -> Prop): forall z, P z -> z <= sup P.
 Proof. apply leq_isup. Qed.
+Lemma adj_sup {X Y: supCL.type} (f: X ⊣ Y) P:
+  f (sup P) ≡ isup X P f. 
+Proof. exact: adj_isup. Qed.
 
-(* TODO: much more *)
 
 (** ** concrete instances *)
 
