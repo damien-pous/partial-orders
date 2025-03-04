@@ -32,7 +32,7 @@ Qed.
 
 (** second half of Knaster-Tarski theorem on montone functions,
     also known as Lambek lemma in category theory *)
-Proposition lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
+Proposition is_lfp_fixpoint (f: X -mon-> X) x: is_lfp f x -> f x ≡ x.
 Proof.
   move=>[H H']. apply: antisym'=>//_.
   apply: H'. exact: monotone.
@@ -565,7 +565,7 @@ Section s.
    apply: max_is_sup. exact: Clfp. 
    move=>c Cc. 
      apply: (chain_below_prefixpoints f _ _ (chn Cc)).
-     apply eqv_leq, lfp_fixpoint, is_least_fixpoint.
+     apply eqv_leq, is_lfp_fixpoint, is_least_fixpoint.
  Qed.
 
  Corollary Cdirected: directed (C f).
@@ -573,7 +573,71 @@ Section s.
    move=>c c' Cc Cc'. exists lfp; split. exact: Clfp.
    split; by apply: (leq_is_sup lfp_is_sup_C).
  Qed.
- 
 End s.
 
 End Pataraia.
+Notation lfp := Pataraia.lfp.
+Notation is_least_fixpoint := Pataraia.is_least_fixpoint.
+
+Lemma lfp_pfp {X: dCPO.type} (f: X -mon-> X): f (lfp f) <= lfp f.
+Proof. apply is_least_fixpoint. Qed.
+
+Lemma lfp_ind {X: dCPO.type} (f: X -mon-> X) x: f x <= x -> lfp f <= x.
+Proof. apply is_least_fixpoint. Qed.
+
+Lemma lfp_fixpoint {X: dCPO.type} (f: X -mon-> X): f (lfp f) ≡ lfp f.
+Proof. apply: is_lfp_fixpoint. exact: is_least_fixpoint. Qed.
+
+Instance lfp_leq {X}: Proper (leq ==> leq) (@lfp X).
+Proof. move=>f g fg. apply: (is_lfp_leq fg); exact: is_least_fixpoint. Qed.
+Instance lfp_eqv {X}: Proper (eqv ==> eqv) (@lfp X) := op_leq_eqv_1.
+
+Lemma geq_mon_lfp {X Y: dCPO.type} (f: X-mon->Y) (g: X-mon->X) (h: Y-mon->Y) :
+  h ∘ f <= f ∘ g -> lfp h <= f (lfp g).
+Proof.
+  move=>hf. apply: lfp_ind.
+  setoid_rewrite (hf _)=>/=.
+  apply: monotone. 
+  exact: lfp_pfp.
+Qed.
+
+Lemma rolling_lfp {X Y: dCPO.type} (f: X-mon->Y) (g: Y-mon->X):
+  g (lfp (f ∘ g)) ≡ lfp (g ∘ f).
+Proof.
+  apply: antisym.
+  - rewrite -(lfp_fixpoint (g∘f)). apply: monotone. apply: lfp_ind=>/=.
+    by rewrite -{2}(lfp_fixpoint (g∘f)).
+  - exact: geq_mon_lfp. 
+Qed.
+
+Lemma leq_adj_lfp {X Y: dCPO.type} (f: X ⊣ Y) (g: X-mon->X) (h: Y-mon->Y) :
+  f ∘ g <= h ∘ f -> f (lfp g) <= lfp h.
+Proof.
+  rewrite adj=>fg. apply: lfp_ind.
+  rewrite -adj. setoid_rewrite (fg _)=>/=.
+  setoid_rewrite (adj_counit f _).
+  exact: lfp_pfp.
+Qed.
+
+Lemma adj_lfp {X Y: dCPO.type} (f: X ⊣ Y) (g: X-mon->X) (h: Y-mon->Y) :
+  f ∘ g ≡ h ∘ f -> f (lfp g) ≡ lfp h.
+Proof.
+  move=>/eqv_of_leq[fg hf]. apply: antisym.
+  exact: leq_adj_lfp. exact: geq_mon_lfp. 
+Qed.
+
+Lemma exchange_lfp_leq {X Y: dCPO.type} (f: X ⊣ Y) (g: X-mon->Y) (h: Y-mon->X):
+  f ∘ h ∘ g <= g ∘ h ∘ f -> lfp (f ∘ h) <= lfp (g ∘ h).
+Proof. move=>H. apply: lfp_ind=>/=. rewrite rolling_lfp. exact: leq_adj_lfp. Qed.
+Lemma exchange_lfp_leq' {X Y: dCPO.type} (f: X ⊣ Y) (g: X-mon->Y) (h: Y-mon->X):
+  f ∘ h ∘ g <= g ∘ h ∘ f -> lfp (h ∘ f) <= lfp (h ∘ g).
+Proof.
+  move=>H. rewrite -(rolling_lfp g h) -(rolling_lfp f h).
+  apply: monotone. exact: exchange_lfp_leq.
+Qed.
+Lemma exchange_lfp_eqv {X Y: dCPO.type} (f g: X ⊣ Y) (h: Y-mon->X):
+  f ∘ h ∘ g ≡ g ∘ h ∘ f -> lfp (f ∘ h) ≡ lfp (g ∘ h).
+Proof. move=>/eqv_of_leq[H H']. apply: antisym; exact: exchange_lfp_leq. Qed.
+Lemma exchange_lfp_eqv' {X Y: dCPO.type} (f g: X ⊣ Y) (h: Y-mon->X):
+  f ∘ h ∘ g ≡ g ∘ h ∘ f -> lfp (h ∘ f) ≡ lfp (h ∘ g).
+Proof. move=>/eqv_of_leq[H H']. apply: antisym; exact: exchange_lfp_leq'. Qed.

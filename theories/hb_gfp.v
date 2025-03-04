@@ -26,11 +26,11 @@ Proof. intros; exact: (is_lfp_unique (f:=dualf f) (g:=dualf g)). Qed.
 
 (** second half of Knaster-Tarski theorem on montone functions,
     also known as Lambek lemma in category theory *)
-Proposition gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
-Proof. exact: (lfp_fixpoint (dualf f)). Qed.
+Proposition is_gfp_fixpoint (f: X -mon-> X) x: is_gfp f x -> f x ≡ x.
+Proof. exact: (is_lfp_fixpoint (dualf f)). Qed.
 
 (** characterisation as the supremum of all post-fixpoints (again, for monotone functions) *)
-Lemma is_gfp_sup (f: X -mon-> X) (z: X): is_gfp f z <-> is_sup (fun x => x <= f x) z.
+Proposition is_gfp_sup (f: X -mon-> X) (z: X): is_gfp f z <-> is_sup (fun x => x <= f x) z.
 Proof. exact: (is_lfp_inf (dualf f)). Qed.  
 
 End s.
