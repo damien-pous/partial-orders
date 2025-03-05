@@ -615,7 +615,7 @@ Lemma leq_adj_lfp {X Y: dCPO.type} (f: X ⊣ Y) (g: X-mon->X) (h: Y-mon->Y) :
 Proof.
   rewrite adj=>fg. apply: lfp_ind.
   rewrite -adj. setoid_rewrite (fg _)=>/=.
-  setoid_rewrite (adj_counit f _).
+  setoid_rewrite (ladj_counit f _).
   exact: lfp_pfp.
 Qed.
 

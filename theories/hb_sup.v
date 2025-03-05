@@ -208,11 +208,11 @@ HB.instance Definition _ k A X := @dprod_gsup k A X.
 (** sups from comonadic adjunctions *)
 HB.factory Record comonadic_gsup (k: gkind) Y of PO Y := {
     X: gsupPO.type k;
-    f: X ⊣· Y;
+    f: Y ⊢· X;
   }.
 HB.builders Context k Y of comonadic_gsup k Y.
  Definition gsup I P kIP (h: I -mon-> Y): Y :=
-   f (@gsup k X I P kIP (radj f ∘ h)).
+   ladj f (@gsup k X I P kIP (f ∘ h)).
  Lemma gsup_spec I P kIP (h: I -mon-> Y):
    is_sup (image h P) (@gsup I P kIP h).
  Proof. apply: comonadic_sup. rewrite -image_comp. exact: gsup_spec. Qed.
@@ -539,7 +539,7 @@ Notation "[gbot_for X ]" := (HB.pack_for (gsupPO.type empty_kind) X (@__bot_gen 
 Lemma bot_gsup_closed {X: botPO.type} (P: X -> Prop) (Pbot: P bot): @gsup_closed empty_kind (bot_gen X) P.
 Proof. done. Qed.
 
-HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: X ⊣· Y }.
+HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: Y ⊢· X }.
 HB.builders Context Y of comonadic_bot Y.
  HB.instance Definition _ := comonadic_gsup.Build empty_kind Y (X:=bot_gen X) f.
  HB.instance Definition _ := botPO.copy Y (bot_gen Y).
@@ -588,7 +588,7 @@ Lemma cup_gsup_closed {X: joinSemiLattice.type} (P: X -> Prop) (Pcup: forall x y
   @gsup_closed pair_kind (cup_gen X) P.
 Proof. move=>I Q kIQ h /forall_image H. apply: Pcup; apply: H; apply kIQ. Qed.
 
-HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: X ⊣· Y }.
+HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: Y ⊢· X }.
 HB.builders Context Y of comonadic_cup Y.
  HB.instance Definition _ := comonadic_gsup.Build pair_kind Y (X:=cup_gen X) f.
  HB.instance Definition _ := joinSemiLattice.copy Y (cup_gen Y).
@@ -622,7 +622,7 @@ Lemma csup_gsup_closed {X: CPO.type} (P: X -> Prop) (Pcsup: forall Q (C: chain Q
   @gsup_closed (@chain) (csup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcsup. Qed.
 
-HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: X ⊣· Y }.
+HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: Y ⊢· X }.
 HB.builders Context Y of comonadic_csup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@chain) Y (X:=csup_gen X) f.
  HB.instance Definition _ := CPO.copy Y (csup_gen Y).
@@ -656,7 +656,7 @@ Lemma dsup_gsup_closed {X: dCPO.type} (P: X -> Prop) (Pdsup: forall Q (D: direct
   @gsup_closed (@directed) (dsup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdsup. Qed.
 
-HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: X ⊣· Y; }.
+HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: Y ⊢· X }.
 HB.builders Context Y of comonadic_dsup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@directed) Y (X:=dsup_gen X) f.
  HB.instance Definition _ := dCPO.copy Y (dsup_gen Y).
@@ -694,7 +694,7 @@ Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I Q h, imag
   @gsup_closed any_kind (isup_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Pisup. Qed.
                                     
-HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: X ⊣· Y }.
+HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: Y ⊢· X }.
 HB.builders Context Y of comonadic_isup Y.
  HB.instance Definition _ := comonadic_gsup.Build any_kind Y (X:=isup_gen X) f.
  HB.instance Definition _ := supCL.copy Y (isup_gen Y).

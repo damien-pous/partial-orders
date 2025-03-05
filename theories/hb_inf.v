@@ -116,7 +116,7 @@ HB.factory Record monadic_ginf (k: gkind) Y of PO Y := {
   }.
 HB.builders Context k Y of monadic_ginf k Y.
  Definition ginf I P kIP (h: I -mon-> dual Y): Y :=
-   radj a (@ginf k X I P kIP (radj (dual_adj a) ∘ h)).
+   radj a (@ginf k X I P kIP (dualf a ∘ h)).
  Lemma ginf_spec I P kIP (h: I -mon-> dual Y):
    @is_inf Y (image h P) (@ginf I P kIP h).
  Proof. apply: monadic_inf. rewrite -image_comp. exact: ginf_spec. Qed.
