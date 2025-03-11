@@ -130,7 +130,7 @@ Qed.
 HB.mixin Record isMonotone (X Y: PO.type) f of setoid_morphism X Y f := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
-(* #[primitive] *)
+#[primitive]
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f & }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 Existing Instance monotone.
@@ -158,9 +158,8 @@ HB.instance Definition _ {X} :=
 Notation po_id := (types_id: _ -mon-> _) (only parsing). 
 
 (** composition of morphisms *)
-Definition po_comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := 
-  isMonotone.Build X Z (g ∘ f) _.
-HB.instance Definition _ {X Y Z} f g := @po_comp X Y Z f g.
+HB.instance Definition _ {X Y Z} (f: X-mon->Y) (g: Y-mon->Z) := 
+  isMonotone.Build X Z (g ∘ f) (fun x y xy => monotone _ _ (monotone x y xy)).
 Definition comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := g ∘ f: X-mon->Z.
 Infix "°" := comp. 
 
@@ -171,11 +170,12 @@ Next Obligation. by move=>/=_ _ _. Qed.
 HB.instance Definition _ {X Y} y := @po_const X Y y.
 
 (** dual morphism  *)
-Program Definition po_dualf {X Y} (f: X -mon-> Y)
-  := isMonotone.Build (dual X) (dual Y) (dualf f) _.
-Next Obligation. move=>x y. apply f. Qed.
-HB.instance Definition _ {X Y} f := @po_dualf X Y f.
+HB.instance Definition _ {X Y} (f: X-mon->Y) :=
+  isMonotone.Build (dual X) (dual Y) (dualf f) (fun x y xy => @monotone _ _ f y x xy).
+HB.instance Definition _ {X Y: PO.type} (f: dual X-mon->dual Y) := 
+  isMonotone.Build X Y (dualf' f) (fun x y xy => @monotone _ _ f y x xy).
 
+(** expanded morphisms (unused) *)
 HB.instance Definition _ {X Y} (f: X-mon->Y) :=
   isMonotone.Build (eta X) (eta Y) (etaf f) (@monotone X Y f).
 
@@ -448,6 +448,8 @@ HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
 HB.instance Definition _ {X Y: PO.type} :=
   PO.copy (X-mon->Y) (kernel (@po_morphism.sort X Y)).
 Definition pobody {X Y} := kernelf (@po_morphism.sort X Y).
+Instance po_morphism_leq {X Y}: Proper (leq ==> leq ==> leq) (@po_morphism.sort X Y).
+Proof. move=>f g fg x y xy. rewrite xy. exact: fg. Qed.
 
 Section test.
   Check fun (X: PO.type) (P: X -> Prop) =>
@@ -581,9 +583,14 @@ Proof. cbv. tauto. Qed.
 Lemma Proper_or: Proper (iff ==> iff ==> iff) or. 
 Proof. cbv. tauto. Qed.
 
-
+(** downward/upward closed subsets *)
 Notation downward_closed := (Proper (leq ==> impl)). 
 Notation upward_closed := (Proper (leq --> impl)). 
+
+(** lower/upper bounds of a subset *)
+(* using notations rather than definition to avoid having to unfold every now and then *)
+Notation lower_bound P := (fun x => forall y, P y -> x <= y) (only parsing).
+Notation upper_bound P := (fun x => forall y, P y -> y <= x) (only parsing).
 
 Section s.
 
@@ -591,17 +598,51 @@ Context {X: PO.type}.
 Implicit Types x y z: X. 
 Implicit Types P Q: X -> Prop.
 
-(* TOTHINK: infer [is_sup/is_inf] using typeclasses / declare hints  *)
-Definition is_sup P x := forall z, x <= z <-> forall y, P y -> y <= z.
+(** least/greatest elements satisfying a predicate *)
+Definition least P x := P x /\ lower_bound P x.
+Definition greatest P x := P x /\ upper_bound P x.
 
-Lemma is_sup_alt P z: is_sup P z <-> (forall y, P y -> y <= z) /\ (forall z', (forall y, P y -> y <= z') -> z <= z').
+(** minimal/maximal elements satisfying a predicate
+  (ie, without anyone below/above satisfying the predicate)
+  we use definitions that avoid negations *)
+Definition minimal P x := P x /\ forall y, P y -> y <= x -> x ≡ y.
+Definition maximal P x := P x /\ forall y, P y -> x <= y -> x ≡ y.
+
+(** least upper bounds / greatest lower bounds  *)
+Definition is_sup P x := forall z, x <= z <-> upper_bound P z.
+Definition is_inf P x := forall z, z <= x <-> lower_bound P z.
+
+(** predicates closed under suprema/infima *)
+Definition sup_closed P := forall Q, Q <= P -> forall z, is_sup Q z -> P z.
+Definition inf_closed P := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
+
+Lemma greatest_leq P Q: P <= Q -> forall x y, greatest P x -> greatest Q y -> x <= y.
+Proof. move=>PQ x y [Px _] [_ Hy]. apply: Hy. exact: PQ. Qed.
+
+Lemma greatest_maximal P x: greatest P x -> maximal P x.
+Proof. move=>[Px Hx]. split=>//y Py yx. apply: antisym=>//. by apply: Hx. Qed.
+
+Lemma greatest_maximal_unique P x y: greatest P x -> maximal P y -> x ≡ y.
+Proof. move=>[Px Hx] [Py Hy]. symmetry; auto. Qed.
+
+Lemma greatest_unique P x y: greatest P x -> greatest P y -> x ≡ y.
+Proof. move=>+/greatest_maximal. exact: greatest_maximal_unique. Qed.
+
+Lemma is_sup_alt P z: is_sup P z <-> least (upper_bound P) z.
 Proof.
-  split; intro H. by split; apply H.
+  split; intro H. split; by apply H. 
   intro x. split. intros E y. by rewrite -E; apply H. apply H.
 Qed.
 
-Lemma max_is_sup P x: P x -> (forall y, P y -> y <= x) -> is_sup P x.
-Proof. rewrite is_sup_alt=>Px Sx. split=>//z Sz. by apply: Sz. Qed.
+Lemma greatest_is_sup P x: greatest P x -> is_sup P x.
+Proof. move=>[Px Sx]. rewrite is_sup_alt. split=>//z Sz. by apply: Sz. Qed.
+
+Lemma sup_closed_greatest_is_sup P: sup_closed P -> forall x, greatest P x <-> is_sup P x.
+Proof.
+  move=>HP x. split. exact: greatest_is_sup.
+  move=>H. split. apply: HP. reflexivity. done.
+  by apply H.
+Qed.
 
 Definition covered: relation (X -> Prop) := fun P Q => forall x, P x -> exists y, Q y /\ x <= y.
 #[export] Instance PreOrder_covered: PreOrder covered.
@@ -703,12 +744,25 @@ Proof. dual @leq_from_above. Qed.
 Lemma from_below x y: (forall z, z <= x <-> z <= y) -> x ≡ y.
 Proof. dual @from_above. Qed.
 
-Definition is_inf P x := forall z, z <= x <-> forall y, P y -> z <= y.
+Lemma least_leq P Q: Q <= P -> forall x y, least P x -> least Q y -> x <= y.
+Proof. move=>PQ x y Hx Hy. dual @greatest_leq; eassumption. Qed.
 
-Lemma is_inf_alt P z: is_inf P z <-> (forall y, P y -> z <= y) /\ (forall z', (forall y, P y -> z' <= y) -> z' <= z).
+Lemma least_minimal P x: least P x -> minimal P x.
+Proof. dual @greatest_maximal. Qed.
+
+Lemma least_minimal_unique P x y: least P x -> minimal P y -> x ≡ y.
+Proof. dual @greatest_maximal_unique. Qed.
+
+Lemma least_unique P x y: least P x -> least P y -> x ≡ y.
+Proof. dual @greatest_unique.  Qed.
+
+Lemma is_inf_alt P z: is_inf P z <-> greatest (lower_bound P) z.
 Proof. dual @is_sup_alt. Qed.
-Lemma min_is_inf P x: P x -> (forall y, P y -> x <= y) -> is_inf P x.
-Proof. dual @max_is_sup. Qed.
+Lemma least_is_inf P x: least P x -> is_inf P x.
+Proof. dual @greatest_is_sup. Qed.
+Lemma inf_closed_least_is_inf P: inf_closed P -> forall x, least P x <-> is_inf P x.
+Proof. dual @sup_closed_greatest_is_sup. Qed.
+
 
 Definition cocovered P Q := @covered (dual X) P Q.
 Definition cobicovered P Q := @bicovered (dual X) P Q.

@@ -1,15 +1,16 @@
     Time |  Peak Mem | File Name            
 --------------------------------------------
-0m19.17s | 533348 ko | Total Time / Peak Mem
+0m17.70s | 533464 ko | Total Time / Peak Mem
 --------------------------------------------
-0m03.69s | 522680 ko | hb_sup.vo            
-0m03.45s | 533348 ko | hb_inf.vo            
-0m02.58s | 459940 ko | hb_gfp.vo            
-0m02.01s | 489880 ko | hb_adjunctions.vo    
-0m01.93s | 483652 ko | hb_po.vo             
-0m01.74s | 490392 ko | hb_lattice.vo        
-0m01.59s | 463904 ko | hb_lfp.vo            
-0m00.88s | 444788 ko | hb_setoid.vo         
-0m00.65s | 461608 ko | hb_instances.vo      
-0m00.57s | 442456 ko | hb_total.vo          
-0m00.08s | 143532 ko | preliminaries.vo     
+0m03.62s | 522364 ko | hb_sup.vo            
+0m03.41s | 533464 ko | hb_inf.vo            
+0m02.04s | 489756 ko | hb_adjunctions.vo    
+0m02.00s | 485556 ko | hb_po.vo             
+0m01.71s | 490480 ko | hb_lattice.vo        
+0m01.61s | 464016 ko | hb_lfp.vo            
+0m01.02s | 465640 ko | hb_gfp.vo            
+0m00.95s | 446808 ko | hb_setoid.vo         
+0m00.66s | 461504 ko | hb_instances.vo      
+0m00.60s | 442580 ko | hb_total.vo          
+0m00.07s | 144424 ko | preliminaries.vo     
+0m00.01s |  12680 ko | .CoqMakefile.d       

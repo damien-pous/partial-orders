@@ -100,7 +100,16 @@ old attempts
 
 rethink:
 - use of categories / comp ° \circ
-- isomorphisms
+
+- CPO => dCPO 
+hard, uses AC + ordinals, cf.
+https://topology.lmf.cnrs.fr/markowsky-or-cohn/
+https://topology.lmf.cnrs.fr/iwamuras-lemma-kowalskys-theorem-and-ordinals/
+
+George Markowsky, Chain-complete posets and directed sets with applications, 1976
+
+- BourbakiWitt + AC => ZL
+(already in coq-zorns-lemma)
 
 
 rework&sync sanity checks

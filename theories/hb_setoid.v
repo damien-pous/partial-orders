@@ -75,7 +75,7 @@ Ltac dual t := dual0 t.
 HB.mixin Record isExtensional (X Y: Setoid.type) (f: X -> Y) := {
   #[canonical=no] extensional: Proper (eqv ==> eqv) f
   }.
-(* #[primitive] *)
+#[primitive]
 HB.structure Definition setoid_morphism (X Y: Setoid.type) :=
   { f of isExtensional X Y f }.
 Existing Instance extensional.
@@ -94,9 +94,8 @@ HB.instance Definition _ {X} :=
 Notation setoid_id := (types_id: _ -eqv-> _) (only parsing). 
 
 (** composition of morphisms *)
-Definition setoid_comp {X Y Z} (f: Y-eqv->Z) (g: X-eqv->Y) := 
-  isExtensional.Build X Z (f ∘ g) _.
-HB.instance Definition _ {X Y Z} f g := @setoid_comp X Y Z f g.
+HB.instance Definition _ {X Y Z} (f: Y-eqv->Z) (g: X-eqv->Y) :=
+  isExtensional.Build X Z (f ∘ g) (fun x y xy => extensional _ _ (extensional x y xy)).
 
 (** constant morphism *)
 Program Definition setoid_const {X Y: Setoid.type} (y: Y) :=
@@ -106,18 +105,22 @@ HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 
 (** dual morphisms *)
 Definition dualf {X Y: Type} (f: X -> Y): dual X -> dual Y := f.
-Program Definition setoid_dualf {X Y} (f: X -eqv-> Y)
-  := isExtensional.Build (dual X) (dual Y) (dualf f) extensional.
-HB.instance Definition _ {X Y} f := @setoid_dualf X Y f.
+HB.instance Definition _ {X Y} (f: X -eqv-> Y) :=
+  isExtensional.Build (dual X) (dual Y) (dualf f) (@extensional _ _ f).
 
-(** expanded morphisms *)
+Definition dualf' {X Y: Type} (f: dual X -> dual Y): X -> Y := f.
+HB.instance Definition _ {X Y: Setoid.type} (f: dual X -eqv-> dual Y) :=
+  isExtensional.Build X Y (dualf' f) (@extensional _ _ f).
+
+(** expanded morphisms (unused) *)
 Definition etaf {X Y: Type} (f: X -> Y): eta X -> eta Y := f.
-HB.instance Definition _ {X Y} (f: X-eqv->Y) := isExtensional.Build (eta X) (eta Y) (etaf f) (@extensional X Y f).
+HB.instance Definition _ {X Y} (f: X-eqv->Y) :=
+  isExtensional.Build (eta X) (eta Y) (etaf f) (@extensional X Y f).
 
 Section s.
-  Variables (X Y: Setoid.type) (f: X-eqv->Y).
-  Check same (X-eqv->Y) (etaf f) (dualf f).
-  Check same (X-eqv->Y) (etaf f) (dualf (dualf f)).
+  Variables (X Y: Setoid.type) (f: X-eqv->Y) (g: Y-eqv->X).
+  Check same (X-eqv->Y) f (dualf' (dualf f)).
+  Check same (Y-eqv->Y) (f ∘ g) (dualf' (dualf f ∘ dualf g)).
 End s.
 
 (** ** strict setoids, where [eqv=eq] *)
@@ -303,6 +306,8 @@ HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
 HB.instance Definition _ {X Y: Setoid.type} :=
   Setoid.copy (X-eqv->Y) (kernel (@setoid_morphism.sort X Y)).
 Definition setoidbody {X Y} := kernelf (@setoid_morphism.sort X Y).
+Instance setoid_morphism_eqv {X Y}: Proper (eqv ==> eqv ==> eqv) (@setoid_morphism.sort X Y).
+Proof. move=>f g fg x y xy. rewrite xy. exact: fg. Qed.
 
 (** extensionality of functional composition,
     provided the outer function is extensive *)

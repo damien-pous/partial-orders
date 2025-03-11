@@ -33,7 +33,7 @@ Qed.
 Lemma is_sup_eqv P p Q q: is_sup P p -> is_sup Q q -> bicovered P Q -> p≡q.
 Proof. rewrite eqv_of_leq=>??[??]. eauto using is_sup_leq. Qed.
 
-Lemma supU (P: X -> Prop) x y: is_sup P x -> is_sup P y -> x ≡ y.
+Lemma is_sup_unique (P: X -> Prop) x y: is_sup P x -> is_sup P y -> x ≡ y.
 Proof. intros; eapply is_sup_eqv; eauto. Qed.
 
 Lemma is_sup_single x: is_sup (eq x) x.
@@ -47,8 +47,6 @@ Proof.
    clear=>P Q PQ H t Pt. by case: (PQ _ Pt)=>s [? ->]; apply H. 
   split; apply E; apply PQ. 
 Qed.
-
-Definition sup_closed (P: X -> Prop) := forall Q, Q <= P -> forall z, is_sup Q z -> P z.
 
 Lemma sup_closed_impl (P Q: X -> Prop): Proper (leq --> leq) P -> sup_closed Q -> sup_closed (fun x => P x -> Q x).
 Proof.
@@ -84,7 +82,7 @@ Proof.
   apply: Proper_iff=>//{x}.
   split=>H x Px.
   - by apply H; apply: sc_inj.
-  - elim: Px=>//Q QP IH y Hy. by apply Hy, IH. 
+  - elim: Px=>//Q QP IH y Hy. apply Hy. exact: IH.
 Qed.
 
 Lemma is_sup_image {A} (f: A -> X) (P: A -> Prop) x:
