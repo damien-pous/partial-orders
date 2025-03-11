@@ -1,7 +1,5 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
-Require Import Arith.
-Require Export hb_lattice.
+From Stdlib Require Import Arith.
+Require Export lattice.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

@@ -1,7 +1,5 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
-Require Export hb_sup.
-Require Import hb_adjunctions.
+Require Export sups.
+Require Import adjunction.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -218,54 +216,26 @@ HB.builders Context X of PO_inf X.
   HB.instance Definition _ := PO_iinf.Build X _ iinf_spec.
 HB.end.
 
-(** ** duality (partially broken) *)
+(** ** duality *)
 
-HB.instance Definition _po_top_on_dual (X: botPO.type) := PO_top.Build (dual X) bot_spec. 
-HB.instance Definition _po_bot_on_dual (X: topPO.type) := PO_bot.Build (dual X) top_spec. 
+(** due to a bug in HB, needs
+    https://github.com/Tragicus/hierarchy-builder/tree/uniq-mixin    
+ *)
 
-HB.instance Definition _po_cap_on_dual (X: joinSemiLattice.type) := PO_cap.Build (dual X) _ cup_spec.
-HB.instance Definition _po_cup_on_dual (X: meetSemiLattice.type) := PO_cup.Build (dual X) _ cap_spec.
+HB.instance Definition _ (X: botPO.type) := PO_top.Build (dual X) bot_spec. 
+HB.instance Definition _ (X: topPO.type) := PO_bot.Build (dual X) top_spec. 
 
-HB.instance Definition _po_cinf_on_dual (X: CPO.type) := PO_cinf.Build (dual X) _ csup_spec.
-HB.instance Definition _po_csup_on_dual (X: CPO'.type) := PO_csup.Build (dual X) _ cinf_spec.
+HB.instance Definition _ (X: joinSemiLattice.type) := PO_cap.Build (dual X) _ cup_spec.
+HB.instance Definition _ (X: meetSemiLattice.type) := PO_cup.Build (dual X) _ cap_spec.
 
-(* #[log] *)
-HB.instance Definition _po_dinf_on_dual (X: dCPO.type) := PO_dinf.Build (dual X) _ dsup_spec.
-Fail HB.instance Definition _ (X: dCPO'.type) := PO_dsup.Build (dual X) _ dinf_spec. 
-(* BUG HB *)
-(* attempt by hand: possibly more CS should be added *)
-Definition _po_dsup_on_dual (X: dCPO'.type) := PO_dsup.Build (dual X) _ dinf_spec.
-Canonical Structure _dCPO_on_dual (X: dCPO'.type) :=
-{|
-  dCPO.sort := dual X;
-  dCPO.class :=
-    {|
-      dCPO.hb_setoid_isSetoid_mixin := _setoid_on_dual X;
-      dCPO.hb_po_isPO_mixin := _po_on_dual;
-      dCPO.hb_sup_PO_bot_mixin := _po_bot_on_dual X;
-      dCPO.hb_sup_PO_csup_mixin := _po_csup_on_dual X;
-      dCPO.hb_sup_PO_dsup_mixin := _po_dsup_on_dual X;
-    |}
-|}.
+HB.instance Definition _ (X: CPO.type) := PO_cinf.Build (dual X) _ csup_spec.
+HB.instance Definition _ (X: CPO'.type) := PO_csup.Build (dual X) _ cinf_spec.
 
-HB.instance Definition _po_iinf_on_dual (X: supCL.type) := PO_iinf.Build (dual X) _ isup_spec.
-Fail HB.instance Definition _ (X: infCL.type) := PO_isup.Build (dual X) _ iinf_spec.
-(* BUG HB, idem *)
-Definition _po_isup_on_dual (X: infCL.type) := PO_isup.Build (dual X) _ iinf_spec.
-Canonical Structure _supCL_on_dual (X: infCL.type) :=
-{|
-  supCL.sort := dual X;
-  supCL.class :=
-    {|
-      supCL.hb_setoid_isSetoid_mixin := _setoid_on_dual X;
-      supCL.hb_po_isPO_mixin := _po_on_dual;
-      supCL.hb_sup_PO_bot_mixin := _po_bot_on_dual X;
-      supCL.hb_sup_PO_cup_mixin := _po_cup_on_dual X;
-      supCL.hb_sup_PO_csup_mixin := _po_csup_on_dual X;
-      supCL.hb_sup_PO_dsup_mixin := _po_dsup_on_dual X;
-      supCL.hb_sup_PO_isup_mixin := _po_isup_on_dual X;
-    |}
-|}.
+HB.instance Definition _ (X: dCPO.type) := PO_dinf.Build (dual X) _ dsup_spec.
+HB.instance Definition _ (X: dCPO'.type) := PO_dsup.Build (dual X) _ dinf_spec. 
+
+HB.instance Definition _ (X: supCL.type) := PO_iinf.Build (dual X) _ isup_spec.
+HB.instance Definition _ (X: infCL.type) := PO_isup.Build (dual X) _ iinf_spec.
 
 
 (** ** theory *)

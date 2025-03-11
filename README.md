@@ -1,92 +1,282 @@
-# Partial Orders
+# MENU
+
+preliminaries
+ 
+setoids
+ strict [dec]
+ setoid morphism
+ instances (trivial (0,1), strict (2,nat), Prop, dprod, +, *, sig, sigT?, extfun)
+ 
+partial orders
+ discrete
+ po morphisms
+ instances (discrete (0,1), 2, nat, Prop, dprod, +s, *s, sig, sigT?, extfun, monfun)
+ duality
+ chains, directed sets
+
+total
+ chain classic [dec]
+
+adjunctions
+ 
+sups (colimites en catégories)
+ is_sup
+ generic sups and their constructions
+ {bot,cup,csup,dsup,isup}
+
+infs (by duality)
+ is_inf
+ generic infs and their constructions
+ {top,cap,cinf,dinf,iinf}
+ 
+lattices
+ [modular, distributive, residuated, completely distributive]
+
+fixpoints (lfp/gfp)
+ Bourbaki-Witt, Pataria
+
+closures
+
+# DUALITY/GENERICITY
+
+- for setoid/partial orders/... dual is involutive only up to eta
+- for morphisms dual is definitionaly involutive (to exploit duality in abstract fixpoint theories)
+
+in sup,    gsup    <=> std sups
+            dprod       +
+            mon/ext     + 
+
+in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon functions)
+            dprod      (copypaste)
+			mon/ext    (copypaste)
+			
+           std sup <-> std inf (easy but HB bug)
+		    dprod       +
+			mon/ext     ?
+			
+		   ginf    <=> std inf (boring, unless duality)
+			dprod       +
+			mon/ext     +
+			
+# FILES
+
+- theories/preliminaries.v   elementary helpers
+- theories/setoid.v          setoids
+- theories/partialorder.v    partial orders
+- theories/totalorder.v      chains & total orders
+- theories/adjunction.v      adjunctions & isomorphisms
+- theories/sups.v            suprema
+- theories/infs.v            infima
+- theories/lattice.v         lattices
+- theories/instances.v       various instances
+- theories/lfp.v             least fixpoints 
+- theories/gfp.v             greatest fixpoints 
+
+sanity checks
+- tests/*.v
+
+# REQUIREMENTS
+
+- Rocq 9.0 (see branch 8.20 for backports)
+- coq-hierarchy-builder as fixed in
+  https://github.com/Tragicus/hierarchy-builder/tree/uniq-mixin
+
+
+# TODO
+
+rethink:
+- use of categories / comp ° \circ
+
+- CPO => dCPO 
+hard, uses AC + ordinals, cf.
+https://topology.lmf.cnrs.fr/markowsky-or-cohn/
+https://topology.lmf.cnrs.fr/iwamuras-lemma-kowalskys-theorem-and-ordinals/
+
+George Markowsky, Chain-complete posets and directed sets with applications, 1976
+
+- BourbakiWitt + AC => ZL
+(already in coq-zorns-lemma)
+
+
+rework&sync sanity checks
+
+don't use HB for morphisms?
+
+revive the mixed cs+tc (split_tc.v)
+do a pure typeclass attempt?
+
+smart constructor for SPO/IPO/GPO ?
+GPO products/sums/option
+
+distributive GPO 
+Heyting algebras ? (on top of SPO sB or ???)
+Boolean algebras ? (on top of GPO (sB,sB), or ???)
+
+setoid_congruence tactic
+lattice tactics
+more on adjunctions
+
+cast_setoid
+
+strong setoids (where eqv=eq)
+decidable eqv, leq
+finite
+
+
+## later
+non-empty chains/directed/arbitrary?
+and/or I-indexed variants? (omega)
+
+in classical logic, 
+ chain-complete => directed-complete
+
+
+# MISC
+
+- efficiency: 
+  HB needs 15s where CS only needs 4s, 
+  but HB seems faster on the user side: hb_chain needs 2.1s where chain needs 2.5s
+
+- merge Setoid and PO ??  (probably not: lex_prod and prod share setoid their setoid structure)
+
+- split ops and laws:
+  + was forced in relation aglebra?
+  + less unification problems?
+  - less mathematical
+  - more arguments
+  - laws come into the way anyways, for building the GPO of monotone functions
+
+- laws via CS vs. laws via TC
+  - with CS, cannot mix derived ops/concepts and lemmas in the same section
+  - faster with TC (for now)
+
+- separate setoid from PO:
+  + same equality structure for prod and lex_prod
+  - one more layer
+
+- separate PO from SI-PO ?
+  + PO remains without level arguments
+  - one more layer
+
+- levels and inheritance
+  concrete instances could be polymorphic, but not abstract assumptions
+  -> anticipate coercions in all lemma statements
+  
+  concrete instances with a fixed concrete level
+  definitions and lemmas explicitly upward closed (forall l, k<<l -> )
+
+- duality: difficulty with monotone functions: [X-mon->Y] =/= [dual X-mon-> dual Y] due to the switch in monotonicity statement proofs 
 
 
 
-## Getting started
+suprema
+(infima by duality)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+is_sup: (X -> Prop) -> X -> Prop 
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- empty                 bot:   0            *
+- singleton             id:                 *
+- binary                cup:   X²           *     A->X
+- finite                      (list X)      bool, A->X
+- decidable                   (X->bool)     bool, F->X
+- all                   sup:  (X->Prop)     Prop, A->X
+- I                           (I -> X)
 
-## Add your files
+- directed                    {D: X->Prop | directed D}
+- omega-increasing            {D: nat->X  | increasing D}
+- chain                       {C: X->Prop | chain C}
+- omega-chain                 {C: nat->X  | chain C}
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- decidable? [X -> bool]                           bool
 
-```
-cd existing_repo
-git remote add origin https://framagit.org/dpous/partial-orders.git
-git branch -M main
-git push -uf origin main
-```
+[below: to be linked with directed]
+- chains
+- omega-chains
+- increasing omega-sequences
 
-## Integrate with your tools
 
-- [ ] [Set up project integrations](https://framagit.org/dpous/partial-orders/-/settings/integrations)
+omega-increasing => omega-chain => chain => directed
 
-## Collaborate with your team
+classical logic: 
+  omega-chain => omega-increasing
+  chain-complete => directed-complete ()
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+Props:                                                                                closed under
+chain P: forall x y, P x -> P y -> x<=y \/ y <=x                                    intersection
+directed P: forall x y, P x -> P y -> exists z, P z /\ x<=z /\ y <=z                union
+non-empty P: exists x, P x                                                          union
+finite P: exists l, forall x, P x -> In x l                                         union, intersection
 
-## Test and Deploy
+Sizes:
+below T P: exists f: T -> X, P == im f
+exact T P: exists f: T -> X, inj f /\ P == im f
 
-Use the built-in continuous integration in GitLab.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+=================
 
-***
+(X,≡) setoid 
+ -> unit, nat, bool, Prop, +, *, list, forall, 
+ -> category of setoids and setoid-morphisms
 
-# Editing this README
+(X,≡,<=) partial order
+ -> unit, nat, bool, Prop, +, +', *, *', list, forall, 
+ -> po-enriched category of pos and monotone functions
+    (a sub-category of the above one)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+(X,≡,<=,infs,sups) I,S-complete partial order (cpo) [with I,S: (X->Prop)->Type]
+ -> some instances
+ -> infs and sups in the above po-enriched category (for some I,S at least)
+ -> sub-category of I,S-preserving monotone functions
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
 
-## Name
-Choose a self-explaining name for your project.
+[S-sup: forall (P: X -> Prop), S P -> X]
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+[S P = empty P]                     -> bot
+[S P = { x,y: X | P ≡ pair x y }]   -> cup
+[S P = { l: list X | P ≡ In l }]    -> fcup
+[S P = chain P]                     -> csup
+[S P = directed P]                  -> dsup
+[S P = True]                          -> sup
+[S P = decidable P] 
+[S P = { f: X -> bool| reflect f P }]
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+[S_h P = forall b, b\in h -> S_b P]
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+(X,≡,<=) partial order 
+ -> unit, nat, bool, Prop, +, +', *, *', forall, 
+ 
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
 
-## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+(X,≡) setoid
+(X,≡,<=) partial order  (po)
+(X,≡,<=,gsup,gsinf) S,I-complete po
+
+setoid-morphisms
+po-morphisms
+S,I-po-morphisms
+
+
+Hom    Type Setoid PO S,I-PO
+Type        Setoid PO S,I-PO
+Setoid        ^.   ^.   ^.
+PO            ^    ^.   ^.
+S,I-PO        ^    ^    ^.
+
+comp   Type Setoid PO     S,I-PO
+Type   Type Type   Type   Type
+Setoid Type Setoid Setoid Setoid
+PO     Type Setoid PO     PO
+S,I-PO Type Setoid PO     S,I-PO
+
+comp: eqv/Setoid => eqv => eqv
+comp: leq/Setoid => eqv => leq
+comp: leq/PO     => leq => leq
+

@@ -1,7 +1,6 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
-Require Export hb_po.
-Require Import hb_adjunctions.
+From Stdlib Require Eqdep_dec.
+Require Export partialorder.
+Require Import adjunction.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -125,7 +124,7 @@ Proof.
   - set h := fun b =>
                match A_dec a b return X b with
                | left E => match E in _=c return X c with
-                          | eq_refl _ => z
+                          | eq_refl => z
                           end
                | _ => f b
                end.

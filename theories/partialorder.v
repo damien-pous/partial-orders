@@ -1,6 +1,5 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
-Require Export hb_setoid.
+From Stdlib Require Bool.
+Require Export setoid.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

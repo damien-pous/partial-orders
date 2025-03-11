@@ -1,6 +1,4 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
-Require Export hb_po.
+Require Export partialorder.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

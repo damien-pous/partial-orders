@@ -6,32 +6,16 @@
 # end-user library
 -R theories/ PartialOrders
 theories/preliminaries.v
-theories/hb_setoid.v
-theories/hb_po.v
-theories/hb_total.v
-theories/hb_adjunctions.v
-theories/hb_sup.v
-theories/hb_inf.v
-theories/hb_lattice.v
-theories/hb_instances.v
-theories/hb_lfp.v
-theories/hb_gfp.v
-# theories/hb_spo.v
-# theories/hb_ipo.v
-# theories/hb_gpo.v
-# theories/hb_categories.v
-# theories/hb_chain.v
-# theories/hb_chain_alt.v
-
-# # theories/cs_setoid.v
-# theories/cs_po.v
-# theories/cs_adjunctions.v
-# theories/cs_categories.v
-# theories/cs_spo.v
-# theories/cs_ipo.v
-# theories/cs_gpo.v
-# theories/cs_instances.v
-# theories/cs_chain.v
+theories/setoid.v
+theories/partialorder.v
+theories/totalorder.v
+theories/adjunction.v
+theories/sups.v
+theories/infs.v
+theories/lattice.v
+theories/instances.v
+theories/lfp.v
+theories/gfp.v
 
 # # tests & sanity checks
 # -R tests/ PartialOrdersTests
@@ -41,12 +25,6 @@ theories/hb_gfp.v
 # tests/hb_sanity_ipo.v
 # tests/hb_sanity_gpo.v
 # tests/hb_sanity.v
-# tests/cs_sanity_setoid.v
-# tests/cs_sanity_po.v
-# tests/cs_sanity_spo.v
-# tests/cs_sanity_ipo.v
-# tests/cs_sanity_gpo.v
-# tests/cs_sanity.v
 
 # # previous attempts/variations, to be removed at some point, left here to ensure they compile
 # attic/level_attempts.v

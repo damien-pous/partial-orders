@@ -1,7 +1,6 @@
-From HB Require Import structures.
 From Stdlib Require Classical.
-Require Import ssreflect ssrfun ssrbool.
-Require Export hb_inf hb_lfp.
+Require Export infs adjunction.
+Require Import lfp.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.

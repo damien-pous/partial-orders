@@ -1,5 +1,3 @@
-From HB Require Import structures.
-Require Import ssreflect ssrfun ssrbool.
 Require Export preliminaries.
 
 Set Implicit Arguments.

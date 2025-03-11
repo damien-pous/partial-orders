@@ -1,6 +1,7 @@
-Require Import StrictProp.  
-Require Import ssreflect ssrfun ssrbool.
-Require Export Setoid Morphisms Basics.
+From Stdlib Require Import StrictProp.
+From HB Require Export structures.
+From mathcomp Require Export ssreflect ssrfun ssrbool.
+From Stdlib Require Export Setoid Morphisms Basics.
 
 Set Implicit Arguments.
 
@@ -66,7 +67,7 @@ Notation same T X Y := (eq_refl: @eq T X Y).
 (** testing that two terms unify *)
 Notation unify M N := (same _ M N).
 
-(** a definitionally proof irrelevant version of [is_true] *)
+(** a definitionally proof irrelevant version of [is_true] (no longer used) *)
 Definition is_true' (b: bool) : SProp := if b then sUnit else sEmpty.
 Definition is_true'_eq_true b : is_true' b -> true = b
   := match b with
