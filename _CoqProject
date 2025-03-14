@@ -28,8 +28,7 @@ tests/sanity_gfp.v
 tests/sanity_lattice.v
 tests/sanity.v
 
-# # previous attempts/variations, to be removed at some point, left here to ensure they compile
-# attic/level_attempts.v
+## previous attempts/variations, to be removed at some point, left here to ensure they compile
 # attic/alone.v
-# attic/split.v
+# attic/split.v  # no longer compiles
 # attic/split_tc.v

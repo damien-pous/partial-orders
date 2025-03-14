@@ -50,7 +50,7 @@ Module Setoid.
     lsort:> ops;
     #[canonical=no] Equivalence_eqv: Equivalence (eqv lsort);
  }.
- Arguments validate _%type: clear implicits.
+ Arguments validate _%_type: clear implicits.
  Notation cast o e := (validate o (Equivalence_eqv e)) (only parsing). 
  
  Structure morphism (X Y: ops) := build_morphism {
@@ -241,7 +241,7 @@ Module PO.
     #[canonical=no] PreOrder_leq: PreOrder (leq lsort);
     #[canonical=no] eqv_of_leq: forall x y, x ≡ y <-> (leq lsort x y /\ leq lsort y x)
  }.
- Arguments validate _%type: clear implicits.
+ Arguments validate _%_type: clear implicits.
  Notation cast' o e := (validate o (PreOrder_leq e) (@eqv_of_leq e)) (only parsing). 
 
  Program Canonical Structure to_Setoid_laws (X: laws) := Setoid.validate (to_Setoid X) _.
@@ -1017,7 +1017,7 @@ Module GPO.
     #[canonical=no] eqv_of_leq: forall x y, x ≡ y <-> (@PO.leq lsort x y /\ @PO.leq lsort y x);
     #[canonical=no] gsup_spec: forall k, forall kl, forall x: args k lsort, is_sup (setof x) (gsup k kl x)
  }.
- Arguments validate_ {_} _%type.
+ Arguments validate_ {_} _%_type.
  Notation cast' o X := (validate_ o (@PreOrder_leq _ X) (@eqv_of_leq _ X) (@gsup_spec _ X)) (only parsing). 
  Notation validate X H := (validate_ X%type (@PO.PreOrder_leq X%type) (@PO.eqv_of_leq X%type) H).
  Notation validate' X X' H := (validate_ X' (@PO.PreOrder_leq X%type) (@PO.eqv_of_leq X%type) H).

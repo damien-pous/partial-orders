@@ -200,14 +200,14 @@ Module PO.
  Notation cast T o := (let o' := o in build_ T (eqv o') (leq o')) (only parsing). 
  
  Class laws (X: ops) := {
-    PreOrder_leq:> PreOrder (@leq X);
+    PreOrder_leq:: PreOrder (@leq X);
     eqv_of_leq: forall x y, x ≡ y <-> (@leq X x y /\ @leq X y x)
  }.
 
  #[export] Instance to_Setoid_laws X (L: laws X): Setoid.laws X.
  Proof.
    constructor. 
-   - move=>?. by rewrite eqv_of_leq. 
+   - move=>?. by rewrite eqv_of_leq.
    - move=>??. by rewrite 2!eqv_of_leq; tauto.
    - move=>? y?. by rewrite 3!eqv_of_leq; split; transitivity y; tauto.
  Qed.
