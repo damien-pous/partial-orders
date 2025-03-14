@@ -113,29 +113,24 @@ Qed.
 
 (** class of monotone functions (i.e., po morphisms) *)
 #[primitive]
-HB.mixin Record isMonotone (X Y: PO.type) f of setoid_morphism X Y f := {
+HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
-(* TODO: rework to put setoid_morphism dependency only in the mixin *)
-#[primitive]
-HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f & }.
-Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
-Existing Instance monotone.
-
-HB.factory Record Fun_isMonotone (X Y: PO.type) (f: X -> Y) := {
-    #[canonical=no] monotone: Proper (leq ==> leq) f
-  }.
-HB.builders Context X Y f (F : Fun_isMonotone X Y f).
+(** monotone functions are always extensive *)
+HB.builders Context X Y f (F : isMonotone X Y f).
   HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
-  HB.instance Definition _ :=
-    isMonotone.Build X Y f monotone.
 HB.end.
+(** thanks to the above builder, [po_morphism] inherits from [setoid_morphim] *)  
+#[primitive]
+HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
+Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
+Existing Instance monotone.
 
 Section s.
   Context {X Y: PO.type}.
   Definition mk_mon (f: X -> Y) (Hf: Proper (leq ==> leq) f) := f.
-  HB.instance Definition _ f Hf := Fun_isMonotone.Build X Y (@mk_mon f Hf) Hf.
+  HB.instance Definition _ f Hf := isMonotone.Build X Y (@mk_mon f Hf) Hf.
 End s.
 Arguments mk_mon {_ _}. 
 

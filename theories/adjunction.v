@@ -8,50 +8,50 @@ Local Unset Transparent Obligations.
 
 Definition adjunction {X Y: PO.type} l r := forall (x: X) (y: Y), l x <= y <-> x <= r y.
 
+Lemma adj_id {X}: @adjunction X X types_id types_id.
+Proof. done. Qed.
+
+Lemma adj_comp {X Y Z}
+  l r (lr: @adjunction X Y l r)
+  k s (ks: @adjunction Y Z k s)
+  : adjunction (k ∘ l) (r ∘ s).
+Proof. move=>x z. by rewrite ks lr. Qed.
+
+
 (** we would like to index adjunctions by both underlying functions, but HB only supports one index
     we duplicate structures to use inferrence on both functions *)
 
 (** ** indexed by the left adjoint *)
-HB.mixin Record isLeftAdjoint X Y f of po_morphism X Y f :=
+HB.mixin Record isLeftAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] radj: Y -> X; 
     #[canonical=no] adj: adjunction f radj }.
-HB.structure Definition leftAdjunction X Y := {f of isLeftAdjoint X Y f & }.
+(** adjoints are automatically monotone *)
+HB.builders Context (X Y: PO.type) f of isLeftAdjoint X Y f.
+  Lemma monotone: Proper (leq ==> leq) f.
+  Proof. move=>x y xy. apply/adj. rewrite xy. by apply/adj. Qed.
+  HB.instance Definition _ := isMonotone.Build X Y f monotone.
+HB.end.
+HB.structure Definition leftAdjunction X Y := {f of isLeftAdjoint X Y f }.
 Arguments radj {_ _}.
 Infix "⊣" := leftAdjunction.type (at level 79).
 
-(** adjoints are automatically monotone *)
-HB.factory Record Fun_isLeftAdjoint (X Y: PO.type) (f: X -> Y) :=
-  { #[canonical=no] radj: Y -> X; 
-    #[canonical=no] adj: adjunction f radj }.
-HB.builders Context (X Y: PO.type) f of Fun_isLeftAdjoint X Y f.
-  Lemma monotone: Proper (leq ==> leq) f.
-  Proof. move=>x y xy. apply/adj. rewrite xy. by apply/adj. Qed.
-  HB.instance Definition _ := Fun_isMonotone.Build X Y f monotone.
-  HB.instance Definition _ := isLeftAdjoint.Build X Y f adj.
-HB.end.
-
 (** ** indexed by the right adjoint *)
-HB.mixin Record isRightAdjoint X Y f of po_morphism X Y f :=
+HB.mixin Record isRightAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] ladj: Y -> X; 
     #[canonical=no] adj': adjunction ladj f }.
-HB.structure Definition rightAdjunction X Y := {f of isRightAdjoint X Y f & }.
+(** adjoints are automatically monotone *)
+HB.builders Context (X Y: PO.type) f of isRightAdjoint X Y f.
+  Lemma monotone: Proper (leq ==> leq) f.
+  Proof. move=>x y xy. apply/adj'. rewrite -xy. by apply/adj'. Qed.
+  HB.instance Definition _ := isMonotone.Build X Y f monotone.
+HB.end.
+HB.structure Definition rightAdjunction X Y := {f of isRightAdjoint X Y f }.
 Arguments ladj {_ _}.
 Infix "⊢" := rightAdjunction.type (at level 79).
 
-(** adjoints are automatically monotone *)
-HB.factory Record Fun_isRightAdjoint (X Y: PO.type) (f: X -> Y) :=
-  { #[canonical=no] ladj: Y -> X; 
-    #[canonical=no] adj': adjunction ladj f }.
-HB.builders Context (X Y: PO.type) f of Fun_isRightAdjoint X Y f.
-  Lemma monotone: Proper (leq ==> leq) f.
-  Proof. move=>x y xy. apply/adj'. rewrite -xy. by apply/adj'. Qed.
-  HB.instance Definition _ := Fun_isMonotone.Build X Y f monotone.
-  HB.instance Definition _ := isRightAdjoint.Build X Y f adj'.
-HB.end.
-
 (** ** cross-instances, for jumping from one index to the other *)
-HB.instance Definition _ X Y (f: X ⊣ Y) := Fun_isRightAdjoint.Build Y X (radj f) (@adj _ _ f).
-HB.instance Definition _ X Y (f: X ⊢ Y) := Fun_isLeftAdjoint.Build Y X (ladj f) (@adj' _ _ f).
+HB.instance Definition _ X Y (f: X ⊣ Y) := isRightAdjoint.Build Y X (radj f) (@adj _ _ f).
+HB.instance Definition _ X Y (f: X ⊢ Y) := isLeftAdjoint.Build Y X (ladj f) (@adj' _ _ f).
 
 (** ** duality (note the difference with cross-instances) *)
 Lemma dual_adjunction {X Y l r}: @adjunction X Y l r -> @adjunction (dual Y) (dual X) r l.
@@ -66,25 +66,14 @@ HB.instance Definition _ X Y (f: X ⊢ Y) :=
 (** ** operations *)
 
 (** identity *)
-Lemma adj_id {X}: @adjunction X X types_id types_id.
-Proof. done. Qed.
 HB.instance Definition _ {X} := isLeftAdjoint.Build X X types_id adj_id. 
 HB.instance Definition _ {X} := isRightAdjoint.Build X X types_id adj_id. 
 
 (** composition *)
-Lemma ladj_comp {X Y Z} (xy: X ⊣ Y) (yz: Y ⊣ Z):
-  adjunction (yz ∘ xy) (radj xy ∘ radj yz).
-Proof. move=>x y. by rewrite 2!adj. Qed.
 HB.instance Definition _ {X Y Z} (xy: X ⊣ Y) (yz: Y ⊣ Z) :=
-  isLeftAdjoint.Build X Z (yz ∘ xy) (ladj_comp xy yz).
-Lemma radj_comp {X Y Z} (xy: X ⊢ Y) (yz: Y ⊢ Z):
-  adjunction (ladj xy ∘ ladj yz) (yz ∘ xy).
-Proof.
-  apply: dual_adjunction'. 
-  exact: (ladj_comp (dualf xy) (dualf yz)).
-Qed.
+  isLeftAdjoint.Build X Z (yz ∘ xy) (adj_comp adj adj).
 HB.instance Definition _ {X Y Z} (xy: X ⊢ Y) (yz: Y ⊢ Z) :=
-  isRightAdjoint.Build X Z (yz ∘ xy) (radj_comp xy yz). 
+  isRightAdjoint.Build X Z (yz ∘ xy) (adj_comp adj' adj'). 
 
 (** ** properties *)
 
@@ -219,18 +208,7 @@ Proof. exact: (monadic_inf (dualf f)). Qed.
     - f is the right adjoint of a comonadic adjunction [ladj f, f]
     and we need to ask that [ladj f] and [radj f] are the same    
  *)
-HB.mixin Record mcomadj_isIso X Y f of MonadicAdjunction X Y f & CoMonadicAdjunction X Y f := 
-  { #[canonical=no] radj_ladj: radj f ≡ ladj f }.
-HB.structure Definition Iso X Y := {i of mcomadj_isIso X Y i & }.
-Infix "≃" := Iso.type (at level 70).
-Definition inv {X Y} (i: X ≃ Y) := radj i. 
-Notation "i ^-1" := (inv i).
-
-(** reflexivity *)
-HB.instance Definition _ X := mcomadj_isIso.Build X X types_id eqv_refl. 
-
-(** (co)monadicity actually follows from [radj f ≡ ladj f] *)
-HB.factory Record biadj_isIso X Y f of leftAdjunction X Y f & rightAdjunction X Y f := 
+HB.mixin Record biadj_isIso X Y f of leftAdjunction X Y f & rightAdjunction X Y f := 
   { #[canonical=no] radj_ladj: radj f ≡ ladj f }.
 HB.builders Context X Y i of biadj_isIso X Y i.
   Lemma monadic: ladj_monad i ≡ types_id.
@@ -245,8 +223,14 @@ HB.builders Context X Y i of biadj_isIso X Y i.
     rewrite /radj_comonad/=-(radj_ladj (i x)). exact: radj_unit.
   Qed.
   HB.instance Definition _ := isCoMonadic.Build X Y i comonadic.
-  HB.instance Definition _ := mcomadj_isIso.Build X Y i radj_ladj.
 HB.end. 
+HB.structure Definition Iso X Y := {i of biadj_isIso X Y i & }.
+Infix "≃" := Iso.type (at level 70).
+Definition inv {X Y} (i: X ≃ Y) := radj i. 
+Notation "i ^-1" := (inv i).
+
+(** reflexivity *)
+HB.instance Definition _ X := biadj_isIso.Build X X types_id eqv_refl. 
 
 (** alternative factory, where we `manually' provide the two adjunctions *)
 HB.factory Record isIso (X Y: PO.type) (i: X -> Y) := {
@@ -255,7 +239,7 @@ HB.factory Record isIso (X Y: PO.type) (i: X -> Y) := {
     ji: adjunction j i;
   }.
 HB.builders Context X Y i of isIso X Y i.
-  HB.instance Definition _ := Fun_isLeftAdjoint.Build X Y i ij.
+  HB.instance Definition _ := isLeftAdjoint.Build X Y i ij.
   HB.instance Definition _ := isRightAdjoint.Build X Y i ji.
   HB.instance Definition _ := biadj_isIso.Build X Y i eqv_refl.
 HB.end.
@@ -291,9 +275,7 @@ HB.instance Definition _ X Y f g fg gf := @isIso.Build X Y (@mk_iso X Y f g fg g
 
 (** eta expansion of a partial order (HB/structures specific)  *)
 Program Definition iso_eta X: X ≃ eta X :=
-  @mk_iso X (eta X) types_id types_id _ _. 
-Next Obligation. done. Qed.
-Next Obligation. done. Qed.
+  @mk_iso X (eta X) types_id types_id adj adj.
 
 (** pseudo involutivity of duality *)
 Definition dualI (X: PO.type): X ≃ dual (dual X) := iso_eta X.
