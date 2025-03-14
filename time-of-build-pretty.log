@@ -1,15 +1,23 @@
-    Time |  Peak Mem | File Name            
---------------------------------------------
-0m16.40s | 463072 ko | Total Time / Peak Mem
---------------------------------------------
-0m03.29s | 441884 ko | sups.vo              
-0m03.17s | 457720 ko | infs.vo              
-0m01.94s | 410620 ko | partialorder.vo      
-0m01.84s | 412008 ko | adjunction.vo        
-0m01.59s | 423596 ko | lfp.vo               
-0m01.44s | 413092 ko | lattice.vo           
-0m00.97s | 427756 ko | gfp.vo               
-0m00.80s | 367808 ko | setoid.vo            
-0m00.63s | 463072 ko | instances.vo         
-0m00.61s | 365168 ko | totalorder.vo        
-0m00.12s | 227012 ko | preliminaries.vo     
+    Time |  Peak Mem | File Name                   
+---------------------------------------------------
+0m17.50s | 463364 ko | Total Time / Peak Mem       
+---------------------------------------------------
+0m03.30s | 439900 ko | sups.vo                     
+0m03.07s | 457560 ko | infs.vo                     
+0m01.72s | 412180 ko | adjunction.vo               
+0m01.62s | 410736 ko | partialorder.vo             
+0m01.53s | 423544 ko | lfp.vo                      
+0m01.39s | 413324 ko | lattice.vo                  
+0m00.95s | 429920 ko | gfp.vo                      
+0m00.78s | 372144 ko | setoid.vo                   
+0m00.71s | 463364 ko | instances.vo                
+0m00.42s | 365216 ko | totalorder.vo               
+0m00.37s | 356524 ko | tests/sanity_partialorder.vo
+0m00.29s | 350896 ko | tests/sanity_setoid.vo      
+0m00.27s | 413264 ko | tests/sanity_gfp.vo         
+0m00.22s | 330576 ko | tests/sanity.vo             
+0m00.22s | 362044 ko | tests/sanity_lfp.vo         
+0m00.20s | 377804 ko | tests/sanity_lattice.vo     
+0m00.17s | 349016 ko | tests/sanity_infs.vo        
+0m00.14s | 291716 ko | tests/sanity_sups.vo        
+0m00.13s | 227736 ko | preliminaries.vo            

@@ -12,19 +12,21 @@ theories/totalorder.v
 theories/adjunction.v
 theories/sups.v
 theories/infs.v
-theories/lattice.v
-theories/instances.v
 theories/lfp.v
 theories/gfp.v
+theories/lattice.v
+theories/instances.v
 
-# # tests & sanity checks
-# -R tests/ PartialOrdersTests
-# tests/hb_sanity_setoid.v
-# tests/hb_sanity_po.v
-# tests/hb_sanity_spo.v
-# tests/hb_sanity_ipo.v
-# tests/hb_sanity_gpo.v
-# tests/hb_sanity.v
+# tests & sanity checks
+-R tests/ PartialOrdersTests
+tests/sanity_setoid.v
+tests/sanity_partialorder.v
+tests/sanity_sups.v
+tests/sanity_infs.v
+tests/sanity_lfp.v
+tests/sanity_gfp.v
+tests/sanity_lattice.v
+tests/sanity.v
 
 # # previous attempts/variations, to be removed at some point, left here to ensure they compile
 # attic/level_attempts.v

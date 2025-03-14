@@ -67,9 +67,6 @@ End s.
 
 (** theory of such least fixpoint operators *)
 
-Check fun (X: PO.type) (f: X-eqv->X) => same (X-eqv->X) f (dualf' (dualf f)).
-Check fun (X: PO.type) (f: X-mon->X) => same (X-mon->X) f (dualf' (dualf f)).
-
 Lemma gfp_pfp {X: gfpPO.type} (f: X -mon-> X): is_postfp f (gfp f).
 Proof. exact: (lfp_pfp (dualf f)). Qed.
 

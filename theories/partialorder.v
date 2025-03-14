@@ -66,11 +66,6 @@ Instance PartialOrder_eqv_leq {X: PO.type}: @PartialOrder X eqv _ leq _.
 Proof. exact: eqv_of_leq. Qed.
 Instance leq_rw {X: PO.type}: @RewriteRelation X leq := {}.
 
-(* fails if PO.type is defined with #[primitive] *)
-Goal forall X: PO.type, forall x y: X, x ≡ y -> x <= y.
-  intros. rewrite H.
-Abort.
-
 Lemma leq_refl {X: PO.type} (x: X): x <= x.
 Proof. exact: reflexivity. Qed.
 Arguments leq_refl {_ _}, {_}.
@@ -97,14 +92,6 @@ Section dual.
  HB.instance Definition _po_on_dual := isPO.Build (dual X) po_dual.
 End dual.
 
-Section s.
-  Variable X: PO.type.
-  Fail Check same PO.type X (dual (dual X)). (* needs PO.type to be #[primitive] *)
-  Fail Check same PO.type X (eta X).         (* sad but purpose of [eta] *)
-  Check same PO.type (eta X) (dual (dual X)). (* point of [eta] *)
-  Check same PO.type (eta X) (eta (dual (dual X))).
-End s.
-
 
 (** ** morphisms *)
 
@@ -129,6 +116,7 @@ Qed.
 HB.mixin Record isMonotone (X Y: PO.type) f of setoid_morphism X Y f := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
+(* TODO: rework to put setoid_morphism dependency only in the mixin *)
 #[primitive]
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f & }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
@@ -159,8 +147,8 @@ Notation po_id := (types_id: _ -mon-> _) (only parsing).
 (** composition of morphisms *)
 HB.instance Definition _ {X Y Z} (f: X-mon->Y) (g: Y-mon->Z) := 
   isMonotone.Build X Z (g ∘ f) (fun x y xy => monotone _ _ (monotone x y xy)).
-Definition comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := g ∘ f: X-mon->Z.
-Infix "°" := comp. 
+Definition po_comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := g ∘ f: X-mon->Z.
+Infix "°" := po_comp. 
 
 (** constant morphism *)
 Program Definition po_const {X Y: PO.type} (y: Y) :=
@@ -177,24 +165,6 @@ HB.instance Definition _ {X Y: PO.type} (f: dual X-mon->dual Y) :=
 (** expanded morphisms (unused) *)
 HB.instance Definition _ {X Y} (f: X-mon->Y) :=
   isMonotone.Build (eta X) (eta Y) (etaf f) (@monotone X Y f).
-
-Section s.
-  (* Variables (X Y: Setoid.type) (f: X-eqv->Y). *)
-  (* Check same (X-eqv->Y) f (dualf f). *)
-  Variables (X Y: PO.type) (f: X-mon->Y) (f': dual X-mon->dual Y).
-  Check same PO.type (eta X) (eta (dual (dual X))).
-  Fail Check unify (X-mon->Y) (dual X-mon->dual Y). (* has to fail *)
-  Fail Check unify (X-mon->Y) (dual (dual X)-mon->dual (dual Y)). (* sad *)
-  Check unify (eta X-mon->eta Y) (dual (dual X)-mon->dual (dual Y)). (* good *)
-  Check unify (eta X-mon->eta Y) (eta (dual (dual X))-mon->eta (dual (dual Y))). (* good *)
-  Check same (X-mon->Y) f (dualf f). (* triché car ramené à [X-mon->Y] *)
-  Check same (X-mon->Y) f (dualf (dualf f)).
-  Check same (eta X-mon->eta Y) (etaf f) (etaf (dualf f)). (* triché aussi *)
-  Check same (eta X-mon->eta Y) (etaf f) (etaf (dualf (dualf f))).
-  Fail Check dualf f': X-mon->Y. (* dommage *)
-  Fail Check dualf f': eta X-mon->eta Y. (* dommage *)
-  Fail Check etaf (dualf f'): eta X-mon->eta Y. (* dommage *)
-End s.
 
 
 (** ** strict partial orders, where [eqv=eq] *)
@@ -294,16 +264,6 @@ End dprod.
 Arguments leq_dprod {_ _} _ _/. 
 HB.instance Definition _ {A} {X: A -> PO.type} (a: A) :=
   isMonotone.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
-
-Section test.
-  (* above [po_dprod] lemma is defined carefully, so that we get *)
-  Check fun A (X: forall a: A , PO.type) => same Setoid.type (forall a, X a) (dual (forall a, dual (X a))).
-  Check fun A (X: forall a: A , PO.type) => same PO.type (forall a, X a) (dual (forall a, dual (X a))).
-  Check fun (X: Type) (Y: PO.type) =>
-          same PO.type
-            (X -> dual Y)
-            (dual (X -> Y)).
-End test.
 
 (** products, sums, option *)
 Section s.
@@ -421,18 +381,6 @@ Section kernel.
 End kernel.
 Arguments leq_kern [_ _] _ _ _/.
 
-Section test.
-  (* [kern_po] should be defined carefully, and left transparent, so that we have:  *)
-  Check fun X Y (Z: PO.type) (f: X -> Y) (g: Y -> Z) =>
-          same PO.type
-            (kernel (X:=kernel g) f)
-            (kernel (g ∘ f)).
-  Check fun A (X: PO.type) (f: A -> X) =>
-          same PO.type
-            (kernel (f: A -> dual X))
-            (dual (kernel f)).
-End test.
-
 (** sub partial orders as a special case *)
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   PO.copy (sig P) (kernel sval).
@@ -450,42 +398,17 @@ Definition pobody {X Y} := kernelf (@po_morphism.sort X Y).
 Instance po_morphism_leq {X Y}: Proper (leq ==> leq ==> leq) (@po_morphism.sort X Y).
 Proof. move=>f g fg x y xy. rewrite xy. exact: fg. Qed.
 
-Section test.
-  Check fun (X: PO.type) (P: X -> Prop) =>
-          same PO.type
-            (sig (P: dual X -> Prop))
-            (dual (sig P)).
-  Check fun (X: Setoid.type) (Y: PO.type) =>
-          same PO.type
-            (X -eqv-> dual Y)
-            (dual (X -eqv-> Y)).
-  Check fun (X Y: PO.type) =>
-          same PO.type
-            (eta X -mon-> eta Y)
-            (dual (dual X) -mon-> dual (dual Y)).
-End test.
-
 
 (* TOHINK: useful as instances? *)
 Lemma types_comp_leq {X Y Z}:
   Proper (@leq (Y-mon->Z) ==> leq ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x=>/=. rewrite (gg' x). apply: ff'. Qed.
-
 Lemma types_comp_leq_eqv {X Y} {Z: PO.type}: Proper (@leq (Y-eqv->Z) ==> eqv ==> leq) (@types_comp X Y Z).
 Proof. move=>/=f f' ff' g g' gg' x/=. rewrite (gg' x). apply: ff'. Qed.
 
-Instance comp_leq {X Y Z: PO.type}: Proper (leq ==> leq ==> leq) (@comp X Y Z).
+Instance po_comp_leq {X Y Z: PO.type}: Proper (leq ==> leq ==> leq) (@po_comp X Y Z).
 Proof. apply: types_comp_leq. Qed.
-
-
-
-(* Check forall X: PO.type, forall f: hom X X, f ° f ≡ f ° f. *)
-(* Fail Check forall f: hom Prop Prop, True. *)
-(* Check forall f: Prop -mon-> Prop, f ° f ≡ f ° f. *)
-(* Check forall f: Prop -mon-> Prop, f ° f <= f ° f. *)
-(* Check forall f: Prop -mon-> Prop, f ° f <= id. *)
-(* Fail Check forall f: Prop -mon-> Prop, id <= f ° f. *)
-(* Check forall f: Prop -mon-> Prop, id <=[_-mon->_] f ° f. *)
+Instance po_comp_eqv {X Y Z: PO.type}: Proper (eqv ==> eqv ==> eqv) (@po_comp X Y Z) := op_leq_eqv_2.
 
 
 Instance const_leq {X} {Y: PO.type}:

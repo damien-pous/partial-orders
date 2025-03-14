@@ -698,6 +698,7 @@ HB.builders Context Y of comonadic_isup Y.
 HB.end.
 
 (** liftings to dependent products [forall i, X i] follow generically *)
+(* HB.instance Definition _ I (X: I -> botPO.type) := botPO.copy (forall i, X i) (bot_gen (forall i, [gbot_for (X i)])). *)
 HB.instance Definition _ I (X: I -> botPO.type) := botPO.copy (forall i, X i) (bot_gen (forall i, bot_gen (X i))).
 HB.instance Definition _ I (X: I -> joinSemiLattice.type) := joinSemiLattice.copy (forall i, X i) (cup_gen (forall i, cup_gen (X i))).
 HB.instance Definition _ I (X: I -> CPO.type) := CPO.copy (forall i, X i) (csup_gen (forall i, csup_gen (X i))).
@@ -717,6 +718,3 @@ HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := joinSemiLatti
 HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -mon-> Y) (csup_gen (X -mon-> csup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -mon-> Y) (dsup_gen (X -mon-> dsup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -mon-> Y) (isup_gen (X -mon-> isup_gen Y)).
-
-
-(* Check ((nat->bool)-mon->(nat->Prop)): supCL.type. *)
