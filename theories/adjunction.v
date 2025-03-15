@@ -257,7 +257,7 @@ Proof. exact: monadic. Qed.
 
 (** symmetry *)
 Lemma adj_iso_inv {X Y} (i: X ≃ Y) : adjunction i^-1 i.
-Proof. move=>y x. by rewrite -adj' (inv_alt i y). Qed.
+Proof. move=>y x. rewrite (inv_alt i y). exact: adj'. Qed.
 HB.instance Definition _ X Y (i: X ≃ Y) := @isIso.Build Y X (i^-1) i (adj_iso_inv i) adj.
 
 (** transitivity *)

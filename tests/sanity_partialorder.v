@@ -51,10 +51,11 @@ Section s.
 End s.
 
 
-(* duality on po morphisms is definitionally involutive *)
+(* duality on po morphisms is definitionally involutive up to eta *)
 Section s.
   Variables (X Y: PO.type) (f: X-mon->Y) (g: Y-mon->X).
-  Check same (X-mon->Y) f (dualf' (dualf f)).
+  Fail Check same (X-mon->Y) f (dualf' (dualf f)).
+  Check same (X-mon->Y) (etaf f) (dualf' (dualf f)).
   (* even through composition *)
   Check same (Y-mon->Y) (f ∘ g) (dualf' (dualf f ∘ dualf g)).
 
@@ -104,72 +105,93 @@ Section rewriting.
   Variables (X: PO.type) (f g: X -mon-> X) (x y: X)
     (fg: f <= g)
     (fg': f <=[X-mon->X] g)
-    (xy: x <= y).
+    (fgE: f ≡ g)
+    (xy: x <= y)
+    (xyE: x ≡ y).
 
   Goal (f ∘ f) x <= f (f x).
-  Proof. rewrite {1}xy. Abort.
+  Proof. rewrite {1}xy. rewrite -xyE. Abort.
 
   Goal const x <= g.
   Proof.
-    rewrite xy.
+    rewrite xy -xyE.
   Abort.
 
   Goal const x <=[X-mon->X] g.
   Proof.
+    (* fails because here the goal is an equality of setoid_moprhisms *)
     Fail rewrite xy.
+    Fail rewrite xyE.
+    move=>x'/=.
+    rewrite xy -xyE.
+    Restart.
+    change (const x <=[X->X] g).
+    rewrite xy -xyE. 
   Abort.
   
   Goal (f ∘ g) x <= x.
   Proof.
-    Fail rewrite fg. 
-    Fail rewrite fg'.
+    rewrite fg. Restart.
+    Fail rewrite fgE. Restart.
+    (* surprising that it works here, given that it fails in sanity_setoid *)     
+    rewrite fg'. Restart.
+    (* fails for lack of a match *)
     Fail rewrite (fg _).
+    Fail rewrite (fgE _).
     Fail rewrite (fg' _).
     setoid_rewrite (fg _). 
   Abort.
   
   Goal (g ∘ f) x <= x.
   Proof.
-    Fail rewrite fg. 
-    Fail rewrite fg'. 
+    rewrite fg. Restart.
+    Fail rewrite fgE. Restart.
+    (* idem *)    
+    rewrite fg'. Restart.
+    (* fails for lack of a match *)
     Fail rewrite (fg _).
+    Fail rewrite (fgE _).
     Fail rewrite (fg' _).
-    Fail setoid_rewrite (fg _).
   Abort.
 
   Goal f (f x) <= x.
   Proof.
-    Fail rewrite fg. 
-    Fail rewrite fg'. 
-    Fail rewrite (fg _). 
-    Fail rewrite (fg' _).
-    setoid_rewrite (fg _). 
-    setoid_rewrite (fg _). 
+    rewrite fg. Restart. 
+    Fail rewrite fgE. Restart. 
+    (* idem *)    
+    rewrite fg'. Restart.
+    rewrite 2!(fg _). Restart.
+    rewrite 2!(fg' _). Restart.
   Abort.
   
-  Goal f ∘ g <= g ∘ f.
+  Goal f ∘ g <= types_id.
   Proof.
-    Fail rewrite {1}fg.
-    Fail rewrite {1}fg'. 
-    Fail setoid_rewrite fg. 
-    Fail setoid_rewrite fg' at 1. 
+    Fail rewrite fg.
+    Fail rewrite fgE.
+    Fail rewrite fg'.
   Abort.
 
-  Goal f ∘ g <=[X->X] g ∘ f.
+  Goal f ∘ g <=[X->X] types_id.
   Proof.
-    Fail rewrite {1}fg.
-    Fail rewrite {1}fg'. 
-    Fail setoid_rewrite fg. 
-    Fail setoid_rewrite fg' at 1. 
+    Fail rewrite fg.
+    Fail rewrite fgE.
+    Fail rewrite fg'. 
   Abort.
 
   (* note the upper ° (vs ∘) *)
-  Goal f ° g <= g ° f.
+  Goal f ° g <= types_id.
   Proof.
-    rewrite {1}fg. Restart. 
-    rewrite {1}fg'. Restart. 
-    setoid_rewrite fg at 1. Restart.
-    setoid_rewrite fg' at 1. 
+    rewrite fg. Restart.
+    rewrite fgE. Restart.
+    (* idem *)
+    rewrite fg'. Restart.
+  Abort.
+
+  Goal f ° g <=[X->X] types_id.
+  Proof.
+    Fail rewrite fg.
+    Fail rewrite fgE.
+    Fail rewrite fg'.
   Abort.
   
 End rewriting.

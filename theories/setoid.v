@@ -68,9 +68,10 @@ HB.mixin Record isExtensional (X Y: Setoid.type) (f: X -> Y) := {
   #[canonical=no] extensional: Proper (eqv ==> eqv) f
   }.
 
-(* setting this structure with primitive records yields definitionally involutive duality on morphisms,
-   but it breaks some rewriting *)
-#[primitive]
+(* setting this structure as primitive would give us definitionally
+   involutive duality on morphisms, but it breaks some ssreflect
+   rewriting and is considered fragile for CS inferrence
+   thus we rely on explicit eta expansions at the few places where we need abstract duality *)
 HB.structure Definition setoid_morphism (X Y: Setoid.type) :=
   { f of isExtensional X Y f }.
 Existing Instance extensional.
@@ -103,15 +104,19 @@ HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 Definition dualf {X Y: Type} (f: X -> Y): dual X -> dual Y := f.
 HB.instance Definition _ {X Y} (f: X -eqv-> Y) :=
   isExtensional.Build (dual X) (dual Y) (dualf f) (@extensional _ _ f).
-
 Definition dualf' {X Y: Type} (f: dual X -> dual Y): X -> Y := f.
 HB.instance Definition _ {X Y: Setoid.type} (f: dual X -eqv-> dual Y) :=
   isExtensional.Build X Y (dualf' f) (@extensional _ _ f).
+(* would be definitional if setoid_morphism were declared #[primitive] *)
+Lemma dualfE {X Y}: forall f: X-eqv->Y, f = dualf' (dualf f).
+Proof. by case. Qed.
 
-(** expanded morphisms (unused) *)
-Definition etaf {X Y: Type} (f: X -> Y): eta X -> eta Y := f.
-HB.instance Definition _ {X Y} (f: X-eqv->Y) :=
-  isExtensional.Build (eta X) (eta Y) (etaf f) (@extensional X Y f).
+(** eta expanded morphisms *)
+Definition etaf {X Y: Type} (f: X -> Y): X -> Y := f.
+HB.instance Definition _ {X Y} (f: X-eqv->Y) := setoid_morphism.on (etaf f).
+(* would be definitional if setoid_morphism were declared #[primitive] *)
+Lemma etafE {X Y}: forall f: X -eqv-> Y, f = etaf f.
+Proof. by case. Qed.
 
 (** ** strict setoids, where [eqv=eq] *)
 

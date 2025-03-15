@@ -68,13 +68,13 @@ End s.
 (** theory of such least fixpoint operators *)
 
 Lemma gfp_pfp {X: gfpPO.type} (f: X -mon-> X): is_postfp f (gfp f).
-Proof. exact: (lfp_pfp (dualf f)). Qed.
+Proof. dualf. exact: (lfp_pfp (dualf f)). Qed.
 
 Lemma gfp_ind {X: gfpPO.type} (f: X -mon-> X) x: x <= f x -> x <= gfp f.
-Proof. exact: (lfp_ind (dualf f)). Qed.
+Proof. dualf. exact: (lfp_ind (dualf f)). Qed.
 
 Lemma gfp_fixpoint {X: gfpPO.type} (f: X -mon-> X): is_fp f (gfp f).
-Proof. exact: (lfp_fixpoint (dualf f)). Qed.
+Proof. dualf. exact: (lfp_fixpoint (dualf f)). Qed.
 
 Instance gfp_leq {X}: Proper (leq ==> leq) (@gfp X).
 Proof. move=>f g fg. apply: (is_gfp_leq fg); exact: gfpE. Qed.
@@ -82,33 +82,33 @@ Instance gfp_eqv {X}: Proper (eqv ==> eqv) (@gfp X) := op_leq_eqv_1.
 
 Lemma leq_mon_gfp {X Y: gfpPO.type} (f: X-mon->Y) (g: X-mon->X) (h: Y-mon->Y) :
   f ∘ g <= h ∘ f -> f (gfp g) <= gfp h.
-Proof. exact: (geq_mon_lfp (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (geq_mon_lfp (dualf f) (dualf g) (dualf h)). Qed.
 
 Lemma rolling_gfp {X Y: gfpPO.type} (f: X-mon->Y) (g: Y-mon->X):
   g (gfp (f ∘ g)) ≡ gfp (g ∘ f).
-Proof. exact: (rolling_lfp (dualf f) (dualf g)). Qed.
+Proof. dualf. exact: (rolling_lfp (dualf f) (dualf g)). Qed.
 
 Lemma geq_adj_gfp {X Y: gfpPO.type} (f: X ⊢ Y) (g: X-mon->X) (h: Y-mon->Y) :
   h ∘ f <= f ∘ g -> gfp h <= f (gfp g).
-Proof. exact: (leq_adj_lfp (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (leq_adj_lfp (dualf f) (dualf g) (dualf h)). Qed.
 
 Lemma adj_gfp {X Y: gfpPO.type} (f: X ⊢ Y) (g: X-mon->X) (h: Y-mon->Y) :
   f ∘ g ≡ h ∘ f -> f (gfp g) ≡ gfp h.
-Proof. exact: (adj_lfp (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (adj_lfp (dualf f) (dualf g) (dualf h)). Qed.
 
 Lemma exchange_gfp_leq {X Y: gfpPO.type} (f: X ⊢ Y) (g: X-mon->Y) (h: Y-mon->X):
   g ∘ h ∘ f <= f ∘ h ∘ g  -> gfp (g ∘ h) <= gfp (f ∘ h).
-Proof. exact: (exchange_lfp_leq (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (exchange_lfp_leq (dualf f) (dualf g) (dualf h)). Qed.
 Lemma exchange_gfp_leq' {X Y: gfpPO.type} (f: X ⊢ Y) (g: X-mon->Y) (h: Y-mon->X):
   g ∘ h ∘ f <= f ∘ h ∘ g  -> gfp (h ∘ g) <= gfp (h ∘ f).
-Proof. exact: (exchange_lfp_leq' (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (exchange_lfp_leq' (dualf f) (dualf g) (dualf h)). Qed.
 
 Lemma exchange_gfp_eqv {X Y: gfpPO.type} (f g: X ⊢ Y) (h: Y-mon->X):
   f ∘ h ∘ g ≡ g ∘ h ∘ f -> gfp (f ∘ h) ≡ gfp (g ∘ h).
-Proof. exact: (exchange_lfp_eqv (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (exchange_lfp_eqv (dualf f) (dualf g) (dualf h)). Qed.
 Lemma exchange_gfp_eqv' {X Y: gfpPO.type} (f g: X ⊢ Y) (h: Y-mon->X):
   f ∘ h ∘ g ≡ g ∘ h ∘ f -> gfp (h ∘ f) ≡ gfp (h ∘ g).
-Proof. exact: (exchange_lfp_eqv' (dualf f) (dualf g) (dualf h)). Qed.
+Proof. dualf. exact: (exchange_lfp_eqv' (dualf f) (dualf g) (dualf h)). Qed.
 
 
 Module BourbakiWitt.

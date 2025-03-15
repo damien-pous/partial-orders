@@ -117,12 +117,11 @@ HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
 (** monotone functions are always extensive *)
-HB.builders Context X Y f (F : isMonotone X Y f).
+HB.builders Context X Y f of isMonotone X Y f.
   HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
 HB.end.
 (** thanks to the above builder, [po_morphism] inherits from [setoid_morphim] *)  
-#[primitive]
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 Existing Instance monotone.
@@ -156,10 +155,25 @@ HB.instance Definition _ {X Y} (f: X-mon->Y) :=
   isMonotone.Build (dual X) (dual Y) (dualf f) (fun x y xy => @monotone _ _ f y x xy).
 HB.instance Definition _ {X Y: PO.type} (f: dual X-mon->dual Y) := 
   isMonotone.Build X Y (dualf' f) (fun x y xy => @monotone _ _ f y x xy).
+(* would be definitional if po_morphism were declared #[primitive] *)
+Lemma dualfE {X Y}: forall f: X-mon->Y, f = dualf' (dualf f).
+Proof. by case. Qed.
+(** dualising all monotone functions from the current context *)
+Ltac dualf :=
+  match goal with
+  | f: ?X -mon-> ?Y |- _ =>
+      rewrite (dualfE f);
+      change (X-mon->Y) with (types_id (X-mon->Y)) in f;
+      dualf;
+      unfold types_id in f
+  | _ => idtac
+  end.
 
-(** expanded morphisms (unused) *)
-HB.instance Definition _ {X Y} (f: X-mon->Y) :=
-  isMonotone.Build (eta X) (eta Y) (etaf f) (@monotone X Y f).
+(** eta expanded morphisms *)
+HB.instance Definition _ {X Y} (f: X-mon->Y) := po_morphism.on (etaf f).
+(* would be definitional if po_morphism were declared #[primitive] *)
+Lemma etafE {X Y}: forall f: X -mon-> Y, f = etaf f.
+Proof. by case. Qed.
 
 
 (** ** strict partial orders, where [eqv=eq] *)
