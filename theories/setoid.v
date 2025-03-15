@@ -45,11 +45,11 @@ Hint Extern 0 (_ ≡ _) =>
 (** trivial for setoids, but required for subsequent layers *)
 
 Definition dual (X: Type) := X.
-HB.instance Definition _setoid_on_dual (X: Setoid.type) := Setoid.on (dual X).
+HB.instance Definition _ (X: Setoid.type) := Setoid.on (dual X).
 
 (* for expanding a structure, to help with duality *)
 Definition eta (X: Type) := X.
-HB.instance Definition _setoid_on_eta (X: Setoid.type) := Setoid.on (eta X).
+HB.instance Definition _ (X: Setoid.type) := Setoid.on (eta X).
 
 Ltac dual0 t :=
   match type of t with

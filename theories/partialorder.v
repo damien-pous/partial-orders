@@ -77,7 +77,7 @@ Proof. by move=>->. Qed.
 Hint Extern 0 (_ <= _) => exact: (eqv_refl _): core.
 
 
-(** ** duality *)
+(** ** duality / eta expansion *)
 
 Section dual.
  Context {X: PO.type}.
@@ -89,9 +89,8 @@ Section dual.
   exact: (eqv_of_geq_ (@PO_axm X)).
   exact: (eqv_of_leq_ (@PO_axm X)).
  Defined.
- HB.instance Definition _po_on_dual := isPO.Build (dual X) po_dual.
+ HB.instance Definition _ := isPO.Build (dual X) po_dual.
 End dual.
-
 
 (** ** morphisms *)
 

@@ -525,7 +525,7 @@ Section s.
   Proof. rewrite (image_empty_kind H). exact: bot_spec. Qed.
  End t.
  Definition __bot_gen := PO_gsup.Build empty_kind X _ bot_gsup_spec.
- HB.instance Definition _bot_gen := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec.
+ HB.instance Definition _ := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec.
 End s.
 Notation "[gbot_for X ]" := (HB.pack_for (gsupPO.type empty_kind) X (@__bot_gen X)) (only parsing).
 

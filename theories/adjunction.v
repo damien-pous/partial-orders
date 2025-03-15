@@ -263,7 +263,7 @@ HB.instance Definition _ X Y (i: X ≃ Y) := @isIso.Build Y X (i^-1) i (adj_iso_
 (** transitivity *)
 Lemma iso_comp_radj_ladj {X Y Z: PO.type} (i: X ≃ Y) (j: Y ≃ Z): radj (j ∘ i) ≡ ladj (j ∘ i).
 Proof. cbn=>x. rewrite (radj_ladj x). exact: radj_ladj. Qed.
-HB.instance Definition iso_comp_ {X Y Z: PO.type} (i: X ≃ Y) (j: Y ≃ Z) :=
+HB.instance Definition _ {X Y Z: PO.type} (i: X ≃ Y) (j: Y ≃ Z) :=
   @biadj_isIso.Build X Z (j ∘ i) (iso_comp_radj_ladj i j).
 
 (** helper to construct isomorphisms with the last factory [isIso.Build] *)
