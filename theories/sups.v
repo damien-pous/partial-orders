@@ -87,7 +87,7 @@ Qed.
 Lemma is_sup_image {A} (f: A -> X) (P: A -> Prop) x:
   is_sup (image f P) x <-> forall z, x <= z <-> forall a, P a -> f a <= z.
 Proof.
-  change ((forall z, x <= z <-> (image f P <= (fun y => y <= z))) <->
+  change ((forall z, x <= z <-> (forall x, image f P x -> x <= z)) <->
             (forall z, x <= z <-> (forall a, P a -> f a <= z))).        
   by setoid_rewrite forall_image.
 Qed.
@@ -287,8 +287,7 @@ Lemma adj_gsup {k} {X Y: gsupPO.type k} (f: X ⊣ Y) I P kIP h:
   f (@gsup k X I P kIP h) ≡ gsup I P kIP (f ∘ h). 
 Proof.
   apply: from_above=>y.
-  rewrite adj 2!gsup_spec.
-  setoid_rewrite forall_image.
+  rewrite adj 2!gsup_spec 2!forall_image.
   apply: forall_iff=>i.
   by rewrite -adj. 
 Qed.
@@ -394,8 +393,7 @@ Proof. apply leq_is_sup, csup_spec. Qed.
 Lemma adj_csup {X Y: CPO.type} (f: X ⊣ Y) (P: X -> Prop) C: f (csup P C) ≡ csup (image f P) (chain_image f C). 
 Proof.
   apply: from_above=>y.
-  rewrite adj 2!csup_spec /=.
-  setoid_rewrite forall_image.
+  rewrite adj 2!csup_spec forall_image/=.
   apply: forall_iff=>x.
   by rewrite -adj.
 Qed.
@@ -407,22 +405,20 @@ Proof. apply leq_is_sup, dsup_spec. Qed.
 Lemma adj_dsup {X Y: dCPO.type} (f: X ⊣ Y) (P: X -> Prop) D: f (dsup P D) ≡ dsup (image f P) (directed_image f D). 
 Proof.
   apply: from_above=>y.
-  rewrite adj 2!dsup_spec /=.
-  setoid_rewrite forall_image.
+  rewrite adj 2!dsup_spec forall_image/=.
   apply: forall_iff=>x.
   by rewrite -adj.
 Qed.
   
 Lemma geq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) (z: X): (forall i, P i -> h i <= z) -> isup I P h <= z.
-Proof. move=>H. apply: geq_is_sup. exact: isup_spec. by setoid_rewrite forall_image. Qed.
+Proof. move=>H. apply: geq_is_sup. exact: isup_spec. by rewrite forall_image. Qed.
 Lemma leq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) i: P i -> h i <= isup I P h.
 Proof. move=>Pi. apply: leq_is_sup. exact: isup_spec. exact: in_image. Qed.
 Lemma adj_isup {X Y: supCL.type} (f: X ⊣ Y) I P h:
   f (isup I P h) ≡ isup I P (f ∘ h). 
 Proof.
   apply: from_above=>y.
-  rewrite adj 2!isup_spec/=.
-  setoid_rewrite forall_image.
+  rewrite adj 2!isup_spec 2!forall_image/=.
   apply: forall_iff=>i.
   by rewrite -adj. 
 Qed.

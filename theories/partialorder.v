@@ -631,9 +631,8 @@ Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
 Proof. by exists x. Qed.
 Hint Resolve in_image: core. 
 
-(* TODO: check usages and possibly unfold LHS *)
 Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
-  image f P <= Q <-> forall x, P x -> Q (f x).
+  (forall y, image f P y <= Q y) <-> forall x, P x -> Q (f x).
 Proof.
   split=>H.
   - move=>x Px. apply: H. by exists x.
@@ -655,7 +654,7 @@ Qed.
 
 Instance covered_image {X: Type} {Y: PO.type}: Proper (leq ==> leq ==> covered) (@image X Y).
 Proof.
-  move=>f g fg P Q PQ. apply forall_image=>x Px.
+  move=>f g fg P Q PQ. apply/forall_image=>x Px.
   exists (g x); split. exists x; split=>//. by apply: PQ. by apply: fg.
 Qed.  
 
