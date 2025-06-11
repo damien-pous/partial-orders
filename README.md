@@ -1,10 +1,25 @@
+A Rocq library about partial orders and related structures (CPOs, complete lattices, etc).
+
+# REQUIREMENTS
+
+- rocq-prover 9.0 (see branch 8.20 for backports)
+- rocq-mathcomp-ssreflect 
+
+# AUTHORS
+
+Damien Pous (CNRS, Plume team, LIP, ENS de Lyon)
+
+# LICENSE
+
+GNU LGPL3+
+
 # MENU
 
 preliminaries
  
 setoids
  strict [dec]
- setoid morphism
+ setoid morphisms
  instances (trivial (0,1), strict (2,nat), Prop, dprod, +, *, sig, sigT?, extfun)
  
 partial orders
@@ -19,7 +34,7 @@ total
 
 adjunctions
  
-sups (colimites en catégories)
+sups (colimits in categories)
  is_sup
  generic sups and their constructions
  {bot,cup,csup,dsup,isup}
@@ -34,6 +49,23 @@ lattices
 
 fixpoints (lfp/gfp)
  Bourbaki-Witt, Pataria
+			
+# FILES
+
+- theories/preliminaries.v   elementary helpers
+- theories/setoid.v          setoids
+- theories/partialorder.v    partial orders
+- theories/totalorder.v      chains & total orders
+- theories/adjunction.v      adjunctions & isomorphisms
+- theories/sups.v            suprema
+- theories/infs.v            infima
+- theories/lfp.v             least fixpoints 
+- theories/gfp.v             greatest fixpoints 
+- theories/lattice.v         complete lattices and mixed infs/sups structures
+- theories/instances.v       various instances
+
+sanity checks
+- tests/*.v
 
 # HIERARCHY OF MORE OR LESS COMPLETE PARTIAL ORDERS
 
@@ -94,68 +126,34 @@ in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon fun
 		   ginf    <=> std inf (boring, unless duality)
 			dprod       +
 			mon/ext     +
-			
-# FILES
-
-- theories/preliminaries.v   elementary helpers
-- theories/setoid.v          setoids
-- theories/partialorder.v    partial orders
-- theories/totalorder.v      chains & total orders
-- theories/adjunction.v      adjunctions & isomorphisms
-- theories/sups.v            suprema
-- theories/infs.v            infima
-- theories/lfp.v             least fixpoints 
-- theories/gfp.v             greatest fixpoints 
-- theories/lattice.v         complete lattices and mixed infs/sups structures
-- theories/instances.v       various instances
-
-sanity checks
-- tests/*.v
-
-# REQUIREMENTS
-
-- Rocq 9.0 (see branch 8.20 for backports)
-- coq-hierarchy-builder as fixed in
-  https://github.com/Tragicus/hierarchy-builder/tree/uniq-mixin
-
 
 # TODO
 
 closures 
+decidable eqv, leq
+modular,distributive,residuated
+more on adjunctions
 
 rethink:
 - use of categories / comp ° \circ
 
-
 rework&sync sanity checks
 
-don't use HB for morphisms?
+don't use HB for morphisms? (or use them more)
 
-revive the mixed cs+tc (split_tc.v)
-do a pure typeclass attempt?
-
-smart constructor for SPO/IPO/GPO ?
-GPO products/sums/option
-
-distributive GPO 
-Heyting algebras ? (on top of SPO sB or ???)
-Boolean algebras ? (on top of GPO (sB,sB), or ???)
-
-setoid_congruence tactic
 lattice tactics
-more on adjunctions
-
-cast_setoid
-
-strong setoids (where eqv=eq)
-decidable eqv, leq
-finite
 
 
 ## LATER
 
+finite structures
+
+Heyting/Boolean algebras
+
 non-empty chains/directed/arbitrary?
 and/or I-indexed variants? (omega)
+
+setoid_congruence tactic
 
 
 Non constructive arguments:
@@ -167,7 +165,7 @@ George Markowsky, Chain-complete posets and directed sets with applications, 197
 - BourbakiWitt + AC => ZL (already in coq-zorns-lemma)
 
 
-# MISC
+# MISC THOUGHTS
 
 - efficiency: 
   HB needs 15s where CS only needs 4s, 
