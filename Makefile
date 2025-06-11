@@ -21,3 +21,4 @@ sanity: tests/sanity.vo
 # This should be the last rule, to handle any targets not declared above
 %: invoke-coqmakefile
 	@true
+

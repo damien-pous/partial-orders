@@ -35,12 +35,49 @@ lattices
 fixpoints (lfp/gfp)
  Bourbaki-Witt, Pataria
 
-closures
+# HIERARCHY OF MORE OR LESS COMPLETE PARTIAL ORDERS
+
+Mathematically, we have the following picture
+
+ ·     ·       ·
+CL -- dCPO -- CPO --------------------\
+       ^ \       \(EM)                 \
+       |  \-- Chain_lfp_PO -- lfp_PO -- botPO
+       \----------(AC)---------/          ·
+
+bot_PO: partial orders with a bottom element
+lfp_PO: every monotone function has a least fixpoint
+Chain_lfp: every monotone function has a leas fixpoint, obtained as the top element of its chain
+CPO: every chain has a least upper bound
+dCPO: every directed set has least upper bound
+CL: every set has least upper bound
+
+Dotted structures are those preserved by taking products and monotone functions.
+
+dCPO inherits from Chain_lfp by Pataria fixpoint theorem, but not in a forgetful way.
+similarly for CPO, but only classically, by Bourbaki-Witt's theorem.
+
+This raises difficulties when using HB structures, which we solve using the following hierarchy
+(more comments in file [theories/sups.v])
+
+    ·CL
+	 |
+   ·dCPO   ·CPO
+	  \    /
+      lfpCPO
+	 /     \
+    /       \
+·sups.CPO  Chain_lfp
+    \       /
+     \   lfp_PO 
+      \   /
+     ·botPO
+
 
 # DUALITY/GENERICITY
 
 - for setoid/partial orders/... dual is involutive only up to eta
-- for morphisms dual is definitionaly involutive (to exploit duality in abstract fixpoint theories)
+- idem for morphisms (otherwise we loose some ssreflect rewriting)
 
 in sup,    gsup    <=> std sups
             dprod       +
@@ -50,7 +87,7 @@ in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon fun
             dprod      (copypaste)
 			mon/ext    (copypaste)
 			
-           std sup <-> std inf (easy but HB bug)
+           std sup <-> std inf
 		    dprod       +
 			mon/ext     ?
 			
@@ -67,10 +104,10 @@ in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon fun
 - theories/adjunction.v      adjunctions & isomorphisms
 - theories/sups.v            suprema
 - theories/infs.v            infima
-- theories/lattice.v         lattices
-- theories/instances.v       various instances
 - theories/lfp.v             least fixpoints 
 - theories/gfp.v             greatest fixpoints 
+- theories/lattice.v         complete lattices and mixed infs/sups structures
+- theories/instances.v       various instances
 
 sanity checks
 - tests/*.v
@@ -84,18 +121,10 @@ sanity checks
 
 # TODO
 
+closures 
+
 rethink:
 - use of categories / comp ° \circ
-
-- CPO => dCPO 
-hard, uses AC + ordinals, cf.
-https://topology.lmf.cnrs.fr/markowsky-or-cohn/
-https://topology.lmf.cnrs.fr/iwamuras-lemma-kowalskys-theorem-and-ordinals/
-
-George Markowsky, Chain-complete posets and directed sets with applications, 1976
-
-- BourbakiWitt + AC => ZL
-(already in coq-zorns-lemma)
 
 
 rework&sync sanity checks
@@ -123,12 +152,19 @@ decidable eqv, leq
 finite
 
 
-## later
+## LATER
+
 non-empty chains/directed/arbitrary?
 and/or I-indexed variants? (omega)
 
-in classical logic, 
- chain-complete => directed-complete
+
+Non constructive arguments:
+- chain-complete => directed-complete (e.g., CPO => dCPO)
+https://topology.lmf.cnrs.fr/markowsky-or-cohn/
+https://topology.lmf.cnrs.fr/iwamuras-lemma-kowalskys-theorem-and-ordinals/
+George Markowsky, Chain-complete posets and directed sets with applications, 1976
+
+- BourbakiWitt + AC => ZL (already in coq-zorns-lemma)
 
 
 # MISC
