@@ -725,9 +725,9 @@ Proof. dual @chain_directed. Qed.
 End dual_props.
 
 Lemma cochain_image {X Y: PO.type} (f: X-mon->Y) P (C: cochain P): cochain (image f P).
-Proof. exact: (chain_image (dualf f)). Qed.
+Proof. exact: (chain_image (dualf f)). Defined. (* defined to help with dualities *)
 Lemma codirected_image {X Y: PO.type} (f: X-mon->Y) P (D: codirected P): codirected (image f P).
-Proof. exact: (directed_image (dualf f)). Qed.
+Proof. exact: (directed_image (dualf f)). Defined. (* defined to help with dualities *)
 
 Instance cocovered_image {X: Type} {Y: PO.type}: Proper (leq --> leq ==> cocovered) (@image X Y).
 Proof. exact: (@covered_image X (dual Y)). Qed.

@@ -1,5 +1,5 @@
-Require Export sups.
-Require Import adjunction.
+Require Export adjunction.
+Require Import sups.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -44,8 +44,16 @@ Definition inf_closure P: X -> Prop := sup_closure (P: dual X -> Prop).
 Lemma is_inf_closure P: is_inf (inf_closure P) ≡ is_inf P.
 Proof. dual @is_sup_closure. Qed.
 
-Lemma is_inf_image {A} (f: A -> X) (P: A -> Prop) x:
-  is_inf (image f P) x <-> forall z, z <= x <-> forall a, P a -> z <= f a.
+Lemma is_inf_empty z:
+  is_inf empty z <-> forall t, t <= z.
+Proof. dual @is_sup_empty. Qed.
+
+Lemma is_inf_pair x y z:
+  is_inf (pair x y) z <-> forall t, t <= z <-> t <= x /\ t <= y.
+Proof. dual @is_sup_pair. Qed.
+
+Lemma is_inf_image {A} (f: A -> X) (P: A -> Prop) z:
+  is_inf (image f P) z <-> forall t, t <= z <-> forall a, P a -> t <= f a.
 Proof. dual @is_sup_image. Qed.
   
 End s.
@@ -163,13 +171,13 @@ End s.
 
 HB.mixin Record PO_top X of PO X := {
     #[canonical=no] top: X;
-    #[canonical=no] top_spec: is_inf empty top;
+    #[canonical=no] top_inf_spec: is_inf empty top;
   }.
 HB.structure Definition topPO := {X of PO_top X & }.
 
 HB.mixin Record PO_cap X of PO X := {
     #[canonical=no] cap: X -> X -> X;
-    #[canonical=no] cap_spec: forall x y: X, is_inf (pair x y) (cap x y);
+    #[canonical=no] cap_inf_spec: forall x y: X, is_inf (pair x y) (cap x y);
   }.
 HB.structure Definition meetSemiLattice := {X of PO_cap X & }.
 HB.structure Definition topmeetSemiLattice := {X of PO_top X & meetSemiLattice X }.
@@ -194,39 +202,25 @@ HB.structure Definition dCPO' := {X of PO_dinf X & }.
 
 HB.mixin Record PO_iinf X of PO X := {
     #[canonical=no] iinf: forall I, (I -> Prop) -> (I -> X) -> X;
-    #[canonical=no] iinf_spec: forall I P (h: I -> X), is_inf (image h P) (iinf I P h);
+    #[canonical=no] iinf_inf_spec: forall I P (h: I -> X), is_inf (image h P) (iinf I P h);
   }.
 HB.builders Context X of PO_iinf X.
   Definition inf (P: X -> Prop) := iinf P types_id.
   Lemma inf_spec (P: X -> Prop): is_inf P (inf P).
-  Proof. move: (iinf_spec P types_id). by rewrite image_id. Qed.
+  Proof. move: (iinf_inf_spec P types_id). by rewrite image_id. Qed.
   HB.instance Definition _ := PO_cap.Build X _ (fun x y => inf_spec (pair x y)).
   HB.instance Definition _ := PO_dinf.Build X _ (fun D _ => inf_spec D).
 HB.end.
 HB.structure Definition infCL := {X of PO_iinf X & }.
-
-HB.factory Record PO_inf X of PO X := {
-    #[canonical=no] inf: (X -> Prop) -> X;
-    #[canonical=no] inf_spec: forall P: X -> Prop, is_inf P (inf P);
-  }.
-HB.builders Context X of PO_inf X.
-  Definition iinf I P (h: I -> X) := inf (image h P).
-  Lemma iinf_spec I P h: is_inf (image h P) (@iinf I P h).
-  Proof. apply: inf_spec. Qed.
-  HB.instance Definition _ := PO_iinf.Build X _ iinf_spec.
-HB.end.
+Arguments iinf {_ _}. 
 
 (** ** duality *)
 
-(** due to a bug in HB, needs
-    https://github.com/Tragicus/hierarchy-builder/tree/uniq-mixin    
- *)
+HB.instance Definition _ (X: botPO.type) := PO_top.Build (dual X) bot_sup_spec. 
+HB.instance Definition _ (X: topPO.type) := PO_bot.Build (dual X) top_inf_spec. 
 
-HB.instance Definition _ (X: botPO.type) := PO_top.Build (dual X) bot_spec. 
-HB.instance Definition _ (X: topPO.type) := PO_bot.Build (dual X) top_spec. 
-
-HB.instance Definition _ (X: joinSemiLattice.type) := PO_cap.Build (dual X) _ cup_spec.
-HB.instance Definition _ (X: meetSemiLattice.type) := PO_cup.Build (dual X) _ cap_spec.
+HB.instance Definition _ (X: joinSemiLattice.type) := PO_cap.Build (dual X) _ cup_sup_spec.
+HB.instance Definition _ (X: meetSemiLattice.type) := PO_cup.Build (dual X) _ cap_inf_spec.
 
 HB.instance Definition _ (X: CPO.type) := PO_cinf.Build (dual X) _ csup_spec.
 HB.instance Definition _ (X: CPO'.type) := PO_csup.Build (dual X) _ cinf_spec.
@@ -234,64 +228,119 @@ HB.instance Definition _ (X: CPO'.type) := PO_csup.Build (dual X) _ cinf_spec.
 HB.instance Definition _ (X: dCPO.type) := PO_dinf.Build (dual X) _ dsup_spec.
 HB.instance Definition _ (X: dCPO'.type) := PO_dsup.Build (dual X) _ dinf_spec. 
 
-HB.instance Definition _ (X: supCL.type) := PO_iinf.Build (dual X) _ isup_spec.
-HB.instance Definition _ (X: infCL.type) := PO_isup.Build (dual X) _ iinf_spec.
+HB.instance Definition _ (X: supCL.type) := PO_iinf.Build (dual X) _ isup_sup_spec.
+HB.instance Definition _ (X: infCL.type) := PO_isup.Build (dual X) _ iinf_inf_spec.
 
 
 (** ** theory *)
 
-Notation inf P := (iinf _ P types_id).
+Notation inf P := (iinf P types_id).
 Lemma inf_spec (X: infCL.type) (P: X -> Prop): is_inf P (inf P).
 Proof. exact: (@sup_spec (dual X)). Qed. 
 
-Lemma leq_top {X: topPO.type} (x: X): x <= top.
+Section top.
+Context {X: topPO.type}.
+Implicit Types x y z: X.  
+Lemma top_spec z: z <= top <-> True.
+Proof. exact: (@bot_spec (dual X)). Qed.
+Lemma leq_top x: x <= top.
 Proof. exact: (@geq_bot (dual X)). Qed.
-Lemma geq_top {X: topPO.type} (x: X): top <= x -> x ≡ top.
+Lemma geq_top x: top <= x -> x ≡ top.
 Proof. exact: (@leq_bot (dual X)). Qed.
+End top.
+#[export] Hint Immediate leq_top: lattice.
+Lemma adj_top {X Y: topPO.type} (f: X ⊢ Y): f top ≡ top. 
+Proof. exact: (adj_bot (dualf f)). Qed.
 
-Lemma leq_cap {X: meetSemiLattice.type} (x y z: X): z <= x -> z <= y -> z <= cap x y.
+Section cap.
+Context {X: meetSemiLattice.type}.
+Implicit Types x y z: X.  
+Lemma cap_spec x y z: z <= cap x y <-> z <= x /\ z <= y.
+Proof. exact: (@cup_spec (dual X)). Qed.
+Lemma leq_cap x y z: z <= x -> z <= y -> z <= cap x y.
 Proof. exact: (@geq_cup (dual X)). Qed.
-Lemma geq_cap_l {X: meetSemiLattice.type} (x y z: X): x <= z -> cap x y <= z.
+Lemma geq_cap_l x y z: x <= z -> cap x y <= z.
 Proof. exact: (@leq_cup_l (dual X)). Qed.
-Lemma geq_cap_r {X: meetSemiLattice.type} (x y z: X): y <= z -> cap x y <= z.
+Lemma geq_cap_r x y z: y <= z -> cap x y <= z.
 Proof. exact: (@leq_cup_r (dual X)). Qed.
+#[export] Instance cap_leq: Proper (leq ==> leq ==> leq) (@cap X).
+Proof. intros x x' xx y y' yy. exact: (@cup_leq (dual X)). Qed.
+#[export] Instance cap_eqv: Proper (eqv ==> eqv ==> eqv) (@cap X) := op_leq_eqv_2.
+Lemma capA x y z: cap x (cap y z) ≡ cap (cap x y) z.
+Proof. exact: (@cupA (dual X)). Qed.
+Lemma capC x y: cap x y ≡ cap y x.
+Proof. exact: (@cupC (dual X)). Qed.
+Lemma capI x: cap x x ≡ x.
+Proof. exact: (@cupI (dual X)). Qed.
+Lemma codirected_inf_closure (P: X -> Prop): codirected (inf_closure P).
+Proof. exact: (@directed_sup_closure (dual X)). Qed.
+End cap.
+#[export] Hint Resolve geq_cap_l geq_cap_r: lattice.
+Lemma adj_cap {X Y: meetSemiLattice.type} (f: X ⊢ Y) (x y: X): f (cap x y) ≡ cap (f x) (f y). 
+Proof. exact: (adj_cup (dualf f)). Qed.
 
-Lemma leq_cinf {X: CPO'.type} (P: X -> Prop) C (z: X): (forall x, P x -> z <= x) -> z <= cinf P C.
+Section cpo'.
+Context {X: CPO'.type}.
+Implicit Types x y z: X.  
+Lemma leq_cinf (P: X -> Prop) C (z: X): (forall x, P x -> z <= x) -> z <= cinf P C.
 Proof. exact: (@geq_csup (dual X)). Qed.
-Lemma geq_cinf {X: CPO'.type} (P: X -> Prop) C: forall z, P z -> cinf P C <= z.
+Lemma geq_cinf (P: X -> Prop) C: forall z, P z -> cinf P C <= z.
 Proof. exact: (@leq_csup (dual X)). Qed.
+Lemma cinf_leq (P Q: X -> Prop) CP CQ: cocovered Q P -> cinf P CP <= cinf Q CQ.
+Proof. exact: (@csup_leq (dual X)). Qed.
+Lemma cinf_eqv (P Q: X -> Prop) CP CQ: cobicovered P Q -> cinf P CP ≡ cinf Q CQ.
+Proof. exact: (@csup_eqv (dual X)). Qed.
+End cpo'.
+Lemma adj_cinf {X Y: CPO'.type} (f: X ⊢ Y) (P: X -> Prop) C: f (cinf P C) ≡ cinf (image f P) (cochain_image f C). 
+Proof. exact: (adj_csup (dualf f)). Qed.
 
-Lemma leq_dinf {X: dCPO'.type} (P: X -> Prop) D (z: X): (forall x, P x -> z <= x) -> z <= dinf P D.
+Section dcpo'.
+Context {X: dCPO'.type}.
+Implicit Types x y z: X.  
+Lemma leq_dinf (P: X -> Prop) D z: (forall x, P x -> z <= x) -> z <= dinf P D.
 Proof. exact: (@geq_dsup (dual X)). Qed.
-Lemma geq_dinf {X: dCPO'.type} (P: X -> Prop) D: forall z, P z -> dinf P D <= z.
+Lemma geq_dinf (P: X -> Prop) D: forall z, P z -> dinf P D <= z.
 Proof. exact: (@leq_dsup (dual X)). Qed.
+Lemma dinf_leq (P Q: X -> Prop) DP DQ: cocovered Q P -> dinf P DP <= dinf Q DQ.
+Proof. exact: (@dsup_leq (dual X)). Qed.
+Lemma dinf_eqv (P Q: X -> Prop) DP DQ: cobicovered P Q -> dinf P DP ≡ dinf Q DQ.
+Proof. exact: (@dsup_eqv (dual X)). Qed.
+End dcpo'.
+Lemma adj_dinf {X Y: dCPO'.type} (f: X ⊢ Y) (P: X -> Prop) C: f (dinf P C) ≡ dinf (image f P) (codirected_image f C). 
+Proof. exact: (adj_dsup (dualf f)). Qed.
 
-Lemma leq_iinf {X: infCL.type} I (P: I -> Prop) (h: I -> X) (z: X): (forall i, P i -> z <= h i) -> z <= iinf I P h.
+Section iinf.
+Context {X: infCL.type}.
+Implicit Types x y z: X.  
+Lemma iinf_spec I (P: I -> Prop) (h: I -> X) z: z <= iinf P h <-> forall i, P i -> z <= h i.
+Proof. exact: (@isup_spec (dual X)). Qed.
+Lemma leq_iinf I (P: I -> Prop) (h: I -> X) z: (forall i, P i -> z <= h i) -> z <= iinf P h.
 Proof. exact: (@geq_isup (dual X)). Qed.
-Lemma geq_iinf {X: infCL.type} I (P: I -> Prop) (h: I -> X) i: P i -> iinf I P h <= h i.
+Lemma geq_iinf I (P: I -> Prop) (h: I -> X) i: P i -> iinf P h <= h i.
 Proof. exact: (@leq_isup (dual X)). Qed.
+#[export] Instance iinf_leq {I}: Proper (leq --> leq ==> leq) (@iinf X I).
+Proof. repeat intro. exact: (@isup_leq (dual X) I). Qed.
+#[export] Instance iinf_eqv {I}: Proper (eqv ==> eqv ==> eqv) (@iinf X I).
+Proof. exact: (@isup_eqv (dual X)). Qed.
 
-Lemma leq_inf {X: infCL.type} (P: X -> Prop) (z: X): (forall y, P y -> z <= y) -> z <= inf P.
+Lemma leq_inf (P: X -> Prop) z: (forall y, P y -> z <= y) -> z <= inf P.
 Proof. exact: (@geq_isup (dual X)). Qed.
-Lemma geq_inf {X: infCL.type} (P: X -> Prop): forall z, P z -> inf P <= z.
+Lemma geq_inf (P: X -> Prop): forall z, P z -> inf P <= z.
 Proof. exact: (@leq_isup (dual X)). Qed.
-
-(* TODO: much more *)
+Lemma inf_leq: Proper (leq --> leq) (@iinf X X^~ id).
+Proof. move=>P Q pq. exact: iinf_leq. Qed.
+Lemma inf_eqv: Proper (eqv ==> eqv) (@iinf X X^~ id).
+Proof. move=>P Q pq. exact: iinf_eqv. Qed.
+End iinf.
+Lemma adj_iinf {X Y: infCL.type} (f: X ⊢ Y) I (P: I -> Prop) h:
+  f (iinf P h) ≡ iinf P (f ∘ h). 
+Proof. exact: (adj_isup (dualf f)). Qed.
+Lemma adj_inf {X Y: infCL.type} (f: X ⊢ Y) P:
+  f (inf P) ≡ iinf P f. 
+Proof. exact: adj_iinf. Qed.
 
 
 (** ** concrete instances *)
-
-Lemma unit_inf_spec P: is_inf P tt.
-Proof. done. Qed.
-HB.instance Definition _ := PO_iinf.Build unit _ (fun I P h => unit_inf_spec (image h P)).
-
-Lemma bool_top_spec: is_inf empty true.
-Proof. by case. Qed. 
-Lemma bool_cap_spec b c: is_inf (pair b c) (b && c).
-Proof. move=>d. rewrite forall_pair. case:b; case:c; case:d; cbn; intuition discriminate. Qed. 
-
-HB.instance Definition _ := PO_top.Build bool bool_top_spec.
-HB.instance Definition _ := PO_cap.Build bool _ bool_cap_spec.
 
 Lemma Prop_top_spec: is_inf empty True.
 Proof. cbv; tauto. Qed. 
@@ -343,7 +392,7 @@ Section s.
  Section t. 
   Variables (I: PO.type) (P: I -> Prop) (H: empty_kind I P) (h: I -mon-> dual X). 
   Lemma top_ginf_spec: @is_inf X (image h P) top.
-  Proof. rewrite (image_empty_kind (X:=X) H). exact: top_spec. Qed.
+  Proof. rewrite (image_empty_kind (X:=X) H). exact: top_inf_spec. Qed.
  End t.
  HB.instance Definition _ := PO_ginf.Build empty_kind (top_gen X) _ top_ginf_spec. 
 End s.
@@ -379,7 +428,7 @@ Section s.
   Variables (I: PO.type) (P: I -> Prop) (H: pair_kind I P) (h: I -mon-> dual X). 
   Definition cap_ginf: X := cap (h (elem1 H)) (h (elem2 H)).
   Lemma cap_ginf_spec: @is_inf X (image h P) cap_ginf.
-  Proof. rewrite (image_pair_kind H (X:=X)). exact: cap_spec. Qed.
+  Proof. rewrite (image_pair_kind H (X:=X)). exact: cap_inf_spec. Qed.
  End t.
  HB.instance Definition _ := PO_ginf.Build pair_kind (cap_gen X) _ cap_ginf_spec. 
 End s.
@@ -422,12 +471,6 @@ Lemma cinf_ginf_closed {X: CPO'.type} (P: X -> Prop) (Pcinf: forall Q (C: cochai
   @ginf_closed (@chain) (cinf_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcinf. Qed.
 
-HB.factory Record monadic_cinf Y of PO Y := { X: CPO'.type; f: Y ·⊣ X; }.
-HB.builders Context Y of monadic_cinf Y.
- HB.instance Definition _ := monadic_ginf.Build (@chain) Y (X:=cinf_gen X) f.
- HB.instance Definition _ := CPO'.copy Y (cinf_gen Y).
-HB.end.
-
 (** *** directed infs as generic infs over directed domains *)
 Definition dinf_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (dinf_gen X).
@@ -456,12 +499,6 @@ Lemma dinf_ginf_closed {X: dCPO'.type} (P: X -> Prop) (Pdinf: forall Q (D: codir
   @ginf_closed (@directed) (dinf_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdinf. Qed.
 
-HB.factory Record monadic_dinf Y of PO Y := { X: dCPO'.type; f: Y ·⊣ X }.
-HB.builders Context Y of monadic_dinf Y.
- HB.instance Definition _ := monadic_ginf.Build (@directed) Y (X:=dinf_gen X) f.
- HB.instance Definition _ := dCPO'.copy Y (dinf_gen Y).
-HB.end.
-
 (** *** indexed arbitrary infs as generic infs of arbitrary kind *)
 Definition iinf_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (iinf_gen X).
@@ -481,22 +518,16 @@ Section s.
  Context {X: infCL.type}.
  Section t. 
   Variables (I: PO.type) (P: I -> Prop) (kIP: any_kind I P) (h: I -mon-> dual X). 
-  Definition iinf_ginf: X := let _ := kIP in iinf I P h.
+  Definition iinf_ginf: X := let _ := kIP in iinf P h.
   Lemma iinf_ginf_spec: is_inf (X:=X) (image h P) iinf_ginf.
-  Proof. exact: iinf_spec. Qed.
+  Proof. exact: iinf_inf_spec. Qed.
  End t.
  HB.instance Definition _ := PO_ginf.Build any_kind (iinf_gen X) _ iinf_ginf_spec. 
 End s.
 
-Lemma iinf_ginf_closed {X: infCL.type} (P: X -> Prop) (Piinf: forall I Q h, image h Q <= P -> P (iinf I Q h)):
+Lemma iinf_ginf_closed {X: infCL.type} (P: X -> Prop) (Piinf: forall I (Q: I -> Prop) h, image h Q <= P -> P (iinf Q h)):
   @ginf_closed any_kind (iinf_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Piinf. Qed.
-
-HB.factory Record monadic_iinf Y of PO Y := { X: infCL.type; f: Y ·⊣ X }.
-HB.builders Context Y of monadic_iinf Y.
- HB.instance Definition _ := monadic_ginf.Build any_kind Y (X:=iinf_gen X) f.
- HB.instance Definition _ := infCL.copy Y (iinf_gen Y).
-HB.end.
 
 (** restriction to monotone functions follow generically *)
 HB.instance Definition _ (X: PO.type) (Y: topPO.type) := topPO.copy (X -mon-> Y) (top_gen (X -mon-> top_gen Y)).

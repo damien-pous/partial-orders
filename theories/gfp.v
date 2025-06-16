@@ -1,5 +1,5 @@
 From Stdlib Require Classical.
-Require Export infs adjunction.
+Require Export infs.
 Require Import lfp.
 
 Set Implicit Arguments.
@@ -51,6 +51,12 @@ HB.mixin Record PO_gfp X of PO X := {
     #[canonical=no] gfp: (X-mon->X) -> X;
     #[canonical=no] gfpE: forall f: X-mon->X, is_gfp f (gfp f);
   }.
+HB.builders Context X of PO_gfp X.
+Definition top: X := gfp types_id.
+Lemma top_spec: is_inf empty top.
+Proof. rewrite is_inf_empty/==>t. by apply (gfpE types_id). Qed.
+HB.instance Definition _ := PO_top.Build X top_spec.
+HB.end.
 HB.structure Definition gfpPO := {X of PO_gfp X &}. 
 
 (** duality *)
@@ -203,6 +209,18 @@ Section c.
 
 End d.
 End c.
+Lemma CC' {X: PO.type} (f: X->X): C f ≡ C' (dualf f).
+Proof.
+  rewrite C'C. Fail apply: C_eqv. (* TODO *)
+  Restart.
+  apply: antisym.
+  * move=>x. elim=>[{}x Cx IH|T TC IH t Ht].
+    ** exact: Cf'.
+    ** apply: Cinf. exact: IH. done.
+  * move=>x. elim=>[{}x Cx IH|T TC IH t Ht].
+    ** exact: Cf.
+    ** apply: Csup. exact: IH. done.
+Qed.
 
 (** being inf-closed, the cochain inherits infs from the starting partial order *)
 HB.instance Definition _ k {X: ginfPO.type k} (f: X -> X) :=
@@ -227,7 +245,24 @@ HB.mixin Record Chain_gfp X of PO X := {
 HB.builders Context X of Chain_gfp X.
   HB.instance Definition _ := PO_gfp.Build X chain_gfp (fun f => gfp_of_chain_infimum f (chain_gfpE f)).
 HB.end.
+HB.structure Definition chain_gfpPO := { X of Chain_gfp X & }.
 (** we do not develop the theory of this class yet; still, the idea is that this subclass of PO with greatest fixpoints of monotone functions supports tower induction, and hence nice up-to techniques for coinduction *)
+
+(** duality *)
+Section s.
+  Context {X: chain_lfpPO.type}.
+  Definition dual_chain_gfp (f: dual X-mon->dual X) := chain_lfp (dualf' f): dual X.
+  Lemma dual_chain_gfpE (f: dual X-mon->dual X): is_inf (C' f) (dual_chain_gfp f).
+  Proof. rewrite C'C. exact: chain_lfpE. Qed.
+  HB.instance Definition _ := Chain_gfp.Build (dual X) dual_chain_gfp dual_chain_gfpE.
+End s.
+Section s.
+  Context {X: chain_gfpPO.type}.
+  Definition dual_chain_lfp (f: dual X-mon->dual X) := chain_gfp (dualf' f): dual X.
+  Lemma dual_chain_lfpE (f: dual X-mon->dual X): is_sup (C f) (dual_chain_lfp f).
+  Proof. rewrite CC'. exact: chain_gfpE. Qed.
+  HB.instance Definition _ := Chain_lfp.Build (dual X) dual_chain_lfp dual_chain_lfpE.
+End s.
 
 
 (** * Pataraia's fixpoint theorem *)
@@ -282,12 +317,40 @@ HB.factory Record dCPO_gfp X of infs.dCPO' X := {}.
 HB.builders Context X of dCPO_gfp X.
 HB.instance Definition _ := Chain_gfp.Build X Pataraia.gfp Pataraia.gfp_is_inf_C'.
 HB.end.
+(** overriden factory *)
+HB.factory Record PO_dinf X of PO X := {
+    #[canonical=no] dinf: forall P: X -> Prop, codirected P -> X;
+    #[canonical=no] dinf_spec: forall (P: X -> Prop) D, is_inf P (dinf P D);
+  }.
+HB.builders Context X of PO_dinf X.
+  HB.instance Definition _ := infs.PO_dinf.Build X dinf dinf_spec.
+  HB.instance Definition _ := dCPO_gfp.Build X.
+HB.end.
 
 (** empty factory to upgrade [infs.CPO'] to [CPO'], via BourbakiWitt *)
 HB.factory Record CPO_gfp X of infs.CPO' X := {}.
 HB.builders Context X of CPO_gfp X.
 HB.instance Definition _ := Chain_gfp.Build X BourbakiWitt.gfp BourbakiWitt.gfp_is_inf_C'.
 HB.instance Definition _ := EMTag.Build X.
+HB.end.
+(** overriden factory *)
+HB.factory Record PO_cinf X of PO X := {
+    #[canonical=no] cinf: forall P: X -> Prop, cochain P -> X;
+    #[canonical=no] cinf_spec: forall (P: X -> Prop) C, is_inf P (cinf P C);
+  }.
+HB.builders Context X of PO_cinf X.
+  HB.instance Definition _ := infs.PO_cinf.Build X cinf cinf_spec.
+  HB.instance Definition _ := CPO_gfp.Build X.
+HB.end.
+
+(** overriden factory for infCL *)
+HB.factory Record PO_iinf X of PO X := {
+    #[canonical=no] iinf: forall I, (I -> Prop) -> (I -> X) -> X;
+    #[canonical=no] iinf_inf_spec: forall I P (h: I -> X), is_inf (image h P) (iinf I P h);
+  }.
+HB.builders Context X of PO_iinf X.
+  HB.instance Definition _ := infs.PO_iinf.Build X iinf iinf_inf_spec.
+  HB.instance Definition _ := dCPO_gfp.Build X.
 HB.end.
 
 (** we need to redeclare/upgrade all previously known instances of [dCPO'] *)
@@ -296,6 +359,10 @@ HB.instance Definition _ I (X: I -> infs.dCPO'.type) := dCPO_gfp.Build (forall i
 HB.instance Definition _ (X: Setoid.type) (Y: infs.dCPO'.type) := dCPO_gfp.Build (X -eqv-> Y).
 HB.instance Definition _ (X: PO.type) (Y: infs.dCPO'.type) := dCPO_gfp.Build (X -mon-> Y).
 HB.instance Definition _ (X: infs.dCPO'.type) (f: X -> X) := dCPO_gfp.Build (Chain' f). 
+HB.instance Definition _ (X: infs.dCPO'.type) := dCPO_lfp.Build (dual X).
+HB.instance Definition _ (X: sups.dCPO.type) := dCPO_gfp.Build (dual X).
+(* this one is directly defined here, in order to avoid useless overriding *)
+HB.factory Record monadic_dinf Y of PO Y := { X: dCPO'.type; f: Y ·⊣ X; }.
 HB.builders Context Y of monadic_dinf Y.
  HB.instance Definition _ := monadic_ginf.Build (@directed) Y (X:=dinf_gen X) f.
  HB.instance Definition _ := infs.dCPO'.copy Y (dinf_gen Y).
@@ -308,6 +375,10 @@ HB.instance Definition _ I (X: I -> infs.CPO'.type) := CPO_gfp.Build (forall i, 
 HB.instance Definition _ (X: Setoid.type) (Y: infs.CPO'.type) := CPO_gfp.Build (X -eqv-> Y).
 HB.instance Definition _ (X: PO.type) (Y: infs.CPO'.type) := CPO_gfp.Build (X -mon-> Y).
 HB.instance Definition _ (X: infs.CPO'.type) (f: X -> X) := CPO_gfp.Build (Chain' f).
+HB.instance Definition _ (X: infs.CPO'.type) := CPO_lfp.Build (dual X).
+HB.instance Definition _ (X: sups.CPO.type) := CPO_gfp.Build (dual X).
+(* this one is directly defined here, in order to avoid useless overriding *)
+HB.factory Record monadic_cinf Y of PO Y := { X: CPO'.type; f: Y ·⊣ X; }.
 HB.builders Context Y of monadic_cinf Y.
  HB.instance Definition _ := monadic_ginf.Build (@chain) Y (X:=cinf_gen X) f.
  HB.instance Definition _ := infs.CPO'.copy Y (cinf_gen Y).
@@ -315,10 +386,14 @@ HB.builders Context Y of monadic_cinf Y.
 HB.end.
 
 (** similarly for [infCL] *)
-HB.instance Definition _ I (X: I -> infCL.type) := dCPO_gfp.Build (forall i, X i).
-HB.instance Definition _ (X: Setoid.type) (Y: infCL.type) := dCPO_gfp.Build (X -eqv-> Y).
-HB.instance Definition _ (X: PO.type) (Y: infCL.type) := dCPO_gfp.Build (X -mon-> Y).
-HB.instance Definition _ (X: infCL.type) (f: X -> X) := dCPO_gfp.Build (Chain' f). 
+HB.instance Definition _ I (X: I -> infs.infCL.type) := dCPO_gfp.Build (forall i, X i).
+HB.instance Definition _ (X: Setoid.type) (Y: infs.infCL.type) := dCPO_gfp.Build (X -eqv-> Y).
+HB.instance Definition _ (X: PO.type) (Y: infs.infCL.type) := dCPO_gfp.Build (X -mon-> Y).
+HB.instance Definition _ (X: infs.infCL.type) (f: X -> X) := dCPO_gfp.Build (Chain' f). 
+HB.instance Definition _ (X: infs.infCL.type) := dCPO_lfp.Build (dual X).
+HB.instance Definition _ (X: sups.supCL.type) := dCPO_gfp.Build (dual X).
+(* this one is directly defined here, in order to avoid useless overriding *)
+HB.factory Record monadic_iinf Y of PO Y := { X: infCL.type; f: Y ·⊣ X }.
 HB.builders Context Y of monadic_iinf Y.
  HB.instance Definition _ := monadic_ginf.Build any_kind Y (X:=iinf_gen X) f.
  HB.instance Definition _ := infs.infCL.copy Y (iinf_gen Y).

@@ -1,6 +1,5 @@
 From Stdlib Require Eqdep_dec.
-Require Export partialorder.
-Require Import adjunction.
+Require Export adjunction.
 
 Set Implicit Arguments.
 Unset Printing Implicit Defensive.
@@ -84,13 +83,17 @@ Proof.
   - elim: Px=>//Q QP IH y Hy. apply Hy. exact: IH.
 Qed.
 
-Lemma is_sup_image {A} (f: A -> X) (P: A -> Prop) x:
-  is_sup (image f P) x <-> forall z, x <= z <-> forall a, P a -> f a <= z.
-Proof.
-  change ((forall z, x <= z <-> (forall x, image f P x -> x <= z)) <->
-            (forall z, x <= z <-> (forall a, P a -> f a <= z))).        
-  by setoid_rewrite forall_image.
-Qed.
+Lemma is_sup_empty z:
+  is_sup empty z <-> forall t, z <= t.
+Proof. rewrite /is_sup. setoid_rewrite forall_empty. firstorder. Qed.
+
+Lemma is_sup_pair x y z:
+  is_sup (pair x y) z <-> forall t, z <= t <-> x <= t /\ y <= t.
+Proof. rewrite /is_sup. by setoid_rewrite forall_pair. Qed.
+
+Lemma is_sup_image {A} (f: A -> X) (P: A -> Prop) z:
+  is_sup (image f P) z <-> forall t, z <= t <-> forall a, P a -> f a <= t.
+Proof. rewrite /is_sup. by setoid_rewrite forall_image. Qed.
 
 End s.
 
@@ -297,14 +300,14 @@ Qed.
 (** *** bottom element *)
 HB.mixin Record PO_bot X of PO X := {
     #[canonical=no] bot: X;
-    #[canonical=no] bot_spec: is_sup empty bot;
+    #[canonical=no] bot_sup_spec: is_sup empty bot;
   }.
 HB.structure Definition botPO := {X of PO_bot X & }.
 
 (** *** binary joins *)
 HB.mixin Record PO_cup X of PO X := {
     #[canonical=no] cup: X -> X -> X;
-    #[canonical=no] cup_spec: forall x y: X, is_sup (pair x y) (cup x y);
+    #[canonical=no] cup_sup_spec: forall x y: X, is_sup (pair x y) (cup x y);
   }.
 HB.structure Definition joinSemiLattice := {X of PO_cup X & }.
 HB.structure Definition botjoinSemiLattice := {X of PO_bot X & joinSemiLattice X }.
@@ -333,63 +336,105 @@ HB.structure Definition dCPO := {X of PO_dsup X & }.
 (** using `indexed' sups, which is convenient in practice *)
 HB.mixin Record PO_isup X of PO X := {
     #[canonical=no] isup: forall I, (I -> Prop) -> (I -> X) -> X;
-    #[canonical=no] isup_spec: forall I P (h: I -> X), is_sup (image h P) (isup I P h);
+    #[canonical=no] isup_sup_spec: forall I P (h: I -> X), is_sup (image h P) (isup I P h);
   }.
 HB.builders Context X of PO_isup X.
   Definition sup (P: X -> Prop) := isup P types_id.
   Lemma sup_spec (P: X -> Prop): is_sup P (sup P).
-  Proof. move: (isup_spec P types_id). by rewrite image_id. Qed.
+  Proof. move: (isup_sup_spec P types_id). by rewrite image_id. Qed.
   HB.instance Definition _ := PO_cup.Build X _ (fun x y => sup_spec (pair x y)).
   HB.instance Definition _ := PO_dsup.Build X _ (fun D _ => sup_spec D).
 HB.end.
 HB.structure Definition supCL := {X of PO_isup X & }.
-
-(** non-indexed sups are equivalent to indexed sups *)
-HB.factory Record PO_sup X of PO X := {
-    #[canonical=no] sup: (X -> Prop) -> X;
-    #[canonical=no] sup_spec: forall P: X -> Prop, is_sup P (sup P);
-  }.
-HB.builders Context X of PO_sup X.
-  Definition isup I P (h: I -> X) := sup (image h P).
-  Lemma isup_spec I P h: is_sup (image h P) (@isup I P h).
-  Proof. apply: sup_spec. Qed.
-  HB.instance Definition _ := PO_isup.Build X _ isup_spec.
-HB.end.
-
+Arguments isup {_ _}. 
 
 
 (** ** theory *)
 
-Notation sup P := (isup _ P types_id).
+Notation sup P := (isup P types_id).
 Lemma sup_spec (X: supCL.type) (P: X -> Prop): is_sup P (sup P).
-Proof. move: (isup_spec X P types_id). by rewrite image_id. Qed.
+Proof. move: (isup_sup_spec X P types_id). by rewrite image_id. Qed.
 
-Lemma geq_bot {X: botPO.type} (z: X): bot <= z.
-Proof. by rewrite bot_spec forall_empty. Qed.
-Lemma leq_bot {X: botPO.type} (z: X): z <= bot -> z ≡ bot. (* iff, reversed? *)
+Section bot.
+Context {X: botPO.type}.
+Implicit Types x y z: X.  
+Lemma bot_spec z: bot <= z <-> True.
+Proof. by rewrite bot_sup_spec/=. Qed.
+Lemma geq_bot z: bot <= z.
+Proof. by rewrite bot_spec. Qed.
+Lemma leq_bot z: z <= bot -> z ≡ bot. (* iff, reversed? *)
 Proof. move=>H. apply: antisym=>//. apply: geq_bot. Qed.
+End bot.
+#[export] Hint Immediate geq_bot: lattice.
 Lemma adj_bot {X Y: botPO.type} (f: X ⊣ Y): f bot ≡ bot. 
 Proof.
   apply: from_above=>y.
-  by rewrite adj 2!bot_spec 2!forall_empty.
+  by rewrite adj 2!bot_spec.
 Qed.
 
-Lemma geq_cup {X: joinSemiLattice.type} (x y z: X): x <= z -> y <= z -> cup x y <= z.
-Proof. move=>xz yz. apply/geq_is_sup. exact:cup_spec. by rewrite forall_pair. Qed.
-Lemma leq_cup_l {X: joinSemiLattice.type} (x y z: X): z <= x -> z <= cup x y.
-Proof. move=>->. apply/leq_is_sup. exact: cup_spec. by left. Qed.
-Lemma leq_cup_r {X: joinSemiLattice.type} (x y z: X): z <= y -> z <= cup x y.
-Proof. move=>->. apply/leq_is_sup. exact: cup_spec. by right. Qed.
+Section cup.
+Context {X: joinSemiLattice.type}.
+Implicit Types x y z: X.  
+Lemma cup_spec x y z: cup x y <= z <-> x <= z /\ y <= z.
+Proof. by rewrite cup_sup_spec forall_pair. Qed.
+Lemma geq_cup x y z: x <= z -> y <= z -> cup x y <= z.
+Proof. move=>xz yz. by rewrite cup_spec. Qed.
+Lemma leq_cup_l x y z: z <= x -> z <= cup x y.
+Proof. move=>->. apply/leq_is_sup. exact: cup_sup_spec. by left. Qed.
+Lemma leq_cup_r x y z: z <= y -> z <= cup x y.
+Proof. move=>->. apply/leq_is_sup. exact: cup_sup_spec. by right. Qed.
+#[export] Instance cup_leq: Proper (leq ==> leq ==> leq) (@cup X).
+Proof. intros x x' xx y y' yy. by rewrite cup_spec xx yy -cup_spec. Qed.
+#[export] Instance cup_eqv: Proper (eqv ==> eqv ==> eqv) (@cup X) := op_leq_eqv_2.
+Lemma cupA x y z: cup x (cup y z) ≡ cup (cup x y) z.
+Proof. apply: from_above=>t. rewrite 4!cup_spec. tauto. Qed.
+Lemma cupC x y: cup x y ≡ cup y x.
+Proof. apply: from_above=>t. rewrite 2!cup_spec. tauto. Qed.
+Lemma cupI x: cup x x ≡ x.
+Proof. apply: from_above=>t. rewrite cup_spec. tauto. Qed.
+Lemma leq_of_cup x y: x <= y <-> cup x y ≡ y.
+Proof.
+  split=>H. apply: antisym.
+  - by rewrite H cupI.
+  - exact: leq_cup_r.
+  - rewrite -H. exact: leq_cup_l.
+Qed.
+Lemma directed_sup_closure (P: X -> Prop): directed (sup_closure P).
+Proof.
+  move=>x y Px Py. exists (cup x y). split.
+  apply: sc_sup. 2: exact: cup_sup_spec.
+  by setoid_rewrite forall_pair.
+  by apply cup_spec.
+Qed.
+End cup.
+#[export] Hint Resolve leq_cup_l leq_cup_r: lattice.
 Lemma adj_cup {X Y: joinSemiLattice.type} (f: X ⊣ Y) (x y: X): f (cup x y) ≡ cup (f x) (f y). 
 Proof.
   apply: from_above=>z.
-  by rewrite adj 2!cup_spec 2!forall_pair -2!adj.
+  by rewrite adj 2!cup_spec -2!adj.
 Qed.
 
-Lemma geq_csup {X: CPO.type} (P: X -> Prop) C (z: X): (forall x, P x -> x <= z) -> csup P C <= z.
+Section bcup.
+Context {X: botjoinSemiLattice.type}.
+Implicit Types x y z: X.  
+Lemma cupbx x: cup bot x ≡ x.
+Proof. apply: from_above=>z. rewrite cup_spec bot_spec. tauto. Qed.
+Lemma cupxb x: cup x bot ≡ x.
+Proof. by rewrite cupC cupbx. Qed.
+End bcup.
+
+Section cpo.
+Context {X: CPO.type}.
+Implicit Types x y z: X.  
+Lemma geq_csup (P: X -> Prop) C z: (forall x, P x -> x <= z) -> csup P C <= z.
 Proof. apply geq_is_sup, csup_spec. Qed.
-Lemma leq_csup {X: CPO.type} (P: X -> Prop) C: forall z, P z -> z <= csup P C.
+Lemma leq_csup (P: X -> Prop) C: forall z, P z -> z <= csup P C.
 Proof. apply leq_is_sup, csup_spec. Qed.
+Lemma csup_leq (P Q: X -> Prop) CP CQ: covered P Q -> csup P CP <= csup Q CQ.
+Proof. apply: is_sup_leq; exact: csup_spec. Qed.
+Lemma csup_eqv (P Q: X -> Prop) CP CQ: bicovered P Q -> csup P CP ≡ csup Q CQ.
+Proof. apply: is_sup_eqv; exact: csup_spec. Qed.
+End cpo.
 Lemma adj_csup {X Y: CPO.type} (f: X ⊣ Y) (P: X -> Prop) C: f (csup P C) ≡ csup (image f P) (chain_image f C). 
 Proof.
   apply: from_above=>y.
@@ -398,10 +443,18 @@ Proof.
   by rewrite -adj.
 Qed.
 
-Lemma geq_dsup {X: dCPO.type} (P: X -> Prop) D (z: X): (forall y, P y -> y <= z) -> dsup P D <= z.
+Section dcpo.
+Context {X: dCPO.type}.
+Implicit Types x y z: X.  
+Lemma geq_dsup (P: X -> Prop) D z: (forall y, P y -> y <= z) -> dsup P D <= z.
 Proof. apply geq_is_sup, dsup_spec. Qed.
-Lemma leq_dsup {X: dCPO.type} (P: X -> Prop) D: forall z, P z -> z <= dsup P D.
+Lemma leq_dsup (P: X -> Prop) D: forall z, P z -> z <= dsup P D.
 Proof. apply leq_is_sup, dsup_spec. Qed.
+Lemma dsup_leq (P Q: X -> Prop) DP DQ: covered P Q -> dsup P DP <= dsup Q DQ.
+Proof. apply: is_sup_leq; exact: dsup_spec. Qed.
+Lemma dsup_eqv (P Q: X -> Prop) CP CQ: bicovered P Q -> dsup P CP ≡ dsup Q CQ.
+Proof. apply: is_sup_eqv; exact: dsup_spec. Qed.
+End dcpo.
 Lemma adj_dsup {X Y: dCPO.type} (f: X ⊣ Y) (P: X -> Prop) D: f (dsup P D) ≡ dsup (image f P) (directed_image f D). 
 Proof.
   apply: from_above=>y.
@@ -409,46 +462,51 @@ Proof.
   apply: forall_iff=>x.
   by rewrite -adj.
 Qed.
-  
-Lemma geq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) (z: X): (forall i, P i -> h i <= z) -> isup I P h <= z.
-Proof. move=>H. apply: geq_is_sup. exact: isup_spec. by rewrite forall_image. Qed.
-Lemma leq_isup {X: supCL.type} I (P: I -> Prop) (h: I -> X) i: P i -> h i <= isup I P h.
-Proof. move=>Pi. apply: leq_is_sup. exact: isup_spec. exact: in_image. Qed.
-Lemma adj_isup {X Y: supCL.type} (f: X ⊣ Y) I P h:
-  f (isup I P h) ≡ isup I P (f ∘ h). 
+
+Section isup.
+Context {X: supCL.type}.
+Implicit Types x y z: X.  
+Lemma isup_spec I (P: I -> Prop) (h: I -> X) z: isup P h <= z <-> forall i, P i -> h i <= z.
+Proof. by rewrite isup_sup_spec forall_image. Qed.
+Lemma geq_isup I (P: I -> Prop) (h: I -> X) (z: X): (forall i, P i -> h i <= z) -> isup P h <= z.
+Proof. move=>H. by rewrite isup_spec. Qed.
+Lemma leq_isup I (P: I -> Prop) (h: I -> X) i: P i -> h i <= isup P h.
+Proof. move=>Pi. eapply isup_spec; eauto. Qed.
+#[export] Instance isup_leq {I}: Proper (leq ==> leq ==> leq) (@isup X I).
+Proof.
+  move=>P Q pq h k hk. apply: is_sup_leq.
+  1,2: exact: isup_sup_spec.
+  exact: covered_image. 
+Qed.
+#[export] Instance isup_eqv {I}: Proper (eqv ==> eqv ==> eqv) (@isup X I) := op_leq_eqv_2.
+
+Lemma geq_sup (P: X -> Prop) z: (forall y, P y -> y <= z) -> sup P <= z.
+Proof. exact: geq_isup. Qed.
+Lemma leq_sup (P: X -> Prop): forall z, P z -> z <= sup P.
+Proof. exact: leq_isup. Qed.
+Lemma sup_leq: Proper (leq ==> leq) (@isup X X^~ id).
+Proof. move=>P Q pq. exact: isup_leq. Qed.
+Lemma sup_eqv: Proper (eqv ==> eqv) (@isup X X^~ id).
+Proof. move=>P Q pq. exact: isup_eqv. Qed.
+End isup.
+Lemma adj_isup {X Y: supCL.type} (f: X ⊣ Y) I (P: I -> Prop) h:
+  f (isup P h) ≡ isup P (f ∘ h). 
 Proof.
   apply: from_above=>y.
-  rewrite adj 2!isup_spec 2!forall_image/=.
+  rewrite adj 2!isup_spec/=. 
   apply: forall_iff=>i.
   by rewrite -adj. 
 Qed.
-
-Lemma geq_sup {X: supCL.type} (P: X -> Prop) (z: X): (forall y, P y -> y <= z) -> sup P <= z.
-Proof. apply geq_isup. Qed.
-Lemma leq_sup {X: supCL.type} (P: X -> Prop): forall z, P z -> z <= sup P.
-Proof. apply leq_isup. Qed.
 Lemma adj_sup {X Y: supCL.type} (f: X ⊣ Y) P:
-  f (sup P) ≡ isup X P f. 
+  f (sup P) ≡ isup P f. 
 Proof. exact: adj_isup. Qed.
 
-
 (** ** concrete instances *)
-
-Lemma unit_sup_spec P: is_sup P tt.
-Proof. done. Qed.
-HB.instance Definition _ := PO_sup.Build unit _ unit_sup_spec.
-
-Lemma bool_bot_spec: is_sup empty false.
-Proof. done. Qed. 
-Lemma bool_cup_spec b c: is_sup (pair b c) (b || c).
-Proof. move=>d. rewrite forall_pair. case:b; case:c; case:d; cbn; intuition discriminate. Qed. 
-HB.instance Definition _ := PO_bot.Build bool bool_bot_spec.
-HB.instance Definition _ := PO_cup.Build bool _ bool_cup_spec.
 
 Lemma Prop_bot_spec: is_sup empty False.
 Proof. cbv; tauto. Qed. 
 Lemma Prop_cup_spec (P Q: Prop): is_sup (pair P Q) (P \/ Q).
-Proof. move=>R. rewrite forall_pair. cbv; tauto. Qed. 
+Proof. rewrite is_sup_pair. cbv; tauto. Qed. 
 Lemma Prop_isup_spec I P (h: I -> Prop): is_sup (image h P) (exists2 i, P i & h i).
 Proof. rewrite is_sup_image. cbv; firstorder. Qed.
 HB.instance Definition _ := PO_bot.Build Prop Prop_bot_spec.
@@ -466,14 +524,14 @@ Section dprod.
  Program Definition dprod_bot (X: A -> botPO.type) :=
    @PO_bot.Build (forall a, X a) (fun _ => bot) _. 
  Next Obligation.
-   apply: dprod_sup=>a. rewrite image_empty. exact: bot_spec.
+   apply: dprod_sup=>a. rewrite image_empty. exact: bot_sup_spec.
  Qed.
  HB.instance Definition _ X := dprod_bot X.
 
  Program Definition dprod_cup (X: A -> joinSemiLattice.type) :=
    PO_cup.Build (forall a, X a) (fun f g a => cup (f a) (g a)) _. 
  Next Obligation.
-   apply: dprod_sup=>a. rewrite image_pair. exact: cup_spec.
+   apply: dprod_sup=>a. rewrite image_pair. exact: cup_sup_spec.
  Qed.  
  HB.instance Definition _ X := dprod_cup X.
 
@@ -488,8 +546,8 @@ Section dprod.
  HB.instance Definition _ X := dprod_dsup X. 
 
  Program Definition dprod_isup (X: A -> supCL.type) :=
-   PO_isup.Build (forall a, X a) (fun I P F a => isup I P (app a ∘ F)) _. 
- Next Obligation. apply: dprod_sup=>a. rewrite -image_comp. exact: isup_spec. Qed.
+   PO_isup.Build (forall a, X a) (fun I P F a => isup P (app a ∘ F)) _. 
+ Next Obligation. apply: dprod_sup=>a. rewrite -image_comp. exact: isup_sup_spec. Qed.
  HB.instance Definition _ X := dprod_isup X. 
  
 End dprod.
@@ -522,7 +580,7 @@ Section s.
  Section t. 
   Variables (I: PO.type) (P: I -> Prop) (H: empty_kind I P) (h: I -mon-> X). 
   Lemma bot_gsup_spec: is_sup (image h P) bot.
-  Proof. rewrite (image_empty_kind H). exact: bot_spec. Qed.
+  Proof. rewrite (image_empty_kind H). exact: bot_sup_spec. Qed.
  End t.
  Definition __bot_gen := PO_gsup.Build empty_kind X _ bot_gsup_spec.
  HB.instance Definition _ := PO_gsup.Build empty_kind (bot_gen X) _ bot_gsup_spec.
@@ -572,7 +630,7 @@ Section s.
   Variables (I: PO.type) (P: I -> Prop) (H: pair_kind I P) (h: I -mon-> X). 
   Definition cup_gsup: X := cup (h (elem1 H)) (h (elem2 H)).
   Lemma cup_gsup_spec: is_sup (image h P) cup_gsup.
-  Proof. rewrite image_pair_kind. exact: cup_spec. Qed.
+  Proof. rewrite image_pair_kind. exact: cup_sup_spec. Qed.
  End t.
  HB.instance Definition _ := PO_gsup.Build pair_kind (cup_gen X) _ cup_gsup_spec. 
 End s.
@@ -615,12 +673,6 @@ Lemma csup_gsup_closed {X: CPO.type} (P: X -> Prop) (Pcsup: forall Q (C: chain Q
   @gsup_closed (@chain) (csup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pcsup. Qed.
 
-HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_csup Y.
- HB.instance Definition _ := comonadic_gsup.Build (@chain) Y (X:=csup_gen X) f.
- HB.instance Definition _ := CPO.copy Y (csup_gen Y).
-HB.end.
-
 (** *** directed sups as generic sups over directed domains *)
 Definition dsup_gen (X: Type) := X.
 HB.instance Definition _ (X: PO.type) := PO.on (dsup_gen X).
@@ -649,12 +701,6 @@ Lemma dsup_gsup_closed {X: dCPO.type} (P: X -> Prop) (Pdsup: forall Q (D: direct
   @gsup_closed (@directed) (dsup_gen X) P.
 Proof. move=>I Q kIQ h H. exact: Pdsup. Qed.
 
-HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_dsup Y.
- HB.instance Definition _ := comonadic_gsup.Build (@directed) Y (X:=dsup_gen X) f.
- HB.instance Definition _ := dCPO.copy Y (dsup_gen Y).
-HB.end.
-
 (** *** indexed arbitrary sups as generic sups of arbitrary kind *)
 Definition any_kind: gkind := fun _ _ => True.
 
@@ -676,22 +722,16 @@ Section s.
  Context {X: supCL.type}.
  Section t. 
   Variables (I: PO.type) (P: I -> Prop) (kIP: any_kind I P) (h: I -mon-> X). 
-  Definition isup_gsup: X := let _ := kIP in isup I P h.
+  Definition isup_gsup: X := let _ := kIP in isup P h.
   Lemma isup_gsup_spec: is_sup (image h P) isup_gsup.
-  Proof. exact: isup_spec. Qed.
+  Proof. exact: isup_sup_spec. Qed.
  End t.
  HB.instance Definition _ := PO_gsup.Build any_kind (isup_gen X) _ isup_gsup_spec. 
 End s.
 
-Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I Q h, image h Q <= P -> P (isup I Q h)):
+Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I (Q: I -> Prop) h, image h Q <= P -> P (isup Q h)):
   @gsup_closed any_kind (isup_gen X) P.
 Proof. move=>I Q kIQ h H; exact: Pisup. Qed.
-                                    
-HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_isup Y.
- HB.instance Definition _ := comonadic_gsup.Build any_kind Y (X:=isup_gen X) f.
- HB.instance Definition _ := supCL.copy Y (isup_gen Y).
-HB.end.
 
 (** liftings to dependent products [forall i, X i] follow generically *)
 (* HB.instance Definition _ I (X: I -> botPO.type) := botPO.copy (forall i, X i) (bot_gen (forall i, [gbot_for (X i)])). *)
