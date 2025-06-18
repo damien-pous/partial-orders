@@ -5,7 +5,7 @@ version: "dev"
 homepage: "https://github.com/damien-pous/partial-orders"
 dev-repo: "git+https://github.com/damien-pous/partial-orders.git"
 bug-reports: "https://github.com/damien-pous/partial-orders/issues"
-license: "GNU LGPL3+"
+license: "GNU LGPL"
 
 synopsis: "A library for setoids, partial orders, complete lattices and related structures"
 description: """
