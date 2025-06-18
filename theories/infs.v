@@ -263,6 +263,10 @@ Lemma geq_cap_l x y z: x <= z -> cap x y <= z.
 Proof. exact: (@leq_cup_l (dual X)). Qed.
 Lemma geq_cap_r x y z: y <= z -> cap x y <= z.
 Proof. exact: (@leq_cup_r (dual X)). Qed.
+Lemma cap_l x y: cap x y <= x.
+Proof. exact: geq_cap_l. Qed.
+Lemma cap_r x y: cap x y <= y.
+Proof. exact: geq_cap_r. Qed.
 #[export] Instance cap_leq: Proper (leq ==> leq ==> leq) (@cap X).
 Proof. intros x x' xx y y' yy. exact: (@cup_leq (dual X)). Qed.
 #[export] Instance cap_eqv: Proper (eqv ==> eqv ==> eqv) (@cap X) := op_leq_eqv_2.

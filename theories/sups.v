@@ -383,6 +383,10 @@ Lemma leq_cup_l x y z: z <= x -> z <= cup x y.
 Proof. move=>->. apply/leq_is_sup. exact: cup_sup_spec. by left. Qed.
 Lemma leq_cup_r x y z: z <= y -> z <= cup x y.
 Proof. move=>->. apply/leq_is_sup. exact: cup_sup_spec. by right. Qed.
+Lemma cup_l x y: x <= cup x y.
+Proof. exact: leq_cup_l. Qed.
+Lemma cup_r x y: y <= cup x y.
+Proof. exact: leq_cup_r. Qed.
 #[export] Instance cup_leq: Proper (leq ==> leq ==> leq) (@cup X).
 Proof. intros x x' xx y y' yy. by rewrite cup_spec xx yy -cup_spec. Qed.
 #[export] Instance cup_eqv: Proper (eqv ==> eqv ==> eqv) (@cup X) := op_leq_eqv_2.
