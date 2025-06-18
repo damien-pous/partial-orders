@@ -85,7 +85,7 @@ Arguments leq_list [_] _ _/.
 
 (** ** extensional functions on Types *)
 (** NB: different from extensional functions between setoids (setoid_morphisms), here we use [eq] on the codomain *)
-Definition efun X Y := arrow X Y.
-Definition eid {X}: efun X X := types_id. 
+Definition extfun X Y := arrow X Y.
+Definition extid {X}: extfun X X := types_id. 
 HB.instance Definition _ X Y :=
-  isSetoid.Build (efun X Y) (@Equivalence.pointwise_equivalence X Y eq eq_equivalence). 
+  isSetoid.Build (extfun X Y) (@Equivalence.pointwise_equivalence X Y eq eq_equivalence). 

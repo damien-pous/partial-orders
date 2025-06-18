@@ -302,7 +302,7 @@ Section s.
  Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
    exist (Proper (eqv ==> eqv)) f extensional.
  Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
-   mk_ext (sval f) (proj2_sig f).
+   mk_ext' (sval f) (proj2_sig f).
  Program Definition setoid_morphism_as_sig: (X-eqv->Y) ≃ (sig (Proper (@eqv X==>@eqv Y))) :=
    mk_iso setoid_morphism_to_sig sig_to_setoid_morphism _ _.
  Next Obligation. done. Qed.

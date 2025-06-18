@@ -79,10 +79,14 @@ Notation "X '-eqv->' Y" := (setoid_morphism.type X Y) (at level 99, Y at level 2
 
 Section s.
  Context {X Y: Setoid.type}.
- Definition mk_ext (f: X -> Y) (Hf: Proper (eqv ==> eqv) f) := f.
- HB.instance Definition _ f Hf := isExtensional.Build X Y (@mk_ext f Hf) Hf.
+ Definition mk_ext' (f: X -> Y) (Hf: Proper (eqv ==> eqv) f) := f.
+ HB.instance Definition _ f Hf := isExtensional.Build X Y (@mk_ext' f Hf) Hf.
+ Definition mk_ext (f: X -> Y) Hf := @mk_ext' f Hf: X-eqv->Y.
 End s.
-Arguments mk_ext {_ _}.
+Arguments mk_ext' {_ _}.
+Arguments mk_ext {_ _} _ _.
+Notation "'efun' x .. y => p" := (mk_ext (fun x => .. (mk_ext (fun y => p) _) .. ) _)
+  (at level 200, x binder, right associativity).
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=

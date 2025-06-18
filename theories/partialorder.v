@@ -127,10 +127,14 @@ Existing Instance monotone.
 
 Section s.
   Context {X Y: PO.type}.
-  Definition mk_mon (f: X -> Y) (Hf: Proper (leq ==> leq) f) := f.
-  HB.instance Definition _ f Hf := isMonotone.Build X Y (@mk_mon f Hf) Hf.
+  Definition mk_mon' (f: X -> Y) (Hf: Proper (leq ==> leq) f) := f.
+  HB.instance Definition _ f Hf := isMonotone.Build X Y (@mk_mon' f Hf) Hf.
+  Definition mk_mon (f: X -> Y) Hf := @mk_mon' f Hf: X-mon->Y.
 End s.
-Arguments mk_mon {_ _}. 
+Arguments mk_mon' {_ _}. 
+Arguments mk_mon {_ _} _ _.
+Notation "'mfun' x .. y => p" := (mk_mon (fun x => .. (mk_mon (fun y => p) _) .. ) _)
+  (at level 200, x binder, right associativity).
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=
