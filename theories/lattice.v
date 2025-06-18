@@ -5,13 +5,14 @@ Unset Printing Implicit Defensive.
 Local Unset Transparent Obligations.
 Set Primitive Projections.
 
+
 HB.structure Definition boundedPO := {X of botPO X & topPO X }.
 HB.structure Definition Lattice := {X of joinSemiLattice X & meetSemiLattice X }.
 HB.structure Definition boundedLattice := {X of boundedPO X & Lattice X }.
-HB.structure Definition CompleteLattice := {X of supCL X & infCL X }.
+HB.structure Definition CompleteLattice := {X of supCL X & infCL X }. (* FIX: loong *)
 
 HB.saturate dual.
-(* HB.saturate setoid_morphism.type. (* hangs *) *)
+(* HB.saturate setoid_morphism.type. (* hangs (already right after boundedPO) *) *)
 HB.saturate po_morphism.type.
 HB.saturate (forall _, _).           (* void... *)
 
