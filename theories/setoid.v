@@ -76,6 +76,7 @@ HB.structure Definition setoid_morphism (X Y: Setoid.type) :=
   { f of isExtensional X Y f }.
 Existing Instance extensional.
 Notation "X '-eqv->' Y" := (setoid_morphism.type X Y) (at level 99, Y at level 200).
+Arguments extensional {_ _} _ [_ _]. 
 
 Section s.
  Context {X Y: Setoid.type}.
@@ -83,7 +84,7 @@ Section s.
  HB.instance Definition _ f Hf := isExtensional.Build X Y (@mk_ext' f Hf) Hf.
  Definition mk_ext (f: X -> Y) Hf := @mk_ext' f Hf: X-eqv->Y.
 End s.
-Arguments mk_ext' {_ _}.
+Arguments mk_ext' {_ _} _ _ _/.
 Arguments mk_ext {_ _} _ _.
 Notation "'efun' x .. y => p" := (mk_ext (fun x => .. (mk_ext (fun y => p) _) .. ) _)
   (at level 200, x binder, right associativity).
@@ -94,8 +95,8 @@ HB.instance Definition _ {X} :=
 Notation setoid_id := (types_id: _ -eqv-> _) (only parsing). 
 
 (** composition of morphisms *)
-HB.instance Definition _ {X Y Z} (f: Y-eqv->Z) (g: X-eqv->Y) :=
-  isExtensional.Build X Z (f ∘ g) (fun x y xy => extensional _ _ (extensional x y xy)).
+HB.instance Definition _ {X Y Z} (f: X-eqv->Y) (g: Y-eqv->Z) :=
+  isExtensional.Build X Z (g ∘ f) (fun _ _ xy => extensional g (extensional f xy)).
 Definition setoid_comp {X Y Z} (g: Y-eqv->Z) (f: X-eqv->Y) := g ∘ f: X-eqv->Z.
 
 (** constant morphism *)
@@ -107,10 +108,10 @@ HB.instance Definition _ {X Y} y := @setoid_const X Y y.
 (** dual morphisms *)
 Definition dualf {X Y: Type} (f: X -> Y): dual X -> dual Y := f.
 HB.instance Definition _ {X Y} (f: X -eqv-> Y) :=
-  isExtensional.Build (dual X) (dual Y) (dualf f) (@extensional _ _ f).
+  isExtensional.Build (dual X) (dual Y) (dualf f) (fun _ _ xy => extensional f xy).
 Definition dualf' {X Y: Type} (f: dual X -> dual Y): X -> Y := f.
 HB.instance Definition _ {X Y: Setoid.type} (f: dual X -eqv-> dual Y) :=
-  isExtensional.Build X Y (dualf' f) (@extensional _ _ f).
+  isExtensional.Build X Y (dualf' f) (fun _ _ xy => extensional f xy).
 (* would be definitional if setoid_morphism were declared #[primitive] *)
 Lemma dualfE {X Y}: forall f: X-eqv->Y, f = dualf' (dualf f).
 Proof. by case. Qed.
@@ -192,6 +193,7 @@ Section dprod.
 End dprod.
 Arguments eqv_dprod {_ _} _ _/.
 Definition app {A} {X: A -> Type} (a: A): (forall a, X a) -> X a := fun f => f a.
+Arguments app {_ _} _ _/.
 Definition setoid_app {A} {X: A -> Setoid.type} (a: A) :=
   isExtensional.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
 HB.instance Definition _ A X a := @setoid_app A X a.

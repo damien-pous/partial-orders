@@ -300,7 +300,7 @@ Next Obligation. done. Qed.
 Section s.
  Context {X: Setoid.type} {Y: PO.type}.
  Definition setoid_morphism_to_sig (f: X-eqv->Y): sig (Proper (eqv==>eqv)) :=
-   exist (Proper (eqv ==> eqv)) f extensional.
+   exist (Proper (eqv ==> eqv)) f (extensional f).
  Definition sig_to_setoid_morphism (f: sig (Proper (eqv==>eqv))): X-eqv->Y :=
    mk_ext' (sval f) (proj2_sig f).
  Program Definition setoid_morphism_as_sig: (X-eqv->Y) ≃ (sig (Proper (@eqv X==>@eqv Y))) :=
@@ -314,7 +314,7 @@ End s.
 Section s.
  Context {X Y: PO.type}.
  Definition po_morphism_to_sig (f: X-mon->Y): sig (Proper (leq==>leq)) :=
-   exist (Proper (leq ==> leq)) f monotone.
+   exist (Proper (leq ==> leq)) f (monotone f).
  Definition sig_to_po_morphism (f: sig (Proper (leq==>leq))): X-mon->Y :=
    mk_mon (sval f) (proj2_sig f).
  Program Definition po_morphism_as_sig: (X-mon->Y) ≃ (sig (Proper (@leq X==>@leq Y))) :=

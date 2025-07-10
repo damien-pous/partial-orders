@@ -124,6 +124,7 @@ HB.end.
 HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 Existing Instance monotone.
+Arguments monotone {_ _} _ [_ _]. 
 
 Section s.
   Context {X Y: PO.type}.
@@ -131,8 +132,8 @@ Section s.
   HB.instance Definition _ f Hf := isMonotone.Build X Y (@mk_mon' f Hf) Hf.
   Definition mk_mon (f: X -> Y) Hf := @mk_mon' f Hf: X-mon->Y.
 End s.
-Arguments mk_mon' {_ _}. 
-Arguments mk_mon {_ _} _ _.
+Arguments mk_mon' {_ _} _ _ _/. 
+Arguments mk_mon {_ _} _ _/.
 Notation "'mfun' x .. y => p" := (mk_mon (fun x => .. (mk_mon (fun y => p) _) .. ) _)
   (at level 200, x binder, right associativity).
 
@@ -143,7 +144,7 @@ Notation po_id := (types_id: _ -mon-> _) (only parsing).
 
 (** composition of morphisms *)
 HB.instance Definition _ {X Y Z} (f: X-mon->Y) (g: Y-mon->Z) := 
-  isMonotone.Build X Z (g ∘ f) (fun x y xy => monotone _ _ (monotone x y xy)).
+  isMonotone.Build X Z (g ∘ f) (fun x y xy => monotone g (monotone f xy)).
 Definition po_comp {X Y Z} (g: Y-mon->Z) (f: X-mon->Y) := g ∘ f: X-mon->Z.
 Infix "°" := po_comp. 
 
@@ -155,9 +156,9 @@ HB.instance Definition _ {X Y} y := @po_const X Y y.
 
 (** dual morphism  *)
 HB.instance Definition _ {X Y} (f: X-mon->Y) :=
-  isMonotone.Build (dual X) (dual Y) (dualf f) (fun x y xy => @monotone _ _ f y x xy).
+  isMonotone.Build (dual X) (dual Y) (dualf f) (fun _ _ xy => monotone f xy).
 HB.instance Definition _ {X Y: PO.type} (f: dual X-mon->dual Y) := 
-  isMonotone.Build X Y (dualf' f) (fun x y xy => @monotone _ _ f y x xy).
+  isMonotone.Build X Y (dualf' f) (fun x y xy => monotone f xy).
 (* would be definitional if po_morphism were declared #[primitive] *)
 Lemma dualfE {X Y}: forall f: X-mon->Y, f = dualf' (dualf f).
 Proof. by case. Qed.
