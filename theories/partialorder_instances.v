@@ -3,7 +3,6 @@ Require Export partialorder.
 Local Obligation Tactic := idtac. (* mitigate painful behaviour or [Program] *)
 
 
-
 (** * instance constructors for partial orders *)
   
 Section s.
@@ -290,6 +289,7 @@ Arguments leqb_lex_list [_] _ _/.
 Arguments leqb_option [_] _ _/.
 HB.saturate prod. 
 HB.saturate sum. 
+HB.saturate list. 
 HB.saturate option. 
 
 

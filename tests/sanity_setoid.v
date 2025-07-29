@@ -5,9 +5,21 @@ Check fun X: Type => trivial X: Setoid.type.
 Check fun X: Type => strict X: Setoid.type.
 Check False: StrictSetoid.type.
 Check unit: StrictSetoid.type.
-Check bool: StrictSetoid.type.
+Check list bool: StrictSetoid.type.
+Check False: DecidableSetoid.type.
+Check unit: DecidableSetoid.type.
+Check bool: DecidableSetoid.type.
+Check list bool: DecidableSetoid.type.
+
+Check False: Equality'.type.
+Check unit: Equality'.type.
+Check bool: Equality'.type.
+Check list bool: Equality'.type.
+Check (bool*unit+list bool)%type: Equality'.type.
+
 HB.instance Definition _ := strict_setoid nat.
 Check nat: StrictSetoid.type.
+Check (nat*bool)%type: StrictSetoid.type.  
 Check (nat->bool): Setoid.type.  
 Check (bool * (unit -> dual bool) * sig (fun b: bool=> b=true)  (* * True *))%type: Setoid.type. 
 Check (bool -> bool -> Prop): Setoid.type. 

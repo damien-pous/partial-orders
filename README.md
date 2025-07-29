@@ -28,13 +28,14 @@ setoids
  chains, directed sets
  
 (partial) order instances:
+ nat
  *, +, option, sig (classic, decidable, chain, total)
  lex_prod, sequential_sum, list, lex_list, option (classic, decidable, chain, total)
 TODO: 
  finite dprod (classic, decidable)
  fset, mset
 
-adjunctions
+adjunctions & isomoprhisms
  
 sups (colimits in categories)
  is_sup
@@ -51,7 +52,7 @@ lattices
 
 fixpoints (lfp/gfp)
  Bourbaki-Witt, Pataria
-			
+
 # FILES
 
 - theories/preliminaries.v   elementary helpers

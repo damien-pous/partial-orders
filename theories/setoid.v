@@ -341,6 +341,11 @@ Section s.
  Proof. move=>[?|?][?|?]///eqv_eq?; by f_equal. Qed.
  HB.instance Definition _ := Setoid_isStrict.Build (sum X Y) strictsetoid_sum.
 
+ (** lists *)
+ Lemma strictsetoid_list: subrelation eqv (@eq (list X)).
+ Proof. elim=>[|a h IH][|b k]//[/eqv_eq? /IH?]; by f_equal. Qed.
+ HB.instance Definition _ := Setoid_isStrict.Build (list X) strictsetoid_list.
+
  (** option *)
  Lemma strictsetoid_option: subrelation eqv (@eq (option X)).
  Proof. move=>[?|][?|]///eqv_eq?; by f_equal. Qed.
@@ -401,6 +406,10 @@ Arguments eqvb_prod [_ _] _ _/.
 Arguments eqvb_sum [_ _] _ _/.
 Arguments eqvb_list [_]_ _/. 
 Arguments eqvb_option [_] _ _/.
+HB.saturate prod.
+HB.saturate sum.
+HB.saturate list.
+HB.saturate option.
 
 
 (** constructing setoids via functions into other setoids *)
