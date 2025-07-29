@@ -160,6 +160,7 @@ HB.mixin Record Setoid_isDecidable X of Setoid X := {
   #[canonical=no] eqv_dec: forall x y, reflect (x ≡ y) (eqvb x y);
 }.
 HB.structure Definition DecidableSetoid := { X of Setoid_isDecidable X & }.
+Infix "≡?" := eqvb (at level 70). 
 
 HB.factory Record isDecidableSetoid X := {
   #[canonical=no] eqvb: X -> X -> bool;
@@ -209,6 +210,9 @@ HB.end.
 
 (** trivial setoids, for proof irrelevant types *)
 Program Definition trivial_setoid X := isDecidableSetoid.Build X (fun _ _ => true) _ _ _.
+Next Obligation. done. Qed.
+Next Obligation. done. Qed.
+Next Obligation. done. Qed.
 Definition trivial (X: Type) := X.
 HB.instance Definition _ X := trivial_setoid (trivial X).
 
@@ -249,7 +253,7 @@ Definition setoid_app {A} {X: A -> Setoid.type} (a: A) :=
   isExtensional.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
 HB.instance Definition _ A X a := @setoid_app A X a.
 
-(** product, sum, and option on Setoids *)
+(** product, sum, lists, and option on Setoids *)
 Section s.
  Variables (X Y: Setoid.type).
 
@@ -285,6 +289,24 @@ Section s.
  HB.instance Definition _ :=
    isExtensional.Build Y (sum X Y) inr (fun p q pq => pq).
 
+ (** lists *)
+ Fixpoint eqv_list (h k: list X) :=
+   match h,k with
+   | nil,nil => True
+   | cons a h,cons b k => a ≡ b /\ eqv_list h k
+   | _,_ => False
+   end.
+ Lemma setoid_list: Equivalence eqv_list.
+ Proof.
+   constructor.
+   - by elim; split. 
+   - elim=>[|a h IH] [|b k] //=[ab hk]=>//; split. by symmetry. exact: IH.
+   - elim=>[|a h IH] [|b k] [|c l]//=[ab hk] [bc kl]=>//; split.
+     by transitivity b. by eauto. 
+ Qed.
+ HB.instance Definition _ :=
+   isSetoid.Build _ setoid_list.
+ 
  (** option type *)
  Definition eqv_option (p q: option X) :=
   match p,q with Some p,Some q => p≡q | None,None => True | _,_ => False end.
@@ -302,11 +324,12 @@ Section s.
 End s.
 Arguments eqv_prod {_ _} _ _/. 
 Arguments eqv_sum {_ _}_ _/. 
+Arguments eqv_list {_}_ _/. 
 Arguments eqv_option {_}_ _/. 
 
 (** product, sum, and option on strict Setoids *)
 Section s.
- Variables (X Y: StrictSetoid.type).
+ Variables X Y: StrictSetoid.type.
 
  (** direct product *)
  Lemma strictsetoid_prod: subrelation eqv (@eq (X*Y)).
@@ -323,6 +346,62 @@ Section s.
  Proof. move=>[?|][?|]///eqv_eq?; by f_equal. Qed.
  HB.instance Definition _ := Setoid_isStrict.Build (option X) strictsetoid_option.
 End s.
+
+(** product, sum, and option on decidable Setoids *)
+Section s.
+ Variables X Y: DecidableSetoid.type.
+
+ (** direct product *)
+ Definition eqvb_prod (x y: X*Y) := (fst x ≡? fst y) && (snd x ≡? snd y).
+ Program Definition dsetoid_prod := Setoid_isDecidable.Build (prod X Y) eqvb_prod _.
+ Next Obligation. apply: andPP; apply eqv_dec. Qed.
+ HB.instance Definition _ := dsetoid_prod. 
+
+ (** direct sum *)
+ Definition eqvb_sum (x y: X+Y) :=
+   match x,y with inl x,inl y | inr x,inr y => x ≡? y | _,_ => false end.
+ Program Definition dsetoid_sum := Setoid_isDecidable.Build (sum X Y) eqvb_sum _.
+ Next Obligation.
+   destruct x; destruct y; cbn.
+   exact: eqv_dec. exact: ReflectF.
+   exact: ReflectF. exact: eqv_dec.
+ Qed.
+ HB.instance Definition _ := dsetoid_sum. 
+
+ (** lists *)
+ Fixpoint eqvb_list (h k: list X) :=
+   match h,k with
+   | nil,nil => true
+   | cons a h,cons b k => (a ≡? b) && eqvb_list h k
+   | _,_ => false
+   end.
+ Program Definition dsetoid_list := Setoid_isDecidable.Build (list X) eqvb_list _.
+ Next Obligation.
+   revert x y. 
+   elim=>[|a h IH] [|b k]/=.
+   - exact: ReflectT. 
+   - exact: ReflectF. 
+   - exact: ReflectF. 
+   - apply: andPP. exact: eqv_dec. exact: IH. 
+ Qed.
+ HB.instance Definition _ := dsetoid_list. 
+
+ (** option type *)
+ Definition eqvb_option (p q: option X) :=
+  match p,q with Some p,Some q => p≡?q | None,None => true | _,_ => false end.
+ Program Definition dsetoid_option := Setoid_isDecidable.Build (option X) eqvb_option _.
+ Next Obligation.
+   destruct x; destruct y; cbn.
+   exact: eqv_dec. exact: ReflectF.
+   exact: ReflectF. exact: ReflectT.
+ Qed.
+ HB.instance Definition _ := dsetoid_option. 
+End s. 
+Arguments eqvb_prod [_ _] _ _/.
+Arguments eqvb_sum [_ _] _ _/.
+Arguments eqvb_list [_]_ _/. 
+Arguments eqvb_option [_] _ _/.
+
 
 (** constructing setoids via functions into other setoids *)
 Definition kernel {A X: Type} (f: A -> X) := A.
@@ -342,10 +421,14 @@ Section kernel.
  HB.instance Definition _ := isExtensional.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
 Arguments eqv_kern [_ _] _ _ _/.
+HB.instance Definition _ (A: Type) (X: DecidableSetoid.type) (f: A -> X) :=
+  Setoid_isDecidable.Build (kernel f) (fun x y => f x ≡? f y) (fun _ _ => eqv_dec _ _).
 
 (** sub-setoids as a special case *)
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   Setoid.copy (sig P) (kernel sval).
+HB.instance Definition _ (X: DecidableSetoid.type) (P: X -> Prop) :=
+  DecidableSetoid.copy (sig P) (kernel sval).
 HB.instance Definition _ (X: Setoid.type) (P: X -> Prop) :=
   isExtensional.Build (sig P) X sval (fun p q pq => pq).
 
@@ -370,4 +453,3 @@ Instance const_eqv {X} {Y: Setoid.type}:
 Proof. move=>/=y y' yy x. apply yy. Qed.
 Instance const_eqv' {X} {Y: Setoid.type}:
   Proper (eqv ==> @eqv (X-eqv->Y)) (@const Y X) := const_eqv.
-

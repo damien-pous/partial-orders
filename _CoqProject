@@ -9,7 +9,6 @@
 theories/preliminaries.v
 theories/setoid.v
 theories/partialorder.v
-theories/totalorder.v
 theories/partialorder_instances.v
 theories/adjunction.v
 theories/sups.v

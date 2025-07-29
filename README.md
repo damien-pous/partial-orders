@@ -16,19 +16,23 @@ GNU LGPL3+
 # MENU
 
 setoids
- strict [dec]
+ trivial, strict, decidable
  setoid morphisms
- instances (trivial (0,1), strict (2,nat), Prop, dprod, +, *, sig, sigT?, extfun)
- 
-partial orders
- discrete
+ instances: 0, 1, 2, Prop, dprod, *, +, list, option, sig, sigT?, extfun
+
+(partial) orders
+ discrete, classic, decidable, chain
  po morphisms
- instances (discrete (0,1), 2, nat, Prop, dprod, +s, *s, sig, sigT?, extfun, monfun)
+ instances: 0, 1, 2, Prop, dprod, *(just PO), sig, sigT?, extfun, monfun
  duality
  chains, directed sets
-
-total
- chain classic [dec]
+ 
+(partial) order instances:
+ *, +, option, sig (classic, decidable, chain, total)
+ lex_prod, sequential_sum, list, lex_list, option (classic, decidable, chain, total)
+TODO: 
+ finite dprod (classic, decidable)
+ fset, mset
 
 adjunctions
  

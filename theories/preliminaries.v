@@ -5,8 +5,11 @@ From Stdlib Require Export Setoid Morphisms Basics.
 
 #[export] Set Implicit Arguments.
 #[export] Unset Printing Implicit Defensive.
-#[export] Unset Transparent Obligations.
+
 #[export] Set Primitive Projections.
+
+#[export] Unset Transparent Obligations.
+#[export] Obligation Tactic := intros. (* mitigate painful behaviour or [Program] *)
 
 (** identity and composition *)
 Notation types_id := Datatypes.id.

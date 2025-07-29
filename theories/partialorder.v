@@ -72,13 +72,105 @@ Proof. by move=>->. Qed.
 
 Hint Extern 0 (_ <= _) => exact: (eqv_refl _): core.
 
+Definition lt {X: PO.type} (x y: X) := x<=y /\ ~y<=x.
+Infix "<" := lt (at level 70).
+Notation "x <[ X ] y" := (@lt X x y) (at level 70, only parsing).
+
+
+Section s.
+Context {X: PO.type}.
+Implicit Types x y: X.
+
+Lemma eqv_leq x y: x ≡ y -> x <= y.
+Proof. apply eqv_of_leq. Qed.
+Lemma eqv_geq x y: x ≡ y -> y <= x.
+Proof. apply eqv_of_leq. Qed.
+Lemma antisym x y: x <= y -> y <= x -> x ≡ y.
+Proof. intros. by apply eqv_of_leq. Qed.
+
+Lemma antisym' x y: x <= y -> (x <= y -> y <= x) -> x ≡ y. (* TODO: more general? *)
+Proof. intros. apply antisym; tauto. Qed.
+
+Lemma leq_from_above x y: (forall z, y <= z -> x <= z) -> x <= y.
+Proof. by auto. Qed.
+Lemma from_above x y: (forall z, x <= z <-> y <= z) -> x ≡ y.
+Proof. intro E. by apply antisym; apply E. Qed.
+
+Lemma lt_le x y: x < y -> x <= y.
+Proof. exact: proj1. Qed.
+Lemma lt_nle x y: x < y -> ~y <= x.
+Proof. exact: proj2. Qed.
+Lemma lt_nlt x y: x < y -> ~y < x.
+Proof. move=>xy yx. exact: (lt_nle xy (lt_le yx)). Qed.
+Lemma lelt_lt x y z: x <= y -> y < z -> x < z.
+Proof.
+  move=>xy [yz zy]. split. by transitivity y.
+  contradict zy. by transitivity x.
+Qed.
+Lemma ltle_lt x y z: x < y -> y <= z -> x < z.
+Proof.
+  move=>[xy yx] yz. split. by transitivity y.
+  contradict yx. by transitivity z.
+Qed.
+#[export] Instance Transitive_lt: Transitive (@lt X).
+Proof. move=>x y z [xy _]. by apply lelt_lt. Qed.
+
+End s.
+
 
 (** ** classic partial orders with EM on [leq] *)
 
-HB.mixin Record isClassicPO X of PO X := {
-    #[canonical=no] classic: forall x y: X, x <= y \/ ~ x <= y;
+HB.mixin Record PO_isClassic X of PO X := {
+    #[canonical=no] leq_classic: forall x y: X, x <= y \/ ~ x <= y;
 }.
-HB.structure Definition ClassicPO := { X of isClassicPO X & }.
+HB.structure Definition ClassicPO := { X of PO_isClassic X & }.
+
+
+(** ** chains, where all pairs of elements are comparable *)
+
+HB.mixin Record PO_isChain X of PO X := {
+    #[canonical=no] leq_chain: forall x y: X, x <= y \/ y <= x;
+}.
+HB.structure Definition Chain := { X of PO_isChain X & }.
+
+
+(** ** (linear/total) orders *)
+
+HB.structure Definition Order := { X of Chain X & ClassicPO X }.
+
+HB.factory Record PO_Total X of PO X := {
+    #[canonical=no] total: forall x y: X, x <= y \/ y < x;
+}.
+HB.builders Context X of PO_Total X.
+  Implicit Types x y: X.
+  Lemma chain x y: x <= y  \/  y <= x.
+  Proof. case: (total x y)=>[|[? ?]]; auto. Qed.
+  HB.instance Definition _ := PO_isChain.Build X chain. 
+  Lemma classic x y: x <= y  \/  ~ x <= y.
+  Proof. case: (total x y)=>[|[? ?]]; auto. Qed.
+  HB.instance Definition _ := PO_isClassic.Build X classic.
+HB.end.
+
+Section s.
+Context {X: Order.type}.
+Implicit Types x y: X.
+Lemma leq_total x y: x <= y  \/  y < x.
+Proof.
+  case: (leq_classic x y); auto.
+  case: (leq_chain x y); auto.
+  by right; split.
+Qed.
+Lemma compare x y: x < y  \/  x ≡ y  \/  y < x.
+Proof.
+  case: (leq_total x y)=>xy;
+  case: (leq_total y x)=>yx.
+  - by right; left; apply: antisym. 
+  - by left.
+  - by right; right.
+  - exfalso. move: xy yx. exact: lt_nlt. 
+Qed.
+End s.
+
 
 (** ** decidable partial orders, where [leq] is decidable *)
 
@@ -91,7 +183,7 @@ HB.mixin Record PO_isDecidable X of PO X := {
 HB.builders Context X of PO_isDecidable X.
   Lemma classic (x y: X): x <= y \/ ~ x <= y.
   Proof. case: (leq_dec x y). by left. by right. Qed.
-  HB.instance Definition _ := isClassicPO.Build X classic.
+  HB.instance Definition _ := PO_isClassic.Build X classic.
   Definition eqvb (x y: X) := leqb x y && leqb y x.
   Lemma eqv_dec x y: reflect (x ≡ y) (eqvb x y).
   Proof.
@@ -101,6 +193,7 @@ HB.builders Context X of PO_isDecidable X.
   HB.instance Definition _ := Setoid_isDecidable.Build X _ eqv_dec.
 HB.end.
 HB.structure Definition DecidablePO := { X of PO_isDecidable X & }.
+Infix "<=?" := leqb (at level 70). 
 
 (** getting a decidable partial order directly from a setoid *)
 HB.factory Record Setoid_isDecidablePO X of Setoid X := {
@@ -325,6 +418,9 @@ Program Definition po_bool := Setoid_isDecidablePO.Build bool implb _ _.
 Next Obligation. by case:x; case:y. Qed.
 Next Obligation. by destruct x; destruct y. Qed.
 HB.instance Definition _ := po_bool.
+Program Definition chain_bool := PO_isChain.Build bool _.
+Next Obligation. case:x; case:y; cbv; tauto. Qed.
+HB.instance Definition _ := chain_bool.
 
 (** propositions ordered by implication *)
 Lemma po_Prop: po_axm impl. 
@@ -387,10 +483,24 @@ Section kernel.
  HB.instance Definition _ := isMonotone.Build (kernel f) X (kernelf f) (fun _ _ xy => xy). 
 End kernel.
 Arguments leq_kern [_ _] _ _ _/.
+HB.instance Definition _ (A: Type) (X: ClassicPO.type) (f: A -> X) :=
+  PO_isClassic.Build (kernel f) (fun _ _ => leq_classic _ _).
+HB.instance Definition _ (A: Type) (X: Chain.type) (f: A -> X) :=
+  PO_isChain.Build (kernel f) (fun _ _ => leq_chain _ _).
+HB.saturate kernel. 
+HB.instance Definition _ (A: Type) (X: DecidablePO.type) (f: A -> X) :=
+  PO_isDecidable.Build (kernel f) (fun x y => f x <=? f y) (fun _ _ => leq_dec _ _).
 
 (** sub partial orders as a special case *)
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   PO.copy (sig P) (kernel sval).
+HB.instance Definition _ (X: ClassicPO.type) (P: X -> Prop) :=
+  ClassicPO.copy (sig P) (kernel sval).
+HB.instance Definition _ (X: Chain.type) (P: X -> Prop) :=
+  Chain.copy (sig P) (kernel sval).
+HB.saturate sig.
+HB.instance Definition _ (X: DecidablePO.type) (P: X -> Prop) :=
+  DecidablePO.copy (sig P) (kernel sval).
 HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
   po_morphism.copy (@proj1_sig X P) (kernelf sval).
 
@@ -427,49 +537,13 @@ Instance const_leq' {X} {Y: PO.type}:
 
 (** ** theory *)
 
-Definition lt {X: PO.type} (x y: X) := x<=y /\ ~y<=x.
-Infix "<" := lt (at level 70).
-Notation "x <[ X ] y" := (@lt X x y) (at level 70, only parsing).
-
-Section s.
-Context {X: PO.type}.
-Implicit Types x y: X.
-
-Lemma eqv_leq x y: x ≡ y -> x <= y.
-Proof. apply eqv_of_leq. Qed.
-Lemma eqv_geq x y: x ≡ y -> y <= x.
-Proof. apply eqv_of_leq. Qed.
-Lemma antisym x y: x <= y -> y <= x -> x ≡ y.
-Proof. intros. by apply eqv_of_leq. Qed.
-
-Lemma antisym' x y: x <= y -> (x <= y -> y <= x) -> x ≡ y. (* TODO: more general? *)
-Proof. intros. apply antisym; tauto. Qed.
-
-Lemma leq_from_above x y: (forall z, y <= z -> x <= z) -> x <= y.
-Proof. by auto. Qed.
-Lemma from_above x y: (forall z, x <= z <-> y <= z) -> x ≡ y.
-Proof. intro E. by apply antisym; apply E. Qed.
-
-Lemma lt_le x y: x < y -> x <= y.
-Proof. exact: proj1. Qed.
-Lemma lt_nle x y: x < y -> ~y <= x.
-Proof. exact: proj2. Qed.
-Lemma lt_nlt x y: x < y -> ~y < x.
-Proof. move=>xy yx. exact: (lt_nle xy (lt_le yx)). Qed.
-Lemma lelt_lt x y z: x <= y -> y < z -> x < z.
+Lemma le_lt_or_eqv {X: ClassicPO.type} (x y: X): x<=y <-> x<y \/ x≡y.
 Proof.
-  move=>xy [yz zy]. split. by transitivity y.
-  contradict zy. by transitivity x.
+  split. 2: move=>[|]; [exact: lt_le | exact: eqv_leq].
+  case: (leq_classic y x)=>yx.
+  - right. exact: antisym.
+  - by left.
 Qed.
-Lemma ltle_lt x y z: x < y -> y <= z -> x < z.
-Proof.
-  move=>[xy yx] yz. split. by transitivity y.
-  contradict yx. by transitivity z.
-Qed.
-#[export] Instance Transitive_lt: Transitive (@lt X).
-Proof. move=>x y z [xy _]. by apply lelt_lt. Qed.
-
-End s.
 
 Lemma Proper_eqv_leq {X: Setoid.type} {Y: PO.type}:
   Proper (@eqv X ==> @eqv Y) ≡ Proper (eqv ==> leq).
