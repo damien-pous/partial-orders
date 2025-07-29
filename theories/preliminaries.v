@@ -3,7 +3,10 @@ From HB Require Export structures.
 From mathcomp Require Export ssreflect ssrfun ssrbool.
 From Stdlib Require Export Setoid Morphisms Basics.
 
-Set Implicit Arguments.
+#[export] Set Implicit Arguments.
+#[export] Unset Printing Implicit Defensive.
+#[export] Unset Transparent Obligations.
+#[export] Set Primitive Projections.
 
 (** identity and composition *)
 Notation types_id := Datatypes.id.

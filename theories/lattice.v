@@ -1,11 +1,5 @@
 Require Export lfp gfp.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
-
 HB.structure Definition boundedPO := {X of botPO X & topPO X }.
 HB.structure Definition Lattice := {X of joinSemiLattice X & meetSemiLattice X }.
 HB.structure Definition boundedLattice := {X of boundedPO X & Lattice X }.

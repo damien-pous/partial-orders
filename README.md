@@ -15,8 +15,6 @@ GNU LGPL3+
 
 # MENU
 
-preliminaries
- 
 setoids
  strict [dec]
  setoid morphisms
@@ -106,211 +104,73 @@ This raises difficulties when using HB structures, which we solve using the foll
      ·botPO
 
 
-# DUALITY/GENERICITY
+# DUALITY
 
-- for setoid/partial orders/... dual is involutive only up to eta
-- idem for morphisms (otherwise we loose some ssreflect rewriting)
+We exploit duality to factor arguments about suprema/infima:
 
-in sup,    gsup    <=> std sups
-            dprod       +
-            mon/ext     + 
+if [X] has some structure then [dual X] has the dual one
 
-in inf,    gsup    <-> ginf (ok but for gdual gdual + difficulty of dual_mon functions)
-            dprod      (copypaste)
-			mon/ext    (copypaste)
-			
-           std sup <-> std inf
-		    dprod       +
-			mon/ext     ?
-			
-		   ginf    <=> std inf (boring, unless duality)
-			dprod       +
-			mon/ext     +
+This duality is involutive only up to eta, otherwise we loose some ssreflect rewriting.
+This is fine almost all the time, but requires specific tricks at a few places.
 
-# TODO
+Consider duality for morphisms for instance,
+if [f] is morphism between some structures X and Y, then [dualf f] is a morphism between [dual X] and [dual Y]
 
-closures 
-decidable eqv, leq
-modular,distributive,residuated
-more on adjunctions
+If X and Y are concrete, then [dualf (dualf f)] is again a morphism between X and Y
+But if X and Y are abstract (not eta-expanded), then this is only a morphism between [dual (dual X)] and [dual (dual Y)].
 
-rethink:
-- use of categories / comp ° \circ
+Whence the need for a second operator, [dualf'], mapping a morphism from [dual X] to [dual Y] to a morphism from [X] to [Y].
+Again, [dualf' (dual f)] = [f] only up to eta
 
-rework&sync sanity checks
 
-don't use HB for morphisms? (or use them more)
+# GENERICITY
 
-lattice tactics
+We define various kinds of suprema:
+- bot        : supremum of the empty set, i.e., bottom element
+- cup x y    : supremum of the pair {x,y}, i.e., join
+- csup P C   : supremum of the chain X (C being the proof that P is a chain) 
+- dsup P D   : supremum of the directed set X (D being the proof that P is directed) 
+- isup I P f : supremum of { f i / i \in I, P i }
+- sup P      : supremum of P  (sup P = isup X P id)
+and dually for infima:
+- bot        : infimum of the empty set, i.e., top element
+- cap x y    : infimum of the pair {x,y}, i.e., meet
+- cinf P C   : infimum of the chain X (C being the proof that P is a chain) 
+- dinf P D   : infimum of the directed set X (D being the proof that P is directed) 
+- iinf I P f : infimum of { f i / i \in I, P i }
+- inf P      : infimum of P  (inf P = iinf X P id)
 
 
-## LATER
+In order to factor some aguments, we use a *generic* operators:
+- gsup k     : supremum operation of kind k
+- ginf k     : infimum operation of kind k 
+where k is an "informative predicate on subsets", for instance
+- k P = is_empty P   for bottom/top elements
+- k P = is_pair P    for binary joins/meet
+- k P = chain P      for chain sups 
+- k P = cochain P    for (co)chain infs (cochain is only equivalent to chain, not equal, unfortunately)
+- k P = directed P   for directed sups 
+- k P = codirected P for (co)directed infs 
+- k P = True         for arbitrary sups/infs
 
-finite structures
 
-Heyting/Boolean algebras
+The construction of dependent product spaces and spaces of extensive/monotone functions are carried out once and for all on generic sups/infs, and then transported to the various structures automatically
 
-non-empty chains/directed/arbitrary?
-and/or I-indexed variants? (omega)
 
-setoid_congruence tactic
+# DECIDABILITY, TOTALITY, CLASSICAL LOGIC
 
+A partial order is 
+- decidable when the relation [<=] is decidable
+- classic when [forall x y, x <= y \/ ~ y <= x]
+- a chain when [forall x y, x <= y \/ y <= x]
+- total (or linear) when [forall x y, x <= y \/ y < x]
+  (with x<y if x<=y /\ ~ y<=x)
 
-Non constructive arguments:
-- chain-complete => directed-complete (e.g., CPO => dCPO)
-https://topology.lmf.cnrs.fr/markowsky-or-cohn/
-https://topology.lmf.cnrs.fr/iwamuras-lemma-kowalskys-theorem-and-ordinals/
-George Markowsky, Chain-complete posets and directed sets with applications, 1976
+We have the following implications (top-down):
 
-- BourbakiWitt + AC => ZL (already in coq-zorns-lemma)
+decidable
+   \        total
+    \      /     \
+    classic     chain
 
-
-# MISC THOUGHTS
-
-- efficiency: 
-  HB needs 15s where CS only needs 4s, 
-  but HB seems faster on the user side: hb_chain needs 2.1s where chain needs 2.5s
-
-- merge Setoid and PO ??  (probably not: lex_prod and prod share setoid their setoid structure)
-
-- split ops and laws:
-  + was forced in relation aglebra?
-  + less unification problems?
-  - less mathematical
-  - more arguments
-  - laws come into the way anyways, for building the GPO of monotone functions
-
-- laws via CS vs. laws via TC
-  - with CS, cannot mix derived ops/concepts and lemmas in the same section
-  - faster with TC (for now)
-
-- separate setoid from PO:
-  + same equality structure for prod and lex_prod
-  - one more layer
-
-- separate PO from SI-PO ?
-  + PO remains without level arguments
-  - one more layer
-
-- levels and inheritance
-  concrete instances could be polymorphic, but not abstract assumptions
-  -> anticipate coercions in all lemma statements
-  
-  concrete instances with a fixed concrete level
-  definitions and lemmas explicitly upward closed (forall l, k<<l -> )
-
-- duality: difficulty with monotone functions: [X-mon->Y] =/= [dual X-mon-> dual Y] due to the switch in monotonicity statement proofs 
-
-
-
-suprema
-(infima by duality)
-
-is_sup: (X -> Prop) -> X -> Prop 
-
-- empty                 bot:   0            *
-- singleton             id:                 *
-- binary                cup:   X²           *     A->X
-- finite                      (list X)      bool, A->X
-- decidable                   (X->bool)     bool, F->X
-- all                   sup:  (X->Prop)     Prop, A->X
-- I                           (I -> X)
-
-- directed                    {D: X->Prop | directed D}
-- omega-increasing            {D: nat->X  | increasing D}
-- chain                       {C: X->Prop | chain C}
-- omega-chain                 {C: nat->X  | chain C}
-
-- decidable? [X -> bool]                           bool
-
-[below: to be linked with directed]
-- chains
-- omega-chains
-- increasing omega-sequences
-
-
-omega-increasing => omega-chain => chain => directed
-
-classical logic: 
-  omega-chain => omega-increasing
-  chain-complete => directed-complete ()
-
-Props:                                                                                closed under
-chain P: forall x y, P x -> P y -> x<=y \/ y <=x                                    intersection
-directed P: forall x y, P x -> P y -> exists z, P z /\ x<=z /\ y <=z                union
-non-empty P: exists x, P x                                                          union
-finite P: exists l, forall x, P x -> In x l                                         union, intersection
-
-Sizes:
-below T P: exists f: T -> X, P == im f
-exact T P: exists f: T -> X, inj f /\ P == im f
-
-
-=================
-
-(X,≡) setoid 
- -> unit, nat, bool, Prop, +, *, list, forall, 
- -> category of setoids and setoid-morphisms
-
-(X,≡,<=) partial order
- -> unit, nat, bool, Prop, +, +', *, *', list, forall, 
- -> po-enriched category of pos and monotone functions
-    (a sub-category of the above one)
-
-(X,≡,<=,infs,sups) I,S-complete partial order (cpo) [with I,S: (X->Prop)->Type]
- -> some instances
- -> infs and sups in the above po-enriched category (for some I,S at least)
- -> sub-category of I,S-preserving monotone functions
-
-
-[S-sup: forall (P: X -> Prop), S P -> X]
-
-[S P = empty P]                     -> bot
-[S P = { x,y: X | P ≡ pair x y }]   -> cup
-[S P = { l: list X | P ≡ In l }]    -> fcup
-[S P = chain P]                     -> csup
-[S P = directed P]                  -> dsup
-[S P = True]                          -> sup
-[S P = decidable P] 
-[S P = { f: X -> bool| reflect f P }]
-
-[S_h P = forall b, b\in h -> S_b P]
-
-
-
-
-
-
-
-
-(X,≡,<=) partial order 
- -> unit, nat, bool, Prop, +, +', *, *', forall, 
- 
-
-
-
-(X,≡) setoid
-(X,≡,<=) partial order  (po)
-(X,≡,<=,gsup,gsinf) S,I-complete po
-
-setoid-morphisms
-po-morphisms
-S,I-po-morphisms
-
-
-Hom    Type Setoid PO S,I-PO
-Type        Setoid PO S,I-PO
-Setoid        ^.   ^.   ^.
-PO            ^    ^.   ^.
-S,I-PO        ^    ^    ^.
-
-comp   Type Setoid PO     S,I-PO
-Type   Type Type   Type   Type
-Setoid Type Setoid Setoid Setoid
-PO     Type Setoid PO     PO
-S,I-PO Type Setoid PO     S,I-PO
-
-comp: eqv/Setoid => eqv => eqv
-comp: leq/Setoid => eqv => leq
-comp: leq/PO     => leq => leq
-
+In fact, a partial order is total iff it is both classic and a chain

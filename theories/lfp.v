@@ -1,11 +1,6 @@
 From Stdlib Require Classical.
 Require Export sups.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
 (** * least fixpoint theorems *)
 
 Section s.

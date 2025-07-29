@@ -1,11 +1,6 @@
 Require Export adjunction.
 Require Import sups.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
 (** * infima in partial orders *)
 
 (** ** general properties of infima *)

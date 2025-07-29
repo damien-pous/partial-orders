@@ -1,23 +1,24 @@
     Time |  Peak Mem | File Name                   
 ---------------------------------------------------
-0m28.61s | 512020 ko | Total Time / Peak Mem       
+0m30.17s | 516248 ko | Total Time / Peak Mem       
 ---------------------------------------------------
-0m04.61s | 512020 ko | gfp.vo                      
-0m04.07s | 494856 ko | lattice.vo                  
-0m03.73s | 483860 ko | lfp.vo                      
-0m03.05s | 433380 ko | sups.vo                     
-0m02.80s | 439404 ko | infs.vo                     
-0m01.64s | 405984 ko | partialorder.vo             
-0m01.63s | 407288 ko | adjunction.vo               
-0m01.55s | 482400 ko | instances.vo                
-0m01.53s | 356308 ko | tests/sanity_partialorder.vo
-0m00.97s | 352620 ko | tests/sanity_setoid.vo      
-0m00.82s | 371648 ko | setoid.vo                   
-0m00.48s | 365624 ko | totalorder.vo               
-0m00.37s | 427716 ko | tests/sanity_gfp.vo         
-0m00.37s | 425144 ko | tests/sanity_lattice.vo     
-0m00.32s | 410220 ko | tests/sanity_lfp.vo         
-0m00.24s | 427316 ko | tests/sanity.vo             
-0m00.16s | 338748 ko | tests/sanity_infs.vo        
-0m00.15s | 305516 ko | tests/sanity_sups.vo        
-0m00.12s | 227404 ko | preliminaries.vo            
+0m04.97s | 516248 ko | gfp.vo                      
+0m04.06s | 499108 ko | lattice.vo                  
+0m03.69s | 483484 ko | lfp.vo                      
+0m03.04s | 440212 ko | sups.vo                     
+0m02.88s | 450876 ko | infs.vo                     
+0m01.89s | 423648 ko | partialorder.vo             
+0m01.66s | 498164 ko | instances.vo                
+0m01.61s | 414884 ko | adjunction.vo               
+0m01.54s | 363576 ko | tests/sanity_partialorder.vo
+0m01.16s | 403116 ko | setoid.vo                   
+0m00.98s | 359580 ko | tests/sanity_setoid.vo      
+0m00.42s | 367784 ko | partialorder_instances.vo   
+0m00.41s | 434184 ko | tests/sanity_lattice.vo     
+0m00.40s | 349168 ko | totalorder.vo               
+0m00.39s | 427512 ko | tests/sanity_gfp.vo         
+0m00.30s | 414208 ko | tests/sanity_lfp.vo         
+0m00.23s | 408276 ko | tests/sanity.vo             
+0m00.22s | 376944 ko | tests/sanity_infs.vo        
+0m00.18s | 327792 ko | tests/sanity_sups.vo        
+0m00.14s | 226040 ko | preliminaries.vo            

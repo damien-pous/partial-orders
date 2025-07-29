@@ -6,6 +6,7 @@ Check fun X: Type => strict X: Setoid.type.
 Check False: StrictSetoid.type.
 Check unit: StrictSetoid.type.
 Check bool: StrictSetoid.type.
+HB.instance Definition _ := strict_setoid nat.
 Check nat: StrictSetoid.type.
 Check (nat->bool): Setoid.type.  
 Check (bool * (unit -> dual bool) * sig (fun b: bool=> b=true)  (* * True *))%type: Setoid.type. 

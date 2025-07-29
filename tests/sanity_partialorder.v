@@ -205,8 +205,8 @@ Abort.
 Check fun X: PO.type => @types_id X: X-mon->X. 
 Check fun (X: PO.type) (f g: X -mon-> X) => f: X -eqv->X. 
 
-Check unify (tt <= tt) True.
-Check unify (false <= true) True.
+Check unify (tt <= tt) true.
+Check unify (false <= true) true.
 
 Check forall (X: PO.type) (f: X -mon-> X), types_id ° f <= types_id. 
 Check forall (X: PO.type) (f: X -eqv-> X), f <= types_id.

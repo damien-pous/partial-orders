@@ -1,11 +1,6 @@
 From Stdlib Require Eqdep_dec.
 Require Export adjunction.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
 (** * suprema in partial orders *)
 
 (** ** general properties of suprema *)

@@ -1,9 +1,5 @@
 Require Export preliminaries.
-
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
+From mathcomp Require Import eqtype. 
 
 (** * setoids *)
 
@@ -152,12 +148,67 @@ HB.end.
 Definition strictext {X: StrictSetoid.type} {Y: Setoid.type} (f: X -> Y) := f.   
 HB.instance Definition _ X Y f := StrictThusExtensional.Build X Y (strictext f).
 
+HB.instance Definition _ (X: StrictSetoid.type) := Setoid_isStrict.Build (dual X) eqv_eq.
+HB.instance Definition _ (X: StrictSetoid.type) := Setoid_isStrict.Build (eta X) eqv_eq.
+
+
+(** ** decidable setoids, where [eqv] is decidable *)
+
+#[primitive]
+HB.mixin Record Setoid_isDecidable X of Setoid X := {
+  #[canonical=no] eqvb: X -> X -> bool;
+  #[canonical=no] eqv_dec: forall x y, reflect (x ≡ y) (eqvb x y);
+}.
+HB.structure Definition DecidableSetoid := { X of Setoid_isDecidable X & }.
+
+HB.factory Record isDecidableSetoid X := {
+  #[canonical=no] eqvb: X -> X -> bool;
+  #[canonical=no] eqv_refl: forall x, eqvb x x;
+  #[canonical=no] eqv_sym: forall x y, eqvb x y -> eqvb y x;
+  #[canonical=no] eqv_trans: forall x y z, eqvb x y -> eqvb y z -> eqvb x z;
+}.
+HB.builders Context X of isDecidableSetoid X.
+  Definition eqv (x y: X): Prop := eqvb x y.
+  Lemma Equivalence_eqv: Equivalence eqv.
+  Proof.
+    split; repeat intro.
+    - exact: eqv_refl.
+    - exact: eqv_sym.
+    - apply: eqv_trans; eassumption.
+  Qed.
+  HB.instance Definition _ := isSetoid.Build X Equivalence_eqv.
+  HB.instance Definition _ := Setoid_isDecidable.Build X _ (fun _ _ => idP).
+HB.end.
+
+HB.instance Definition _ (X: DecidableSetoid.type) := Setoid_isDecidable.Build (dual X) _ eqv_dec.
+HB.instance Definition _ (X: DecidableSetoid.type) := Setoid_isDecidable.Build (eta X) _ eqv_dec.
+
+
+(** ** strict and decidable setoids, i.e., eqtypes
+    (this structure is equivalent to [Equality] from mathcomp.ssreflect) *)
+HB.structure Definition Equality' := { X of StrictSetoid X & DecidableSetoid X }.
+
+HB.factory Record eqtype_Setoid X of Equality X := {}.
+HB.builders Context X of eqtype_Setoid X.
+  HB.instance Definition _ := strict_setoid X. 
+  HB.instance Definition _ := Setoid_isDecidable.Build X _ (@eqP X). 
+HB.end.
+Notation eqtype_setoid X := (eqtype_Setoid.Build X).
+  
+HB.factory Record eqtype_Decidable X of StrictSetoid X & Equality X := {}.
+HB.builders Context X of eqtype_Decidable X.
+  Program Definition dec := Setoid_isDecidable.Build X eq_op _.
+  Next Obligation.
+    apply: equivP. exact: eqP.
+    split. by move=>->. exact: eqv_eq. 
+  Qed.
+HB.instance Definition _ := dec.
+HB.end.
 
 (** ** instances *)
 
 (** trivial setoids, for proof irrelevant types *)
-Program Definition trivial_setoid X := isSetoid.Build X (eqv := fun _ _ => True) _.
-Next Obligation. firstorder. Qed.
+Program Definition trivial_setoid X := isDecidableSetoid.Build X (fun _ _ => true) _ _ _.
 Definition trivial (X: Type) := X.
 HB.instance Definition _ X := trivial_setoid (trivial X).
 
@@ -170,13 +221,13 @@ HB.instance Definition _ (X: Setoid.type) := StrictThusExtensional.Build False X
 HB.instance Definition _ := trivial_setoid unit.
 HB.instance Definition _ := Setoid_isStrict.Build unit (fun x y _ => unit_eq x y).
 
-(** strict setoid for [bool] and [nat] *)
-HB.instance Definition _ := strict_setoid bool.
-HB.instance Definition _ := strict_setoid nat.
+(** strict & decidable setoid for [bool] *)
+HB.instance Definition _ := eqtype_setoid bool.
 HB.instance Definition _ (X: Setoid.type) (x y: X) := StrictThusExtensional.Build bool X (bool_fun x y).
 
 (** setoid of extensional propositions *)
 HB.instance Definition _ := isSetoid.Build Prop iff_equivalence. 
+
 
 (** (dependent) function space *)
 Section dprod.

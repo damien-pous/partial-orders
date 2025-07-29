@@ -1,11 +1,6 @@
 From Stdlib Require Bool.
 Require Export setoid.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
 (** * partial orders *)
 
 (** ** class *)
@@ -55,6 +50,7 @@ HB.builders Context X of Type_isPO X.
   HB.instance Definition _ := isPO.Build X PO_axm.
 HB.end.
 
+
 (** ** basic properties *)
 
 Instance PreOrder_leq {X: PO.type}: @PreOrder X leq.
@@ -77,6 +73,72 @@ Proof. by move=>->. Qed.
 Hint Extern 0 (_ <= _) => exact: (eqv_refl _): core.
 
 
+(** ** classic partial orders with EM on [leq] *)
+
+HB.mixin Record isClassicPO X of PO X := {
+    #[canonical=no] classic: forall x y: X, x <= y \/ ~ x <= y;
+}.
+HB.structure Definition ClassicPO := { X of isClassicPO X & }.
+
+(** ** decidable partial orders, where [leq] is decidable *)
+
+#[primitive]
+HB.mixin Record PO_isDecidable X of PO X := {
+  #[canonical=no] leqb: X -> X -> bool;
+  #[canonical=no] leq_dec: forall x y, reflect (x <= y) (leqb x y);
+  }.
+(** decidable partial orders are decidable setoids *)
+HB.builders Context X of PO_isDecidable X.
+  Lemma classic (x y: X): x <= y \/ ~ x <= y.
+  Proof. case: (leq_dec x y). by left. by right. Qed.
+  HB.instance Definition _ := isClassicPO.Build X classic.
+  Definition eqvb (x y: X) := leqb x y && leqb y x.
+  Lemma eqv_dec x y: reflect (x ≡ y) (eqvb x y).
+  Proof.
+    apply: equivP. 2: by rewrite eqv_of_leq.
+    apply: andPP; exact: leq_dec. 
+  Qed.
+  HB.instance Definition _ := Setoid_isDecidable.Build X _ eqv_dec.
+HB.end.
+HB.structure Definition DecidablePO := { X of PO_isDecidable X & }.
+
+(** getting a decidable partial order directly from a setoid *)
+HB.factory Record Setoid_isDecidablePO X of Setoid X := {
+  #[canonical=no] leqb: X -> X -> bool;
+  #[canonical=no] eqv_of_leqb: forall x y, x ≡ y <-> leqb x y && leqb y x;
+  #[canonical=no] leq_trans: forall x y z, leqb x y -> leqb y z -> leqb x z;
+}.
+HB.builders Context X of Setoid_isDecidablePO X.
+  Definition leq (x y: X): Prop := leqb x y.
+  Lemma po_axm: po_axm leq.
+  Proof.
+    apply: mk_po_axm. split.
+    - move=>x. by move: (eqv_refl x)=>/eqv_of_leqb/andP[_].
+    - exact: leq_trans.
+    - move=>x y. rewrite eqv_of_leqb. exact: Bool.andb_true_iff.
+  Qed.
+  HB.instance Definition _ := isPO.Build X po_axm.
+  HB.instance Definition _ := PO_isDecidable.Build X _ (fun _ _ => idP).
+HB.end.
+
+(** getting a decidable partial order directly from a Type *)
+HB.factory Record Type_isDecidablePO X := {
+  #[canonical=no] leqb: X -> X -> bool;
+  #[canonical=no] leq_refl: forall x, leqb x x;
+  #[canonical=no] leq_trans: forall x y z, leqb x y -> leqb y z -> leqb x z;
+}.
+HB.builders Context X of Type_isDecidablePO X.
+  Definition leq (x y: X): Prop := leqb x y.
+  Lemma PreOrder_leq: PreOrder leq.
+  Proof.
+    split.
+    - exact: leq_refl.
+    - exact: leq_trans.
+  Qed.
+  HB.instance Definition _ := Type_isPO.Build X PreOrder_leq.
+  HB.instance Definition _ := PO_isDecidable.Build X _ (fun _ _ => idP).
+HB.end.
+
 (** ** duality / eta expansion *)
 
 Section dual.
@@ -91,6 +153,13 @@ Section dual.
  Defined.
  HB.instance Definition _ := isPO.Build (dual X) po_dual.
 End dual.
+
+Section dual_dec.
+ Context {X: DecidablePO.type}.
+ HB.instance Definition _ := PO_isDecidable.Build (eta X) leqb leq_dec.
+ HB.instance Definition _ := PO_isDecidable.Build (dual X) (fun x y => leqb y x) (fun x y => leq_dec y x).
+End dual_dec.
+
 
 (** ** morphisms *)
 
@@ -184,7 +253,7 @@ Proof. by case. Qed.
 
 #[primitive]
 HB.structure Definition StrictPO :=
-  { X of isPO X & isStrictSetoid X}.
+  { X of PO X & StrictSetoid X}.
 
 HB.factory Record isStrictPO X := {
     #[canonical=no] leq: relation X;
@@ -224,6 +293,7 @@ HB.end.
 Definition discrete (X: Type) := X.
 HB.instance Definition _ (X: Setoid.type) := Setoid.on (discrete X).
 HB.instance Definition _ (X: Setoid.type) := Setoid_isDiscretePO.Build (discrete X).
+HB.instance Definition _ (X: DecidableSetoid.type) := PO_isDecidable.Build (discrete X) eqvb eqv_dec.
 
 HB.factory Record DiscreteThusMonotone (X: DiscretePO.type) (Y: PO.type) f of setoid_morphism X Y f := {}.
 HB.builders Context X Y f of DiscreteThusMonotone X Y f.
@@ -241,19 +311,20 @@ HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) :=
 (** ** instances *)
 
 (** trivial partial order on trivial setoids *)
-HB.instance Definition _ (X: Type) := PO.copy (trivial X) (discrete (trivial X)).
+HB.instance Definition _ (X: Type) := DecidablePO.copy (trivial X) (discrete (trivial X)).
 
 (** in particular on the empty and unit type *)
 HB.instance Definition _ := DiscretePO.copy False (discrete False).
 HB.instance Definition _ := DiscretePO.copy unit (discrete unit).
+HB.instance Definition _ := DecidablePO.copy False (discrete False).
+HB.instance Definition _ := DecidablePO.copy unit (discrete unit).
 HB.instance Definition _ (X: PO.type) := @DiscreteThusMonotone.Build False X empty_fun.
 
 (** Booleans with [false <= true] *)
-Lemma PreOrder_bool: PreOrder Bool.le.
-Proof. split. by case. by move=>[][][]. Qed.
-Lemma antisym_bool: antisymmetric bool Bool.le.
-Proof. by case; case. Qed.
-HB.instance Definition _ := isStrictPO.Build bool PreOrder_bool antisym_bool.
+Program Definition po_bool := Setoid_isDecidablePO.Build bool implb _ _.
+Next Obligation. by case:x; case:y. Qed.
+Next Obligation. by destruct x; destruct y. Qed.
+HB.instance Definition _ := po_bool.
 
 (** propositions ordered by implication *)
 Lemma po_Prop: po_axm impl. 
@@ -278,7 +349,7 @@ Arguments leq_dprod {_ _} _ _/.
 HB.instance Definition _ {A} {X: A -> PO.type} (a: A) :=
   isMonotone.Build (forall a, X a) (X a) (app a) (fun f g fg => fg a).
 
-(** products, sums, option *)
+(** direct product *)
 Section s.
  Variables X Y: PO.type.
 
@@ -297,86 +368,9 @@ Section s.
    isMonotone.Build (prod X Y) X fst (fun p q pq => proj1 pq).
  HB.instance Definition _ :=
    isMonotone.Build (prod X Y) Y snd (fun p q pq => proj2 pq).
-
- (** lexicographic product *)
- (** we use an alias for product to guide structure inferrence *)
- (** TOREPORT? we need to eta expand this alias otherwise we run into universe problems with SPOs... *)
- Definition lex_prod X Y := prod X Y. 
- HB.instance Definition _ := Setoid.on (lex_prod X Y).
- Definition leq_lex_prod: relation (lex_prod X Y) :=
-   fun p q => fst p <= fst q /\ (fst q <= fst p -> snd p <= snd q).
- Lemma po_lex_prod: po_axm leq_lex_prod.
- Proof.
-   unfold leq_lex_prod.
-   apply: mk_po_axm.
-   - split=>//.
-     move=>[x x'][y y'][z z']/=[xy xy'][yz yz']. split.
-     by transitivity y.
-     move=>zx. transitivity y'.
-     apply: xy'. by transitivity z. 
-     apply: yz'. by transitivity x.
-   - move=>[??][??]. cbn. rewrite 2!eqv_of_leq. intuition.
- Qed.
- HB.instance Definition _ := isPO.Build (lex_prod X Y) po_lex_prod.
-
- (** direct sum (called "parallel" by opposition with the sequential operation below) *)
- Definition leq_parallel_sum: relation (X+Y) :=
-   fun p q => match p,q with
-           | inl x,inl y | inr x,inr y => x<=y
-           | _,_ => False
-           end.
- Lemma po_parallel_sum: po_axm leq_parallel_sum.
- Proof.
-   apply: mk_po_axm. split.
-   by case=>//=.
-   by case=>?; case=>y; case=>?//=; transitivity y.
-   case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
- Qed.
- HB.instance Definition _ :=
-   isPO.Build (sum X Y) po_parallel_sum.
- HB.instance Definition _ :=
-   isMonotone.Build X (sum X Y) inl (fun p q pq => pq).
- HB.instance Definition _ :=
-   isMonotone.Build Y (sum X Y) inr (fun p q pq => pq).
-
- (** sequential sum *)
- Definition sequential_sum := sum. 
- HB.instance Definition _ := Setoid.on (sequential_sum X Y).
- Definition leq_sequential_sum: relation (sequential_sum X Y) :=
-   fun p q => match p,q with
-           | inl x,inl y | inr x,inr y => x<=y
-           | inl _,inr _ => True
-           | _,_ => False
-           end.
- Lemma po_sequential_sum: po_axm leq_sequential_sum.
- Proof.
-   apply: mk_po_axm. split.
-   by case=>//=.
-   by case=>?; case=>y; case=>?//=; transitivity y.
-   case=>x; case=>y; cbn; rewrite ?eqv_of_leq; tauto. 
- Qed.
- HB.instance Definition _ := isPO.Build (sequential_sum X Y) po_sequential_sum.
-
- (** [option] type, adding [None] as top element *)
- (* TODO: propose the other variant;
-    do it via sequential_sum and unit? *)
- Definition leq_option (p q: option X) :=
-  match q,p with Some q,Some p => p<=q | None,_ => True | _,_ => False end.
- Lemma po_option: po_axm leq_option.
- Proof.
-   apply: mk_po_axm. split.
-   by move=>[?|]//=. 
-   by move=>[?|][y|][?|]??//=; transitivity y. 
-   case=>[?|]; case=>[?|]; cbn; rewrite ?eqv_of_leq; tauto.
- Qed.
- HB.instance Definition _ := isPO.Build (option X) po_option.
-End s. 
+End s.
 Arguments leq_prod [_ _] _ _/.
-Arguments leq_lex_prod [_ _] _ _/.
-Arguments leq_parallel_sum [_ _] _ _/.
-Arguments leq_sequential_sum [_ _] _ _/.
-Arguments leq_option [_] _ _/.
-  
+
 (** constructing a partial order via a function into another partial order *)
 Section kernel.
  Variables (A: Type) (X: PO.type) (f: A -> X).

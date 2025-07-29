@@ -1,13 +1,8 @@
 From Stdlib Require Import Arith.
+From mathcomp Require Import eqtype ssrnat.
 Require Export lattice.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
-
-(** ** Unit *)
+(** ** unit *)
 
 Lemma unit_sup_spec P: is_sup P tt.
 Proof. done. Qed.
@@ -31,12 +26,14 @@ HB.instance Definition _ := PO_cap.Build bool _ bool_cap_spec.
 
 (** ** natural numbers *)
 
+HB.instance Definition _ := eqtype_setoid nat.
 Lemma po_nat: po_axm Peano.le.
 Proof.
   apply: mk_po_axm. 
   split. now intros <-. intros. now apply Nat.le_antisymm.
 Qed.
 HB.instance Definition _ := isPO.Build nat po_nat.
+
 Lemma nat_bot_spec: is_sup empty 0.
 Proof. rewrite is_sup_empty/=. exact: le_0_n. Qed.
 Lemma nat_cup_spec n m: is_sup (pair n m) (max n m).

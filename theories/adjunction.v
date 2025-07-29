@@ -1,9 +1,5 @@
 Require Export partialorder.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-
 (** * adjunctions *)
 
 Definition adjunction {X Y: PO.type} l r := forall (x: X) (y: Y), l x <= y <-> x <= r y.

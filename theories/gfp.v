@@ -2,11 +2,6 @@ From Stdlib Require Classical.
 Require Export infs.
 Require Import lfp.
 
-Set Implicit Arguments.
-Unset Printing Implicit Defensive.
-Local Unset Transparent Obligations.
-Set Primitive Projections.
-
 (** * greatest fixpoint theorems *)
 (** by duality with least fixpoint ones *)
 
