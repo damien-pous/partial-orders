@@ -543,3 +543,9 @@ HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -mon-> Y)
 (* HB.instance Definition _ (X: PO.type) (Y: infCL.type) := monadic_iinf.Build (X -mon-> Y) (iso_dual_mon X Y). *)
 
 (* Check ((nat->bool)-mon->(nat->Prop)): infCL.type. *)
+
+(** ** additional lemmas using suprema on subsets *)
+
+Lemma is_inf_cup {X: meetSemiLattice.type} U V (u v: X):
+  is_inf U u -> is_inf V v -> is_inf (cup U V) (cap u v).
+Proof. exact: (@is_sup_cup (dual X)). Qed.

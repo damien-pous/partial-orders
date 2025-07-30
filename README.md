@@ -17,23 +17,13 @@ GNU LGPL3+
 
 setoids
  trivial, strict, decidable
- setoid morphisms
- instances: 0, 1, 2, Prop, dprod, *, +, list, option, sig, sigT?, extfun
+ setoid morphisms (extfun)
 
 (partial) orders
  discrete, classic, decidable, chain
- po morphisms
- instances: 0, 1, 2, Prop, dprod, *(just PO), sig, sigT?, extfun, monfun
+ po morphisms (monfun)
  duality
- chains, directed sets
- 
-(partial) order instances:
- nat
- *, +, option, sig (classic, decidable, chain, total)
- lex_prod, sequential_sum, list, lex_list, option (classic, decidable, chain, total)
-TODO: 
- finite dprod (classic, decidable)
- fset, mset
+ chains, directed sets, suprema&infima
 
 adjunctions & isomoprhisms
  
@@ -48,24 +38,37 @@ infs (by duality)
  {top,cap,cinf,dinf,iinf}
  
 lattices
- [modular, distributive, residuated, completely distributive]
+ complete
+ TODO: modular, distributive, residuated, completely distributive
 
-fixpoints (lfp/gfp)
+fixpoints
+ lfp/gfp and their theory
  Bourbaki-Witt, Pataria
+
+instances:
+ 0, 1, 2, nat, Prop, dprod, *, +, option, sig, extfun, monfun, fset
+ lex_prod, sequential_sum, list, lex_list, option
+TODO: 
+ finite dprod
+ finite multisets
+
 
 # FILES
 
-- theories/preliminaries.v   elementary helpers
-- theories/setoid.v          setoids
-- theories/partialorder.v    partial orders
-- theories/totalorder.v      chains & total orders
-- theories/adjunction.v      adjunctions & isomorphisms
-- theories/sups.v            suprema
-- theories/infs.v            infima
-- theories/lfp.v             least fixpoints 
-- theories/gfp.v             greatest fixpoints 
-- theories/lattice.v         complete lattices and mixed infs/sups structures
-- theories/instances.v       various instances
+- theories/preliminaries.v   		 elementary helpers
+- theories/setoid.v          		 setoids
+- theories/partialorder.v    		 partial orders
+- theories/partialorder_instances.v  partial orders instances
+- theories/totalorder.v      		 chains & total orders
+- theories/adjunction.v      		 adjunctions & isomorphisms
+- theories/sups.v            		 suprema
+- theories/infs.v            		 infima
+- theories/lfp.v             		 least fixpoints 
+- theories/gfp.v             		 greatest fixpoints 
+- theories/lattice.v         		 complete lattices and mixed infs/sups structures
+- theories/instances.v       		 instances
+- theories/sets.v       		     complete lattice of sets over a setoid
+- theories/fsets.v       		     join semilattice of finite sets over a setoid
 
 sanity checks
 - tests/*.v

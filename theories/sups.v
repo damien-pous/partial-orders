@@ -753,3 +753,18 @@ HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := joinSemiLatti
 HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -mon-> Y) (csup_gen (X -mon-> csup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -mon-> Y) (dsup_gen (X -mon-> dsup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -mon-> Y) (isup_gen (X -mon-> isup_gen Y)).
+
+(** ** additional lemmas using suprema on subsets *)
+
+Lemma image_bot {X Y: Type} (f: X -> Y): image f bot ≡ bot.
+Proof. exact: image_empty. Qed.
+Lemma image_cup {X Y: Type} (f: X -> Y) (U V: X -> Prop): image f (cup U V) ≡ cup (image f U) (image f V).
+Proof. cbv. by firstorder. Qed.
+Lemma image_isup {X Y: Type} (f: X -> Y) I P (h: I -> X -> Prop): image f (isup P h) ≡ isup P (fun i => image f (h i)).
+Proof. cbv. by firstorder. Qed.
+Lemma image_sup {X Y: Type} (f: X -> Y) (P: (X -> Prop) -> Prop): image f (sup P) ≡ isup P (image f).
+Proof. exact: image_isup. Qed.
+
+Lemma is_sup_cup {X: joinSemiLattice.type} U V (u v: X):
+  is_sup U u -> is_sup V v -> is_sup (cup U V) (cup u v).
+Proof. move=>Uu Vv z. rewrite cup_spec Uu Vv. cbn. firstorder. Qed.
