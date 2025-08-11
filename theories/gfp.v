@@ -154,7 +154,7 @@ Section c.
    suff H: forall x, C' x -> forall Cx, P (chn' x Cx). by move=>[??]; apply H.
    induction 1 as [x Cx IH|T TC IH t Ht]=>[Cfx|Ct].
    - move: (Pnext (chn' x Cx) (IH _)). by apply inf_closed_Proper.
-   - apply (Pinf (fun t => T (sval t))).
+   - apply: (Pinf (fun t => T (sval t))).
      -- move=>[x Cx] Tx. by apply IH.
      -- move=>/=[x Cx]. etransitivity. apply Ht.
         split. clear; firstorder.

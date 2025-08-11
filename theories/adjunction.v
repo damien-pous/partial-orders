@@ -91,8 +91,10 @@ Section s.
   (** left adjoints preserve sups *)
   Lemma adjoint_sup P (x: X): is_sup P x -> is_sup (image f P) (f x).
   Proof.
-    move=>H y. rewrite adj H.
-    rewrite forall_image. apply: forall_iff=>z. 
+    move=>H y/=. rewrite adj H.
+    rewrite (upper_boundE _ y).
+    setoid_rewrite image_adj.
+    apply: forall_iff=>z/=. 
     by rewrite adj. 
   Qed.
 End s.
@@ -182,8 +184,8 @@ HB.instance Definition _ X := isCoMonadic.Build X X types_id eqv_refl.
 Lemma monadic_inf {X Y} (f: X ·⊣ Y) P (y: Y):
   is_inf (image f P) y -> is_inf P (radj f y).
 Proof.
-  move=>H x. rewrite -adj H.
-  rewrite forall_image. apply: forall_iff=>z.    
+  move=>H x. rewrite -adj H lower_boundE.  
+  setoid_rewrite image_adj. apply: forall_iff=>z/=.
   rewrite adj. by setoid_rewrite (monadic z). 
 Qed.
 

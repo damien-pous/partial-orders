@@ -264,6 +264,9 @@ Proof.
   setoid_rewrite eqv_of_leq. 
   split; apply Hf; tauto.
 Qed.
+Lemma op_leq_eqv_1' {X Y: PO.type} {f: X -> Y} 
+{Hf: Proper (leq --> leq) f}: Proper (eqv ==> eqv) f.
+Proof. exact: (op_leq_eqv_1 (X:=dual X)). Qed.
 Lemma op_leq_eqv_2 {X Y Z: PO.type} {f: X -> Y -> Z}
   {Hf: Proper (leq ==> leq ==> leq) f}: Proper (eqv ==> eqv ==> eqv) f.
 Proof.
@@ -271,6 +274,15 @@ Proof.
   setoid_rewrite eqv_of_leq. 
   split; apply Hf; tauto.
 Qed.
+Lemma op_leq_eqv_2' {X Y Z: PO.type} {f: X -> Y -> Z}
+  {Hf: Proper (leq --> leq ==> leq) f}: Proper (eqv ==> eqv ==> eqv) f.
+Proof. exact: (op_leq_eqv_2 (X:=dual X)). Qed.
+Lemma op_leq_eqv_2'' {X Y Z: PO.type} {f: X -> Y -> Z}
+  {Hf: Proper (leq ==> leq --> leq) f}: Proper (eqv ==> eqv ==> eqv) f.
+Proof. exact: (op_leq_eqv_2 (Y:=dual Y)). Qed.
+Lemma op_leq_eqv_2''' {X Y Z: PO.type} {f: X -> Y -> Z}
+  {Hf: Proper (leq --> leq --> leq) f}: Proper (eqv ==> eqv ==> eqv) f.
+Proof. exact: (op_leq_eqv_2' (Y:=dual Y)). Qed.
 
 (** class of monotone functions (i.e., po morphisms) *)
 #[primitive]
@@ -287,6 +299,7 @@ HB.structure Definition po_morphism (X Y: PO.type) := { f of isMonotone X Y f }.
 Notation "X '-mon->' Y" := (po_morphism.type X Y) (at level 99, Y at level 200).
 Existing Instance monotone.
 Arguments monotone {_ _} _ [_ _]. 
+Arguments po_morphism.sort [_ _] _ _/: simpl nomatch. 
 
 Section s.
   Context {X Y: PO.type}.
@@ -508,6 +521,9 @@ HB.instance Definition _ (X: PO.type) (P: X -> Prop) :=
 HB.instance Definition _ {X: Setoid.type} {Y: PO.type} :=
   PO.copy (X-eqv->Y) (kernel (@setoid_morphism.sort X Y)).
 
+(** sets, ordered by inclusion, as a special case *)
+HB.instance Definition _ {X: Setoid.type} := PO.on (set X).
+
 (** monotone functions as a special case *)
 HB.instance Definition _ {X Y: PO.type} :=
   PO.copy (X-mon->Y) (kernel (@po_morphism.sort X Y)).
@@ -586,24 +602,98 @@ Proof. cbv. tauto. Qed.
 Lemma Proper_or: Proper (iff ==> iff ==> iff) or. 
 Proof. cbv. tauto. Qed.
 
+Lemma image_adj' {X} {Y: Setoid.type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
+  image f P <= Q -> P <= Q ∘ f.
+Proof. exact: forall_image'. Qed.
+Lemma image_adj {X} {Y: Setoid.type} (f: X -> Y) (P: X -> Prop) (Q: set Y):
+  image f P <= Q <-> P <= Q ∘ f.
+Proof. exact: forall_image. Qed.
+Lemma image_adj'' {X} {Y: Setoid.type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
+  P <= Q ∘ f -> image f P <= saturate Q.
+Proof. rewrite image_adj=>->x/=. exact: in_image. Qed.
+
+
 (** downward/upward closed subsets *)
 Notation downward_closed := (Proper (leq ==> impl)). 
 Notation upward_closed := (Proper (leq --> impl)). 
-
-(** lower/upper bounds of a subset *)
-(* using notations rather than definition to avoid having to unfold every now and then *)
-Notation lower_bound P := (fun x => forall y, P y -> x <= y) (only parsing).
-Notation upper_bound P := (fun x => forall y, P y -> y <= x) (only parsing).
 
 Section s.
 
 Context {X: PO.type}.
 Implicit Types x y z: X. 
 Implicit Types P Q: X -> Prop.
+Implicit Types S T: set X.
+
+(** upward/downward closures of an element *)
+Definition upset x := fun y => x <= y.
+Definition downset x := fun y => y <= x.
+Arguments upset _ _/.
+Arguments downset _ _/.
+
+HB.instance Definition _ x := isExtensional.Build _ _ (upset x) _.
+Program Definition _downset x := isExtensional.Build _ _ (downset x) _.
+Next Obligation. move=>y z e. by rewrite /downset e. Qed.
+HB.instance Definition _ x := _downset x.
+
+#[export] Instance upset_leq: Proper (leq --> leq) upset.
+Proof. move=>x x' e y/=. by rewrite e. Qed.
+#[export] Instance upset_eqv: Proper (eqv ==> eqv) upset := op_leq_eqv_1'.
+#[export] Instance downset_leq: Proper (leq ==> leq) downset.
+Proof. move=>x x' e y/=. by rewrite e. Qed.
+#[export] Instance downset_eqv: Proper (eqv ==> eqv) downset := op_leq_eqv_1.
+
+(** upward/downward closures of sets *)
+Definition up_closure P x := exists y, P y /\ y <= x.
+Definition down_closure P x := exists y, P y /\ x <= y.
+
+Program Definition _up_closure P := isExtensional.Build  _ _ (up_closure P) _.
+Next Obligation. move=>x x' E/=. rewrite /up_closure. by setoid_rewrite E. Qed.
+HB.instance Definition _ P := _up_closure P.
+Program Definition _down_closure P := isExtensional.Build  _ _ (down_closure P) _.
+Next Obligation. move=>x x' E/=. rewrite /down_closure. by setoid_rewrite E. Qed.
+HB.instance Definition _ P := _down_closure P.
+
+(** lower/upper bounds of a subset *)
+Definition lower_bound P x := forall y, P y -> x <= y.
+Definition upper_bound P x := forall y, P y -> y <= x.
+
+Lemma lower_boundE P x : lower_bound P x = (P <= upset x).
+Proof. done. Qed.
+Lemma upper_boundE P x : upper_bound P x = (P <= downset x).
+Proof. done. Qed.
+
+Program Definition _lower_bound P := isExtensional.Build _ _ (lower_bound P) _.
+Next Obligation. move=>y z e. by rewrite lower_boundE e. Qed.
+HB.instance Definition _ P := _lower_bound P.
+Program Definition _upper_bound P := isExtensional.Build _ _ (upper_bound P) _.
+Next Obligation. move=>y z e. by rewrite upper_boundE e. Qed.
+HB.instance Definition _ P := _upper_bound P.
+
+#[export] Instance lower_bound_leq_leq: Proper (leq --> leq --> leq) lower_bound.
+Proof. move=>U V H x y xy LUx z Vz/=. rewrite xy. apply: LUx. exact/H. Qed.
+#[export] Instance lower_bound_eqv_eqv: Proper (eqv ==> eqv ==> eqv) lower_bound := op_leq_eqv_2'''.
+#[export] Instance lower_bound_leq: Proper (leq --> leq) lower_bound.
+Proof. move=>U V H x. exact/lower_bound_leq_leq. Qed.
+#[export] Instance lower_bound_eqv: Proper (eqv ==> eqv) lower_bound := op_leq_eqv_1'.
+
+#[export] Instance upper_bound_leq_leq: Proper (leq --> leq ==> leq) upper_bound.
+Proof. move=>U V H x y xy LUx z Vz/=. rewrite -xy. apply: LUx. exact/H. Qed.
+#[export] Instance upper_bound_eqv_eqv: Proper (eqv ==> eqv ==> eqv) upper_bound := op_leq_eqv_2'.
+#[export] Instance upper_bound_leq: Proper (leq --> leq) upper_bound.
+Proof. move=>U V H x. exact/upper_bound_leq_leq. Qed.
+#[export] Instance upper_bound_eqv: Proper (eqv ==> eqv) upper_bound := op_leq_eqv_1'.
 
 (** least/greatest elements satisfying a predicate *)
 Definition least P x := P x /\ lower_bound P x.
 Definition greatest P x := P x /\ upper_bound P x.
+
+Program Definition _least S := isExtensional.Build _ _ (least S) _.
+Next Obligation. move=>x y e. by rewrite /least e. Qed.
+HB.instance Definition _ S := _least S.
+
+Program Definition _greatest S := isExtensional.Build _ _ (greatest S) _.
+Next Obligation. move=>x y e. by rewrite /greatest e. Qed.
+HB.instance Definition _ S := _greatest S.  
 
 (** minimal/maximal elements satisfying a predicate
   (ie, without anyone below/above satisfying the predicate)
@@ -611,47 +701,83 @@ Definition greatest P x := P x /\ upper_bound P x.
 Definition minimal P x := P x /\ forall y, P y -> y <= x -> x ≡ y.
 Definition maximal P x := P x /\ forall y, P y -> x <= y -> x ≡ y.
 
-(** least upper bounds / greatest lower bounds  *)
-Definition is_sup P x := forall z, x <= z <-> upper_bound P z.
-Definition is_inf P x := forall z, z <= x <-> lower_bound P z.
+Program Definition _minimal S := isExtensional.Build _ _ (minimal S) _.
+Next Obligation. move=>x y e. rewrite /minimal. by setoid_rewrite e. Qed.
+HB.instance Definition _ S := _minimal S.
 
-(** predicates closed under suprema/infima *)
-Definition sup_closed P := forall Q, Q <= P -> forall z, is_sup Q z -> P z.
-Definition inf_closed P := forall Q, Q <= P -> forall z, is_inf Q z -> P z.
+Program Definition _maximal S := isExtensional.Build _ _ (maximal S) _.
+Next Obligation. move=>x y e. rewrite /maximal. by setoid_rewrite e. Qed.
+HB.instance Definition _ S := _maximal S.  
+
+(** least upper bounds / greatest lower bounds (suprema / infima)  *)
+Definition is_sup P x := forall y, x <= y <-> upper_bound P y.
+Definition is_inf P x := forall y, y <= x <-> lower_bound P y.
+
+Program Definition _is_sup P := isExtensional.Build _ _ (is_sup P) _.
+Next Obligation. move=>y z e. rewrite /is_sup. by setoid_rewrite e. Qed.
+HB.instance Definition _ P := _is_sup P.  
+Program Definition _is_inf P := isExtensional.Build _ _ (is_inf P) _.
+Next Obligation. move=>y z e. rewrite /is_inf. by setoid_rewrite e. Qed.
+HB.instance Definition _ P := _is_inf P.  
+
+(** predicates closed under suprema / infima *)
+Definition sup_closed P := forall Q, Q <= P -> is_sup Q <= P.
+Definition inf_closed P := forall Q, Q <= P -> is_inf Q <= P.
+
+
+(** properties of the above definitions *)
+
+Lemma upper_bound_empty x: upper_bound empty x ≡ True.
+Proof. exact: forall_empty. Qed.
+
+Lemma upper_bound_single x y: upper_bound (single x) y ≡ (x <= y).
+Proof. split. by apply. by move=>H z <-. Qed.
+
+Lemma upper_bound_pair x y z: upper_bound (pair x y) z ≡ (x <= z /\ y <= z).
+Proof.
+  split.
+  - move=>H. by split; apply: H; [left|right].
+  - by case=>xz yz t [<-|<-].
+Qed.
+
+Lemma upper_bound_image {A} {f: A -> X} (P: A -> Prop) z: upper_bound (image f P) z ≡ (forall a, P a -> f a <= z).
+Proof. by rewrite upper_boundE image_adj. Qed.
 
 Lemma greatest_leq P Q: P <= Q -> forall x y, greatest P x -> greatest Q y -> x <= y.
 Proof. move=>PQ x y [Px _] [_ Hy]. apply: Hy. exact: PQ. Qed.
 
-Lemma greatest_maximal P x: greatest P x -> maximal P x.
-Proof. move=>[Px Hx]. split=>//y Py yx. apply: antisym=>//. by apply: Hx. Qed.
+Lemma greatest_maximal P: greatest P <= maximal P.
+Proof. move=>x [Px Hx]. split=>//y Py yx. apply: antisym=>//. by apply: Hx. Qed.
 
 Lemma greatest_maximal_unique P x y: greatest P x -> maximal P y -> x ≡ y.
-Proof. move=>[Px Hx] [Py Hy]. symmetry; auto. Qed.
+Proof. move=>[Px Hx] [Py Hy]. symmetry. apply: Hy=>//. exact/Hx. Qed.
 
 Lemma greatest_unique P x y: greatest P x -> greatest P y -> x ≡ y.
 Proof. move=>+/greatest_maximal. exact: greatest_maximal_unique. Qed.
 
-Lemma is_sup_alt P z: is_sup P z <-> least (upper_bound P) z.
+Lemma is_sup_alt P: is_sup P ≡ least (upper_bound P).
 Proof.
-  split; intro H. split; by apply H. 
-  intro x. split. intros E y. by rewrite -E; apply H. apply H.
+  split=>/=H. split=>/=. exact/H. rewrite lower_boundE. exact/eqv_geq.
+  move=>b; split. move=><-. by apply H.
+  move:b. by apply H. 
 Qed.
 
-Lemma greatest_is_sup P x: greatest P x -> is_sup P x.
-Proof. move=>[Px Sx]. rewrite is_sup_alt. split=>//z Sz. by apply: Sz. Qed.
+Lemma greatest_is_sup: greatest <= is_sup.
+Proof. move=>P x [Px Sx]. rewrite (is_sup_alt P _). split=>//z Sz. by apply: Sz. Qed.
 
-Lemma sup_closed_greatest_is_sup P: sup_closed P -> forall x, greatest P x <-> is_sup P x.
+Lemma sup_closed_greatest_is_sup P: sup_closed P -> greatest P ≡ is_sup P.
 Proof.
   move=>HP x. split. exact: greatest_is_sup.
   move=>H. split. apply: HP. reflexivity. done.
   by apply H.
 Qed.
 
-Definition covered: relation (X -> Prop) := fun P Q => forall x, P x -> exists y, Q y /\ x <= y.
+(** covering relation *)
+Definition covered: relation (X -> Prop) := fun P Q => P <= down_closure Q.
 #[export] Instance PreOrder_covered: PreOrder covered.
 Proof.
   constructor.
-  - by move=>P x Px; eauto.
+  - move=>P x Px/=; rewrite /down_closure; eauto.
   - move=>P Q R PQ QR x Hx. 
     case: (PQ x Hx)=>[y [Hy xy]]. 
     case: (QR y Hy)=>[z [Hz yz]].
@@ -672,11 +798,13 @@ Proof. move=>P Q H x Px. exists x; split=>//. by apply: H. Qed.
 #[export] Instance eqv_bicovered: subrelation eqv bicovered.
 Proof. move=>P Q. by rewrite eqv_of_leq; move=>[??]; split; apply leq_covered. Qed.
 
+(** directed sets (note that we consider the empty set as directed)  *)
 Definition directed P :=
   forall x y, P x -> P y -> exists z, P z /\ x <= z /\ y <= z.
 Lemma directed_empty: directed empty.
 Proof. by []. Qed.
 
+(** chains (note that we consider the empty set as a chain) *)
 Definition chain P :=
   forall x y, P x -> P y -> x <= y \/ y <= x.
 Lemma chain_empty: chain empty.
@@ -685,31 +813,18 @@ Proof. by []. Qed.
 Lemma chain_directed P: chain P -> directed P.
 Proof. move=>H x y Px Py; by case:(H _ _ Px Py); eauto. Qed.
 
+
+(** dual versions *)
+Definition cocovered: relation (X -> Prop) := fun P Q => P <= up_closure Q.
+Definition cobicovered f g := cocovered f g /\ cocovered g f.
+Definition codirected P :=
+  forall x y, P x -> P y -> exists z, P z /\ z <= x /\ z <= y.
+Definition cochain P :=
+  forall x y, P x -> P y -> y <= x \/ x <= y.
+
 End s.
-
-
-Definition image {X Y: Type} (f: X -> Y) (P: X -> Prop) y := exists x, P x /\ y = f x.
-
-Lemma image_id {X: Type} (P: X -> Prop): image types_id P ≡ P.
-Proof. cbv. by firstorder subst. Qed.
-Lemma image_comp {X Y Z: Type} (f: Y -> Z) (g: X -> Y) (P: X -> Prop): image (f ∘ g) P ≡ image f (image g P).
-Proof. cbv. firstorder subst; eauto. Qed.
-Lemma image_empty {X Y: Type} (f: X -> Y): image f empty ≡ empty.
-Proof. cbv. by firstorder. Qed.
-Lemma image_pair {X Y: Type} (f: X -> Y) (x x': X): image f (pair x x') ≡ pair (f x) (f x').
-Proof. cbv. by firstorder subst; auto. Qed.
-
-Lemma in_image {X Y} (f: X -> Y) (P: X -> Prop) x: P x -> image f P (f x).
-Proof. by exists x. Qed.
-Hint Resolve in_image: core. 
-
-Lemma forall_image {X Y: Type} (f: X -> Y) (P: X -> Prop) (Q: Y -> Prop):
-  (forall y, image f P y <= Q y) <-> forall x, P x -> Q (f x).
-Proof.
-  split=>H.
-  - move=>x Px. apply: H. by exists x.
-  - move=>y [x [Px ->]]; auto. 
-Qed.
+Arguments upset {_} _ _/.
+Arguments downset {_} _ _/.
 
 Lemma chain_image {X Y: PO.type} (f: X-mon->Y) P (C: chain P): chain (image f P).
 Proof.
@@ -719,16 +834,16 @@ Qed.
 
 Lemma directed_image {X Y: PO.type} (f: X-mon->Y) P (D: directed P): directed (image f P).
 Proof.
-   move=>/=_ _ [x [Px ->]] [y [Py ->]].
+   move=>/=fx fy [x [Px Ex]] [y [Py Ey]].
    case: (D _ _ Px Py)=>/=[z [Pz [xz yz]]].
-   exists (f z). split. by exists z. by split; apply f. 
+   exists (f z). split. by exists z. by rewrite Ex xz Ey yz.
 Qed.
 
 Instance covered_image {X: Type} {Y: PO.type}: Proper (leq ==> leq ==> covered) (@image X Y).
 Proof.
-  move=>f g fg P Q PQ. apply/forall_image=>x Px.
-  exists (g x); split. exists x; split=>//. by apply: PQ. by apply: fg.
-Qed.  
+  move=>f g fg P Q PQ. apply/image_adj=>x Px.
+  exists (g x); split. apply: in_image. exact: PQ. exact: fg.
+Qed.
 
 Instance bicovered_image {X: Type} {Y: PO.type}: Proper (eqv ==> eqv ==> bicovered) (@image X Y).
 Proof.
@@ -745,6 +860,18 @@ Lemma leq_from_below x y: (forall z, z <= x -> z <= y) -> x <= y.
 Proof. dual @leq_from_above. Qed.
 Lemma from_below x y: (forall z, z <= x <-> z <= y) -> x ≡ y.
 Proof. dual @from_above. Qed.
+
+Lemma lower_bound_empty x: lower_bound empty x ≡ True.
+Proof. exact: forall_empty. Qed.
+
+Lemma lower_bound_single x y: lower_bound (single x) y ≡ (y <= x).
+Proof. exact: (@upper_bound_single (dual X)). Qed.
+
+Lemma lower_bound_pair x y z: lower_bound (pair x y) z ≡ (z <= x /\ z <= y).
+Proof. exact: (@upper_bound_pair (dual X)). Qed.
+
+Lemma lower_bound_image {A} {f: A -> X} (P: A -> Prop) z: lower_bound (image f P) z ≡ (forall a, P a -> z <= f a).
+Proof. exact: (@upper_bound_image (dual X)). Qed.
 
 Lemma least_leq P Q: Q <= P -> forall x y, least P x -> least Q y -> x <= y.
 Proof. move=>PQ x y Hx Hy. dual @greatest_leq; eassumption. Qed.
@@ -765,31 +892,19 @@ Proof. dual @greatest_is_sup. Qed.
 Lemma inf_closed_least_is_inf P: inf_closed P -> forall x, least P x <-> is_inf P x.
 Proof. dual @sup_closed_greatest_is_sup. Qed.
 
-
-Definition cocovered P Q := @covered (dual X) P Q.
-Definition cobicovered P Q := @bicovered (dual X) P Q.
-
-#[export] Instance PreOrder_cocovered: PreOrder cocovered := @PreOrder_covered (dual X).
-#[export] Instance Equivalence_cobicovered: Equivalence cobicovered := @Equivalence_bicovered (dual X).
+#[export] Instance PreOrder_cocovered: PreOrder (@cocovered X) := @PreOrder_covered (dual X).
+#[export] Instance Equivalence_cobicovered: Equivalence (@cobicovered X) := @Equivalence_bicovered (dual X).
 #[export] Instance PO_cocovered: PartialOrder cobicovered cocovered := @PO_covered (dual X). 
-#[export] Instance leq_cocovered: subrelation leq cocovered.
-Proof. exact: @leq_covered (dual X). Qed.
-#[export] Instance eqv_cobicovered: subrelation eqv cobicovered.
-Proof. exact: @eqv_bicovered (dual X). Qed.
-
-Definition codirected P :=
-  forall x y, P x -> P y -> exists z, P z /\ z <= x /\ z <= y.
-
-Definition cochain P :=
-  forall x y, P x -> P y -> y <= x \/ x <= y.
+#[export] Instance leq_cocovered: subrelation leq (@cocovered X) := @leq_covered (dual X). 
+#[export] Instance eqv_cobicovered: subrelation eqv (@cobicovered X) := @eqv_bicovered (dual X).
 
 Lemma chain_cochain P: chain P ≡ cochain P.
 Proof. by apply: antisym=>H x y Px Py; rewrite or_comm; apply H. Qed.
 
-Lemma codirected_empty: codirected empty.
+Lemma codirected_empty: @codirected X empty.
 Proof. dual @directed_empty. Qed.
 
-Lemma cochain_empty: cochain empty.
+Lemma cochain_empty: @cochain X empty.
 Proof. dual @chain_empty. Qed.
 
 Lemma cochain_codirected P: cochain P -> codirected P.
@@ -808,3 +923,15 @@ Proof. exact: (@covered_image X (dual Y)). Qed.
 Instance cobicovered_image {X: Type} {Y: PO.type}: Proper (eqv ==> eqv ==> cobicovered) (@image X Y).
 Proof. exact: (@bicovered_image X (dual Y)). Qed.
 
+Lemma saturate_bicovered {X: PO.type} (P: X -> Prop): bicovered (saturate P) P.
+Proof.
+  split=>x. move=>[y [Py E]]. exists y; split=>//. exact: eqv_leq.
+  exists x; split=>//. by exists x.
+Qed.
+Lemma saturate_cobicovered {X: PO.type} (P: X -> Prop): cobicovered (saturate P) P.
+Proof. exact: (@saturate_bicovered (dual X)). Qed.
+
+Lemma image_id' {X: PO.type} (P: X -> Prop): bicovered (image types_id P) P.
+Proof. exact: saturate_bicovered. Qed.
+Lemma image_id'' {X: PO.type} (P: X -> Prop): cobicovered (image types_id P) P.
+Proof. exact: saturate_cobicovered. Qed.

@@ -73,6 +73,7 @@ HB.structure Definition setoid_morphism (X Y: Setoid.type) :=
 Existing Instance extensional.
 Notation "X '-eqv->' Y" := (setoid_morphism.type X Y) (at level 99, Y at level 200).
 Arguments extensional {_ _} _ [_ _]. 
+Arguments setoid_morphism.sort [_ _] _ _/: simpl nomatch. 
 
 Section s.
  Context {X Y: Setoid.type}.
@@ -462,3 +463,112 @@ Instance const_eqv {X} {Y: Setoid.type}:
 Proof. move=>/=y y' yy x. apply yy. Qed.
 Instance const_eqv' {X} {Y: Setoid.type}:
   Proper (eqv ==> @eqv (X-eqv->Y)) (@const Y X) := const_eqv.
+
+(** ** sets *)
+
+Section set.
+Context {A: Setoid.type}. 
+Implicit Types a b c: A.
+
+(** we want sets to be consistent with the setoid structure on [A] *)
+Definition set := A -eqv-> Prop.
+Implicit Types U V W: set.
+HB.instance Definition _ := Setoid.on set.
+
+Definition mem U a := U a.
+
+#[export] Instance mem_eqv: Proper (eqv ==> eqv ==> eqv) mem.
+Proof. move=>U V UV a b ab. rewrite /mem. by rewrite (UV a) ab. Qed.
+
+(** turning a predicate into a set by giving an explicit extensionality proof *)
+Definition mk_set P HP: set := mk_ext P HP.
+Arguments mk_set: clear implicits.
+
+(** empty/full set (we just reuse the [empty/full] functions) *)
+HB.instance Definition _ {X} := isExtensional.Build X Prop empty (fun _ _ _ => eqv_refl).
+HB.instance Definition _ {X} := isExtensional.Build X Prop full (fun _ _ _ => eqv_refl).
+(* Check empty: set. *)
+(* Check full: set. *)
+
+(** singleton set *)
+Definition single a := mk_set (eqv a) _.
+Lemma mem_single a: mem (single a) ≡ (eqv a).
+Proof. done. Qed.
+
+(** pair (or singleton if [a≡b]) *)
+Program Definition pair a b: set := efun c => a ≡ c \/ b ≡ c.
+Next Obligation. move=>z z' e/=. by rewrite e. Qed.
+
+End set.
+Arguments set: clear implicits.
+Notation "a ∈ U" := (mem U a) (at level 20). 
+
+(** direct image *)
+Section direct_image.
+Context {X: Type} {Y: Setoid.type} (f: X -> Y).
+
+Definition image (P: X -> Prop) := fun a => exists x, P x /\ a ≡ f x.
+Program Definition _image P := isExtensional.Build _ _ (image P) _.
+Next Obligation. move=>y y' e. rewrite /image. by setoid_rewrite e. Qed.
+HB.instance Definition _ P := _image P. 
+
+Lemma in_image (P: X -> Prop) x: P x -> image P (f x).
+Proof. by exists x. Qed.
+
+Lemma forall_image' (P: X -> Prop) (Q: Y -> Prop):
+  (forall a, image P a -> Q a) -> forall x, P x -> Q (f x).
+Proof. move=>H x Px. apply: H. by exists x. Qed.
+
+Lemma forall_image (P: X -> Prop) (Q: set Y):
+  (forall a, image P a -> Q a) <-> forall x, P x -> Q (f x).
+Proof.
+  split=>H. exact: forall_image'. 
+  move=>y [x [Px ->]]; auto. 
+Qed.
+
+Lemma image_empty: image empty ≡ empty.
+Proof. cbv. by firstorder. Qed.
+Lemma image_eq (x: X): image (eq x) ≡ single (f x).
+Proof.
+  move=>y; split.
+  - by move=>[y' [-> ->]]. 
+  - move=><-; exact: in_image.
+Qed.
+
+End direct_image.
+Arguments image {_ _} _ &.
+
+Lemma image_id {X} (P: set X): image types_id P ≡ P.
+Proof. split. by move=>[? [? ->]]. exact: in_image. Qed.
+
+Lemma image_comp {X Y Z} (f: Y -eqv-> Z) (g: X -> Y) (P: X -> Prop):
+  image (f ∘ g) P ≡ image f (image g P).
+Proof.
+  intro z; split.
+  - move=>[x [Px ->]]. apply: in_image. exact: in_image.
+  - move=>[y [[x [Px xy]] ->]].
+    exists x; split=>//. by rewrite xy.
+Qed.
+
+Lemma image_single {X Y} (f: X -eqv-> Y) (x: X): image f (single x) ≡ single (f x).
+Proof.
+  move=>y/=; split.
+  - by move=>[? [-> ->]].
+  - exists x. by split. 
+Qed.
+Lemma image_pair {X Y} (f: X -eqv-> Y) (x x': X): image f (pair x x') ≡ pair (f x) (f x').
+Proof.
+  move=>y/=; split.
+  - by move=>[? [[->|->] ->]]; [left|right].
+  - case=>H. by exists x=>/=; auto. by exists x'=>/=; auto.
+Qed.
+
+(** turning a predicate into a set by saturation *)
+Section saturate.
+Context {X: Setoid.type}.
+Definition saturate (P: X -> Prop) := image types_id P.
+Lemma mem_saturate P (HP: Proper (eqv ==> eqv) P): mem (saturate P) ≡ P.
+Proof. move=>a; split. by move=>[? [? ->]]. by exists a. Qed.
+Lemma saturate_eq (x: X): saturate (eq x) ≡ single x.
+Proof. exact: image_eq. Qed.
+End saturate.

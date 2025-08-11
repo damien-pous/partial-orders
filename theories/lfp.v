@@ -162,7 +162,7 @@ Section c.
    suff H: forall x, C x -> forall Cx, P (chn x Cx). by move=>[??]; apply H.
    induction 1 as [x Cx IH|T TC IH t Ht]=>[Cfx|Ct].
    - move: (Pnext (chn x Cx) (IH _)). by apply sup_closed_Proper.
-   - apply (Psup (fun t => T (sval t))).
+   - apply: (Psup (fun t => T (sval t))).
      -- move=>[x Cx] Tx. by apply IH.
      -- move=>/=[x Cx]. etransitivity. apply Ht.
         split. clear; firstorder.
@@ -219,7 +219,7 @@ Section c.
  Theorem lfp_of_chain_supremum x: is_sup (C f) x -> is_lfp f x.
  Proof.
    intro Hc.
-   have Cc: C f x by eapply Csup.
+   have Cc: C f x by apply: Csup.
    apply (@lfp_of_chain_prefixpoint (chn Cc))=>/=. 
    apply Hc=>//. by apply Cf. 
  Qed.
@@ -483,7 +483,7 @@ Section b.
  (** there is at most one prefixpoint, which must be a top element  *)
  Lemma prefixpoint_top x: next x <= x -> is_inf empty x.
  Proof.
-   move=>H y. split=>//_. revert y.
+   move=>H y. rewrite /lower_bound. split=>//_. revert y.
    apply: tower. apply (sup_closed_leq (const x)).
    move=>y yx. case: (linear_chain_strong x y); auto=>xy.
    have E: y≡x by apply antisym. by rewrite E.
@@ -504,7 +504,8 @@ Section b.
        have zx: z < t by apply ltle_lt with y. 
        case: (choose T Datatypes.id z z).
        by move=>*; apply linear_chain.
-       -- move=>H. apply proj2 in zx. contradict zx. by apply Ht, H. 
+       -- move=>H. apply proj2 in zx. contradict zx.
+          apply Ht. rewrite /upper_bound. by apply H. 
        -- move=>[u [Tu /=zu]]. by apply: (IH u).
      - move=>x IH y yx. constructor=>z zy. apply IH.
        apply lt_leq. eapply ltle_lt; eassumption.
@@ -519,7 +520,7 @@ Section b.
    - move=>T IH t Ht y.
      case: (choose_gen T (fun x => x <= y) (fun x => ~ x <= y)).
        by move=>*; apply: IH. 
-     -- move=>F. left. by apply Ht, F.
+     -- move=>F. left. by apply Ht; rewrite /upper_bound; apply F.
      -- move=>[x [Tx xy]]. right. contradict xy. rewrite -xy. by apply Ht.
    - move=>x IH y.
      case: (linear_chain_strong (next x) y); auto=>yn.
@@ -572,7 +573,7 @@ Section b.
  Theorem is_fixpoint: f fixpoint ≡ fixpoint.
  Proof.
    apply: antisym=>//.
-   apply: leq_csup. apply: Cf. apply Csup with (C f)=>//. exact: csup_spec.
+   apply: leq_csup. apply: Cf. apply: Csup=>//. exact: csup_spec.
  Qed.
 
  (** note: 
@@ -621,8 +622,8 @@ Section b.
  (** there is at most one prefixpoint, which must be a top element  *)
  Lemma prefixpoint_top' x: next x <= x -> is_inf empty x.
  Proof.
-   move=>H y. split=>//_. revert y.
-   apply: tower. apply (sup_closed_leq (const x)).
+   move=>H y. rewrite /lower_bound. split=>//_. revert y.
+   apply: tower. apply: (sup_closed_leq (const x)).
    by move=>y ->.
  Qed.
  

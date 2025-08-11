@@ -23,8 +23,8 @@ Lemma is_inf_eqv P p Q q: is_inf P p -> is_inf Q q -> cobicovered P Q -> p≡q.
 Proof. dual @is_sup_eqv. Qed.
 Lemma is_inf_unique (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
 Proof. dual @is_sup_unique. Qed.
-Lemma is_inf_single x: is_inf (eq x) x.
-Proof. dual @is_sup_single. Qed.
+Lemma is_inf_eq x: is_inf (eq x) x.
+Proof. dual @is_sup_eq. Qed.
 #[export] Instance Proper_is_inf: Proper (cobicovered ==> eqv ==> eqv) (@is_inf X).
 Proof. dual @Proper_is_sup. Qed.
 
@@ -43,6 +43,9 @@ Lemma is_inf_empty z:
   is_inf empty z <-> forall t, t <= z.
 Proof. dual @is_sup_empty. Qed.
 
+Lemma is_inf_single x y: is_inf (single x) y ≡ (x ≡ y).
+Proof. exact: (@is_sup_single (dual X)). Qed.
+
 Lemma is_inf_pair x y z:
   is_inf (pair x y) z <-> forall t, t <= z <-> t <= x /\ t <= y.
 Proof. dual @is_sup_pair. Qed.
@@ -55,19 +58,19 @@ End s.
 
 (** infs can be computed pointwise in function spaces *)
 Lemma dprod_inf {A} {X: A -> PO.type} (P: (forall a, X a) -> Prop) (f: forall a, X a):
-  (forall a, is_inf (image (app a) P) (f a)) -> is_inf P f.
+  (forall a: A, is_inf (image (app a) P) (f a)) -> is_inf P f.
 Proof. exact: (@dprod_sup A (fun a => dual (X a))). Qed.
 (** infs being unique, they *must* be computed pointwise if they can
     (i.e., when there are enough infs in X) *)
 Lemma dprod_inf' {A} {X: A -> PO.type} (P: (forall a, X a) -> Prop) (f g: forall a, X a):
-  (forall a, is_inf (image (app a) P) (f a)) -> 
-  is_inf P g -> forall a, is_inf (image (app a) P) (g a).
+  (forall a: A, is_inf (image (app a) P) (f a)) -> 
+  is_inf P g -> forall a: A, is_inf (image (app a) P) (g a).
 Proof. exact: (@dprod_sup' A (fun a => dual (X a))). Qed.
 (** alternatively, they *must* be computed pointwise when [A] is decidable *)
 Lemma dprod_inf'' {A} {X: A -> PO.type}
       (A_dec: forall a b: A, {a=b} + {a<>b})
       (P: (forall a, X a) -> Prop) (f: forall a, X a):
-  is_inf P f -> forall a, is_inf (image (app a) P) (f a).
+  is_inf P f -> forall a: A, is_inf (image (app a) P) (f a).
 Proof. exact: (@dprod_sup'' A (fun a => dual (X a))). Qed.
 
   
@@ -84,10 +87,11 @@ Proof. exact: (@kern_sup A (dual X)). Qed.
 
 Definition po_morphism' (X Y: PO.type) := po_morphism.type (dual X) (dual Y).
 Notation "X -mon'-> Y" := (po_morphism' X Y) (at level 99, Y at level 200).
+Definition po_morphism'_sort (X Y: PO.type) (f: X-mon'->Y): X->Y := f. 
 
 (** pointwise sups of monotone functions yield monotone functions *)
-Lemma pointwise_inf_mon' {X Y} (F: (X-mon'-> Y) -> Prop) (g: X -> Y):
-  (forall x, @is_inf Y(image (app x ∘ pobody) F) (g x)) ->
+Lemma pointwise_inf_mon' {X Y} (F: (X -mon'-> Y) -> Prop) (g: X -> Y):
+  (forall x: dual X, @is_inf Y (@image (kernel (@po_morphism'_sort X Y)) Y (app x ∘ pobody) F) (g x)) ->
   Proper (flip leq ==> flip leq) g.
 Proof. exact: (@pointwise_sup_mon (dual X) (dual Y)). Qed.
   
@@ -125,7 +129,7 @@ HB.end.
 (** infs on sub-spaces *)
 Section sub.
  Context {k} {X: ginfPO.type k}.
- Definition ginf_closed (P: X -> Prop) := forall I Q (kIQ: k I Q) (h: I -mon-> dual X), image h Q <= P -> P (ginf I Q kIQ h). 
+ Definition ginf_closed (P: X -> Prop) := forall I Q (kIQ: k I Q) (h: I -mon-> dual X), Q <= P ∘ h -> P (ginf I Q kIQ h). 
  Lemma inf_ginf_closed: inf_closed <= ginf_closed. 
  Proof. exact: (@sup_gsup_closed k (dual X)). Qed.
  #[export] Instance ginf_closed_eqv: Proper (eqv==>eqv) ginf_closed.
@@ -202,7 +206,7 @@ HB.mixin Record PO_iinf X of PO X := {
 HB.builders Context X of PO_iinf X.
   Definition inf (P: X -> Prop) := iinf P types_id.
   Lemma inf_spec (P: X -> Prop): is_inf P (inf P).
-  Proof. move: (iinf_inf_spec P types_id). by rewrite image_id. Qed.
+  Proof. move: (iinf_inf_spec P types_id). by rewrite image_id''. Qed.
   HB.instance Definition _ := PO_cap.Build X _ (fun x y => inf_spec (pair x y)).
   HB.instance Definition _ := PO_dinf.Build X _ (fun D _ => inf_spec D).
 HB.end.
@@ -344,7 +348,7 @@ Proof. exact: adj_iinf. Qed.
 Lemma Prop_top_spec: is_inf empty True.
 Proof. cbv; tauto. Qed. 
 Lemma Prop_cap_spec (P Q: Prop): is_inf (pair P Q) (P /\ Q).
-Proof. move=>R. rewrite forall_pair. cbv; tauto. Qed. 
+Proof. rewrite is_inf_pair. cbv; tauto. Qed. 
 Lemma Prop_iinf_spec I P (h: I -> Prop): is_inf (image h P) (forall i, P i -> h i).
 Proof. rewrite is_inf_image. cbv; firstorder. Qed.
 HB.instance Definition _ := PO_top.Build Prop Prop_top_spec.
@@ -434,7 +438,7 @@ End s.
 
 Lemma cap_ginf_closed {X: meetSemiLattice.type} (P: X -> Prop) (Pcap: forall x y, P x -> P y -> P (cap x y)):
   @ginf_closed pair_kind (cap_gen X) P.
-Proof. move=>I Q kIQ h /forall_image H. apply: Pcap; apply: H; apply kIQ. Qed.
+Proof. move=>I Q kIQ h H. apply: Pcap; apply: H; apply kIQ. Qed.
 
 HB.factory Record monadic_cap Y of PO Y := { X: meetSemiLattice.type; f: Y ·⊣ X }.
 HB.builders Context Y of monadic_cap Y.
@@ -451,7 +455,7 @@ Section s.
   Variables (P: X -> Prop) (D: cochain P). 
   Definition ginf_cinf := ginf (dual X) P D types_id.
   Lemma ginf_cinf_spec: @is_inf X P ginf_cinf.
-  Proof. move: (ginf_spec (dual X) P D types_id). by rewrite (image_id (X:=X)). Qed.
+  Proof. move: (ginf_spec (dual X) P D types_id). by rewrite (image_id'' (X:=X)). Qed.
  End s.
  HB.instance Definition _ := PO_cinf.Build (cinf_gen X) _ ginf_cinf_spec.
 End s.
@@ -466,9 +470,9 @@ Section s.
  HB.instance Definition _ := PO_ginf.Build (@chain) (cinf_gen X) _ cinf_ginf_spec. 
 End s.
 
-Lemma cinf_ginf_closed {X: CPO'.type} (P: X -> Prop) (Pcinf: forall Q (C: cochain Q), Q <= P -> P (cinf Q C)):
+Lemma cinf_ginf_closed {X: CPO'.type} (P: X -> Prop) (Pcinf: forall Q (C: cochain Q), Q <= saturate P -> P (cinf Q C)):
   @ginf_closed (@chain) (cinf_gen X) P.
-Proof. move=>I Q kIQ h H. exact: Pcinf. Qed.
+Proof. move=>I Q kIQ h H. apply: Pcinf. exact/image_adj''. Qed.
 
 (** *** directed infs as generic infs over directed domains *)
 Definition dinf_gen (X: Type) := X.
@@ -479,7 +483,7 @@ Section s.
   Variables (P: X -> Prop) (D: codirected P). 
   Definition ginf_dinf := ginf (dual X) P D types_id.
   Lemma ginf_dinf_spec: @is_inf X P ginf_dinf.
-  Proof. move: (ginf_spec (dual X) P D types_id). by rewrite (image_id (X:=X)). Qed.
+  Proof. move: (ginf_spec (dual X) P D types_id). by rewrite (image_id'' (X:=X)). Qed.
  End s.
  HB.instance Definition _ := PO_dinf.Build (dinf_gen X) _ ginf_dinf_spec.
 End s.
@@ -494,9 +498,9 @@ Section s.
  HB.instance Definition _ := PO_ginf.Build (@directed) (dinf_gen X) _ dinf_ginf_spec. 
 End s.
 
-Lemma dinf_ginf_closed {X: dCPO'.type} (P: X -> Prop) (Pdinf: forall Q (D: codirected Q), Q <= P -> P (dinf Q D)):
+Lemma dinf_ginf_closed {X: dCPO'.type} (P: X -> Prop) (Pdinf: forall Q (D: codirected Q), Q <= saturate P -> P (dinf Q D)):
   @ginf_closed (@directed) (dinf_gen X) P.
-Proof. move=>I Q kIQ h H. exact: Pdinf. Qed.
+Proof. move=>I Q kIQ h H. apply: Pdinf. exact/image_adj''. Qed.
 
 (** *** indexed arbitrary infs as generic infs of arbitrary kind *)
 Definition iinf_gen (X: Type) := X.
@@ -524,9 +528,9 @@ Section s.
  HB.instance Definition _ := PO_ginf.Build any_kind (iinf_gen X) _ iinf_ginf_spec. 
 End s.
 
-Lemma iinf_ginf_closed {X: infCL.type} (P: X -> Prop) (Piinf: forall I (Q: I -> Prop) h, image h Q <= P -> P (iinf Q h)):
+Lemma iinf_ginf_closed {X: infCL.type} (P: X -> Prop) (Piinf: forall I (Q: I -> Prop) h, image h Q <= saturate P -> P (iinf Q h)):
   @ginf_closed any_kind (iinf_gen X) P.
-Proof. move=>I Q kIQ h H; exact: Piinf. Qed.
+Proof. move=>I Q kIQ h H; apply: Piinf. exact/image_adj''. Qed.
 
 (** restriction to monotone functions follow generically *)
 HB.instance Definition _ (X: PO.type) (Y: topPO.type) := topPO.copy (X -mon-> Y) (top_gen (X -mon-> top_gen Y)).

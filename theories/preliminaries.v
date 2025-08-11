@@ -48,14 +48,15 @@ Definition unit_fun {X}: X -> unit := fun _ => tt.
 
 (** common predicates *)
 Definition empty {X}: X -> Prop := fun _ => False. 
-Definition full {X}: X -> Prop := fun _ => True. 
-Notation single x := (eq x) (only parsing).
-Definition pair {X} (x y: X): X -> Prop := fun z => z=x \/ z=y.
+Definition full {X}: X -> Prop := fun _ => True.
+Arguments empty {_} _/.
+Arguments full {_} _/.
+
 Lemma forall_empty {X} (P: X -> Prop): (forall z, empty z -> P z) <-> True.
-Proof. by firstorder subst. Qed.
-Lemma forall_single {X} (P: X -> Prop) x: (forall z, single x z -> P z) <-> P x.
-Proof. by firstorder subst. Qed.
-Lemma forall_pair {X} (P: X -> Prop) x y: (forall z, pair x y z -> P z) <-> P x /\ P y.
+Proof. by firstorder. Qed.
+Lemma forall_full {X} (P: X -> Prop): (forall z, full z -> P z) <-> (forall z, P z).
+Proof. by firstorder. Qed.
+Lemma forall_eq {X} (P: X -> Prop) x: (forall z, x = z -> P z) <-> P x.
 Proof. by firstorder subst. Qed.
 
 Lemma forall_iff X (P Q: X -> Prop) (H: forall a, P a <-> Q a): (forall a, P a) <-> (forall a, Q a).

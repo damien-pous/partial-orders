@@ -10,15 +10,16 @@ Implicit Types a b c: A.
 Definition fset := list A.
 Implicit Types U V W: fset.
 
-Definition mem U a := exists b, In b U /\ a ≡ b.
-Notation "a ∈ U" := (mem U a) (at level 20). 
-
-HB.instance Definition _ := PO.copy fset (kernel mem). 
-#[export] Instance mem_eqv: Proper (eqv ==> eqv ==> eqv) mem.
+Definition fset_mem U a := exists b, In b U /\ a ≡ b.
+HB.instance Definition _ := PO.copy fset (kernel fset_mem). 
+#[export] Instance mem_eqv: Proper (eqv ==> eqv ==> eqv) fset_mem.
 Proof.
   move=>U V UV a b ab. rewrite (UV a).
-  rewrite /mem. by setoid_rewrite ab.
+  rewrite /fset_mem. by setoid_rewrite ab.
 Qed.
+HB.instance Definition _ U := isExtensional.Build _ _ (fset_mem U) _. 
+
+Coercion fset_mem: fset >-> Funclass. 
 
 Definition fset_empty: fset := nil.
 Definition fset_add: A -> fset -> fset := cons.
@@ -30,7 +31,7 @@ Proof. apply: leq_bot=>x [? [[]]]. Qed.
 
 Lemma mem_add a U: mem (fset_add a U) ≡ cup (eqv a) (mem U).
 Proof.
-  cbn=>b. rewrite {1}/mem/=. cbn.
+  cbn=>b. rewrite /fset_mem/=. 
   firstorder subst; auto. eexists; auto. 
 Qed.
 
@@ -39,13 +40,13 @@ Proof. by rewrite mem_add mem_empty cupxb. Qed.
 
 Lemma mem_union U V: mem (fset_union U V) ≡ cup (mem U) (mem V).
 Proof.
-  cbn=>x. rewrite /mem.  
+  cbn=>x. rewrite /fset_mem.  
   setoid_rewrite in_app_iff.
   firstorder. 
 Qed.
 
 Program Definition _fset_bot := @PO_bot.Build fset fset_empty _.
-Next Obligation. apply/is_sup_empty=>/=U x. by rewrite (mem_empty x). Qed.
+Next Obligation. apply/is_sup_empty=>/=U x. by setoid_rewrite (mem_empty x). Qed.
 HB.instance Definition _ := _fset_bot. 
 
 Program Definition _fset_cup := @PO_cup.Build fset (@app _) (fun U V => _).
@@ -75,7 +76,7 @@ Section free.
 
   #[export] Instance eval_eqv: Proper (eqv ==> eqv) eval.
   Proof.
-    move=>U V UV. apply: is_sup_unique. exact: eval_sup_spec.
+    move=>/=U V UV. apply: is_sup_unique. exact: eval_sup_spec.
     rewrite (UV: mem U ≡ mem V). exact: eval_sup_spec.
   Qed.
   Lemma eval_bot: eval bot ≡ bot.
@@ -105,5 +106,4 @@ End free.
 End s.
 
 Arguments fset: clear implicits.
-Notation "a ∈ U" := (mem U a).
 

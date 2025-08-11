@@ -41,8 +41,8 @@ HB.builders Context X of CL_isup X.
   Lemma iinf_spec I P (h: I -> X): is_inf (image h P) (iinf P h).
   Proof.
     rewrite /iinf/= =>z. split=>/=H.
-    move=>y [i [Pi ->]]. by rewrite H sup_spec=>/=; auto.
-    eapply sup_spec. reflexivity. by move: H=>/forall_image. 
+    move=>y [i [Pi ->]]. by rewrite H sup_spec /upper_bound=>/=; auto.
+    eapply sup_spec. reflexivity. by move: H; rewrite lower_boundE=>/image_adj. 
   Qed.
   HB.instance Definition _ := PO_iinf.Build X _ iinf_spec.
 HB.end.
@@ -77,8 +77,8 @@ HB.builders Context X of CL_iinf X.
   Lemma isup_spec I P (h: I -> X): is_sup (image h P) (isup P h).
   Proof.
     rewrite /isup/= =>z. split=>/=H.
-    move=>y [i [Pi ->]]. by rewrite -H/isup inf_spec=>/=; auto.
-    eapply inf_spec. reflexivity. by move: H=>/forall_image.
+    move=>y [i [Pi ->]]. by rewrite -H/isup inf_spec/lower_bound=>/=; auto.
+    eapply inf_spec. reflexivity. by move: H; rewrite upper_boundE=>/forall_image.
   Qed.
   HB.instance Definition _ := PO_isup.Build X _ isup_spec.
 HB.end.

@@ -11,9 +11,9 @@ HB.instance Definition _ := CL_isup.Build unit.
 (** ** Booleans *)
 
 Lemma bool_bot_spec: is_sup empty false.
-Proof. done. Qed. 
+Proof. cbv. done. Qed. 
 Lemma bool_top_spec: is_inf empty true.
-Proof. by case. Qed. 
+Proof. cbv. by case. Qed. 
 Lemma bool_cup_spec b c: is_sup (pair b c) (b || c).
 Proof. rewrite is_sup_pair/=. case; case:b; case:c; cbn; intuition discriminate. Qed. 
 Lemma bool_cap_spec b c: is_inf (pair b c) (b && c).
