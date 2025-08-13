@@ -332,22 +332,41 @@ End Pataraia.
 Module BourbakiWitt.
 Import Classical.
 
-(** a generic consequence of excluded-middle *)
-Lemma choose_gen (X: Type) (P A B: X -> Prop):
+(** a consequence of excluded-middle *)
+Lemma choose_gen X (P A B: X -> Prop):
   (forall x, P x -> A x \/ B x) -> (forall x, P x -> A x) \/ (exists x, P x /\ B x).
 Proof.
   intro H. classical_left. intros x Px.
   destruct (H _ Px). assumption. exfalso; eauto. 
 Qed.
 
+(** the above statement actually is equivalent to the excluded middle *)
+Goal forall P, ~P \/ P.
+Proof.
+  move=>P.
+  case: (@choose_gen unit (fun => P) (fun => False) (fun => True)).
+  - by right.
+  - by move/(_ tt); left.
+  - by case=>_ []; right.
+Qed.
+
 (** a more specific consequence; 
-    - we only use it with [f=id, y=y'] to get than the chain is linearly ordered
-    - we only use it with [f=id, y'=next y] and [f=next, y'= y] to get the stronger [linear_chain_strong]
+    - we only use it with [f=id, y'=next y] to get the chain of an extensive function is strongly linearly ordered [linear_chain_strong] 
+    - we only use it with [f=id, y'=y] to get that the chain of a monotone function is linearly ordered [linear_chain']
  *)
 Lemma choose (X: PO.type) (P: X -> Prop) (f: X -eqv-> X) y y':
   (forall x, P x -> f x <= y \/ y' <= x) -> (forall x, P x -> f x <= y) \/ (exists x, P x /\ y' <= x).
 Proof. apply choose_gen. Qed.
 
+(** the above statement is actually also equivalent to the excluded middle, as soon as we can use it on a partial order with two strictly ordered elements (here, we use [bool]) *)
+Goal forall P, ~P \/ P.
+Proof.
+  move=>P.
+  case: (@choose bool (fun => P) types_id false false).
+  - by case; cbv; auto.
+  - move/(_ true)=>H. by left=>/H p. 
+  - by case=>_ [+ _]; right.
+Qed.
 
 (** ** first Bourbaki-Witt theorem: every extensive function on a CPO has a fixpoint 
     requires classical logic; more precisely, the above lemma [choose] 
@@ -406,7 +425,7 @@ Section b.
    have M: forall c, extreme c -> forall x, split c x. {
      move=>c Ec. apply: tower.
      - move=>T IH t Ht.
-       case: (choose T Datatypes.id c (next c)).
+       case: (choose T types_id c (next c)).
          by move=>x Tx; apply: IH.
        -- move=>F. left. by apply Ht.
        -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
@@ -440,14 +459,14 @@ Section b.
    Restart.
    apply: tower.
    - move=>T IH t Ht c.
-       case: (choose T Datatypes.id c (next c)).
+       case: (choose T types_id c (next c)).
          by move=>x Tx; apply: IH.
        -- move=>F. left. by apply Ht.
        -- move=>[x [Tx xc]]. right. rewrite xc. by apply Ht. 
    - move=>x IHx y. 
      have H: next x <= y \/ y <= x. {
        revert y. apply: tower.
-       -- move=>T IH t Ht. case: (choose T Datatypes.id x (next x)).
+       -- move=>T IH t Ht. case: (choose T types_id x (next x)).
           by move=>y Ty/=; rewrite or_comm; apply: IH.
           --- move=>F. right. by apply Ht.
           --- move=>[y [Ty xy]]. left. rewrite xy. by apply Ht. 
@@ -502,7 +521,7 @@ Section b.
      apply: tower.
      - move=>T IH t Ht y yx. constructor=>z zy. 
        have zx: z < t by apply ltle_lt with y. 
-       case: (choose T Datatypes.id z z).
+       case: (choose T types_id z z).
        by move=>*; apply linear_chain.
        -- move=>H. apply proj2 in zx. contradict zx.
           apply Ht. rewrite /upper_bound. by apply H. 
@@ -512,8 +531,8 @@ Section b.
    }
    by move=>?; eauto.
  Qed.
- 
- (** not clear [choose/choose_gen] is enough to entail decidability *)
+
+ (** not clear [choose/choose_gen] (on [X]) is enough to entail decidability *)
  Lemma chain_dec: forall x y, x <= y \/ ~ x <= y.
  Proof.
    apply: tower.
@@ -526,7 +545,8 @@ Section b.
      case: (linear_chain_strong (next x) y); auto=>yn.
      case: (IH y)=>xy; swap 1 2.
      right. contradict xy. rewrite -xy. by apply id_next.
-     (* ?? *)
+     (* x <= y <= y' <= x' ?? *)
+     right=>x'y. 
  
    (* excluded middle of course works *)
    Restart.
@@ -547,7 +567,7 @@ Section b.
    by right; apply prefixpoint_top.
  Qed.
  
- (** [x<y] is almost equivalent to [next x<=y] *)
+ (** [x<y] is almost equivalent to [next x<=y] (recall [lt_leq'])*)
  Corollary lt_leq'' x y: next x <= y -> x < y \/ is_inf empty x. 
  Proof.
    move=>H. case: (lt_next x); auto=>//H'.
@@ -642,14 +662,15 @@ Section b.
    (** actually an instance of [Bourbaki.linear_chain] *)
    exact (linear_chain next tower id_next).
    Restart. 
-   (** but the following proof is simpler and requires only [choose _ id x x] *)
+   (** but the following proof is simpler and requires only [choose _ id x x]
+       (note that we need [next] to be monotone for this proof, not just extensive) *)
    apply: tower.
    - move=>T IH t Ht y.
-     case: (choose T Datatypes.id y y). by move=>*; apply: IH.
+     case: (choose T types_id y y). by move=>*; apply: IH.
      -- move=>F. left. apply Ht=>x Tx. by apply F.
      -- move=>[x [Tx yx]]. right. rewrite yx. by apply Ht.
    - move=>x IH y.
-     case: (choose (fun t => next t <= y) Datatypes.id x x).
+     case: (choose (fun t => next t <= y) types_id x x).
      by move=>t _; move: (IH t); tauto.
      -- move=>F. right. apply leq_next=>z zy. by apply F.
      -- move=>[t [ty xt]]. left. by rewrite xt.
@@ -709,7 +730,7 @@ End BourbakiWitt.
         \   |
          *supCL
 
-    Structures on the left are those defined in [sups.v], where they were (easily) proved closed under dependent products [forall X, X i] and taking monotone functions [X-mon->X], whence the [*] on their left --- we just say "closed" in the sequel.
+    Structures on the left are those defined in [sups.v], where they were (easily) proved closed under dependent products [forall i, X i] and taking monotone functions [X-mon->X], whence the [*] on their left --- we just say "closed" in the sequel.
 
     We override them here so that they include [Chain_lfp] (and thus [lfpPO]).
     This is justified by Pataraia and Bourbaki-Witt theorems: we do not change the classes when doing so, and they are still closed.
