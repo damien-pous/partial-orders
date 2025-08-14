@@ -31,6 +31,21 @@ HB.structure Definition leftAdjunction X Y := {f of isLeftAdjoint X Y f }.
 Arguments radj {_ _}.
 Infix "⊣" := leftAdjunction.type (at level 79).
 
+(** alternative presentation, via unit and counit *)
+HB.factory Record isLeftAdjoint' (X Y: PO.type) f of po_morphism X Y f := 
+  { #[canonical=no] f': Y -mon-> X; 
+    #[canonical=no] adj_unit: @types_id X <= f' ∘ f;
+    #[canonical=no] adj_counit: f ∘ f' <= types_id }.
+HB.builders Context (X Y: PO.type) f of isLeftAdjoint' X Y f.
+  Lemma adj: adjunction f f'.
+  Proof.
+    move=>x y. split=>H.
+    - setoid_rewrite (adj_unit x)=>/=. exact: monotone.
+    - setoid_rewrite <-(adj_counit y). exact: monotone.
+  Qed.
+  HB.instance Definition _ := isLeftAdjoint.Build X Y f adj.
+HB.end.
+
 (** ** indexed by the right adjoint *)
 HB.mixin Record isRightAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] ladj: Y -> X; 
@@ -44,6 +59,21 @@ HB.end.
 HB.structure Definition rightAdjunction X Y := {f of isRightAdjoint X Y f }.
 Arguments ladj {_ _}.
 Infix "⊢" := rightAdjunction.type (at level 79).
+
+(** alternative presentation, via unit and counit *)
+HB.factory Record isRightAdjoint' (X Y: PO.type) f of po_morphism X Y f := 
+  { #[canonical=no] f': Y -mon-> X; 
+    #[canonical=no] adj_unit: @types_id Y <= f ∘ f';
+    #[canonical=no] adj_counit: f' ∘ f <= types_id }.
+HB.builders Context (X Y: PO.type) f of isRightAdjoint' X Y f.
+  Lemma adj: adjunction f' f.
+  Proof.
+    move=>x y. split=>H.
+    - setoid_rewrite (adj_unit x)=>/=. exact: monotone. 
+    - setoid_rewrite <-(adj_counit y). exact: monotone.
+  Qed.
+  HB.instance Definition _ := isRightAdjoint.Build X Y f adj.
+HB.end.
 
 (** ** cross-instances, for jumping from one index to the other *)
 HB.instance Definition _ X Y (f: X ⊣ Y) := isRightAdjoint.Build Y X (radj f) (@adj _ _ f).
@@ -97,6 +127,11 @@ Section s.
     apply: forall_iff=>z/=. 
     by rewrite adj. 
   Qed.
+
+  (** functional version of the adjunction  *)
+  Lemma fadj {Z} h (k: Z -mon-> Y): f ∘ h <= k <-> h <= radj f ∘ k.
+  Proof. cbn. by setoid_rewrite (adj _). Qed.
+
 End s.
 
 (** dual properties *)
@@ -117,6 +152,10 @@ Section s.
   (** right adjoints preserve infs *)
   Lemma adjoint_inf P (x: X): is_inf P x -> is_inf (image f P) (f x).
   Proof. exact: (adjoint_sup (dualf f)). Qed.
+
+  Lemma fadj' {Z} h (k: Z -mon-> Y): k <=[Z->Y] f ∘ h <-> ladj f ∘ k <= h.
+  Proof. exact: (fadj (dualf f) (Z:=dual Z) h (dualf k)). Qed.
+  
 End s.
 
 (** cross properties (unfortunately, those have to be duplicated) *)

@@ -24,7 +24,6 @@ HB.mixin Record isPO X of Setoid X := {
     #[canonical=no] leq: relation X;
     #[canonical=no] PO_axm: po_axm leq;
 }.
-(* #[primitive] *)
 HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
@@ -357,7 +356,6 @@ Proof. by case. Qed.
 
 (** ** strict partial orders, where [eqv=eq] *)
 
-#[primitive]
 HB.structure Definition StrictPO :=
   { X of PO X & StrictSetoid X}.
 
@@ -549,6 +547,7 @@ Instance const_leq {X} {Y: PO.type}:
 Proof. move=>/=y y' yy x. apply yy. Qed.
 Instance const_leq' {X} {Y: PO.type}:
   Proper (leq ==> @leq (X-mon->Y)) const := const_leq.
+
 
 
 (** ** theory *)

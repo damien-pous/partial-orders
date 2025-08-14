@@ -205,6 +205,7 @@ HB.mixin Record PO_gsup (k: gkind) X of PO X := {
     #[canonical=no] gsup_spec: forall I P kIP (h: I -mon-> X), is_sup (image h P) (gsup I P kIP h);
   }.
 HB.structure Definition gsupPO k := {X of PO_gsup k X & }.
+Arguments gsup {_ _} _ _ _ _/.
 
 (** sups of a given kind are closed under dependent product formations *)
 Program Definition dprod_gsup k A (X: A -> gsupPO.type k)
@@ -651,6 +652,7 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build pair_kind (cup_gen X) _ cup_gsup_spec. 
 End s.
+Arguments cup_gsup {_ _ _} _ _/.
 
 Lemma cup_gsup_closed {X: joinSemiLattice.type} (P: X -> Prop) (Pcup: forall x y, P x -> P y -> P (cup x y)):
   @gsup_closed pair_kind (cup_gen X) P.
@@ -685,6 +687,7 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build (@chain) (csup_gen X) _ csup_gsup_spec. 
 End s.
+Arguments csup_gsup {_ _ _} _ _/.
 
 Lemma csup_gsup_closed {X: CPO.type} (P: X -> Prop) (Pcsup: forall Q (C: chain Q), Q <= saturate P -> P (csup Q C)):
   @gsup_closed (@chain) (csup_gen X) P.
@@ -713,6 +716,7 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build (@directed) (dsup_gen X) _ dsup_gsup_spec. 
 End s.
+Arguments dsup_gsup {_ _ _} _ _/.
 
 Lemma dsup_gsup_closed {X: dCPO.type} (P: X -> Prop) (Pdsup: forall Q (D: directed Q), Q <= saturate P -> P (dsup Q D)):
   @gsup_closed (@directed) (dsup_gen X) P.
@@ -745,6 +749,7 @@ Section s.
  End t.
  HB.instance Definition _ := PO_gsup.Build any_kind (isup_gen X) _ isup_gsup_spec. 
 End s.
+Arguments isup_gsup {_ _ _} _ _/.
 
 Lemma isup_gsup_closed {X: supCL.type} (P: X -> Prop) (Pisup: forall I (Q: I -> Prop) h, image h Q <= saturate P -> P (isup Q h)):
   @gsup_closed any_kind (isup_gen X) P.
