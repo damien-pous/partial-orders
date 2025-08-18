@@ -323,6 +323,7 @@ Section s.
    split; by apply: (leq_is_sup lfp_is_sup_C).
  Qed.
 End s.
+Opaque lfp.
 
 End Pataraia.
 
@@ -604,6 +605,7 @@ Section b.
   *)
  
 End b. 
+Opaque fixpoint.
 
 
 (** * second Bournaki-Witt therorem: every monotone function on a CPO has a least (pre-)fixpoint 
@@ -703,6 +705,7 @@ Section b.
   *)
 
 End b.
+Opaque lfp.
 
 End BourbakiWitt.
 

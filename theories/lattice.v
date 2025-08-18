@@ -97,3 +97,24 @@ Lemma capbx {X: boundedLattice.type} (x: X): cap bot x ≡ bot.
 Proof. exact: (@cuptx (dual X) x). Qed.
 Lemma capxb {X: boundedLattice.type} (x: X): cap x bot ≡ bot.
 Proof. exact: (@cupxt (dual X)). Qed.
+
+
+(** ** helpers for duality *)
+Lemma cup_dualf {X: PO.type} {Y: meetSemiLattice.type} (f g: X-mon->Y):
+  @cup (dual X -mon-> dual Y) (dualf f) (dualf g) ≡ dualf (cap f g).
+Proof. done. Qed.
+Lemma cap_dualf {X: PO.type} {Y: joinSemiLattice.type} (f g: X-mon->Y):
+  @cap (dual X -mon-> dual Y) (dualf f) (dualf g) ≡ dualf (cup f g).
+Proof. done. Qed.
+Lemma bot_dualf {X: PO.type} {Y: topPO.type}:
+  @bot (dual X -mon-> dual Y) ≡ dualf (@top (X-mon->Y)).
+Proof. done. Qed.
+Lemma top_dualf {X: PO.type} {Y: botPO.type}:
+  @top (dual X -mon-> dual Y) ≡ dualf (@bot (X-mon->Y)).
+Proof. done. Qed.
+Lemma const_dualf {X Y: PO.type} y:
+  @const (dual Y) (dual X) y ≡[dual X-mon->dual Y] dualf (@const Y X y).
+Proof. done. Qed.
+Lemma id_dualf {X: PO.type}:
+  @types_id (dual X) ≡[dual X-mon->dual X] dualf (@types_id X).
+Proof. done. Qed.

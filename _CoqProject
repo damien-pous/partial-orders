@@ -17,6 +17,7 @@ theories/lfp.v
 theories/gfp.v
 theories/lattice.v
 theories/instances.v
+theories/closure.v
 theories/sets.v
 theories/fsets.v
 

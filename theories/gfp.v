@@ -271,6 +271,7 @@ Section s.
  Proposition gfp_is_inf_C': is_inf (C' f) gfp.
  Proof. rewrite C'C. exact: (Pataraia.lfp_is_sup_C (dualf f)). Qed.
 End s.
+Opaque gfp.
 End Pataraia.
 
 (** * Bourbaki-Witt's fixpoint theorems *)
@@ -283,6 +284,7 @@ Section b.
  Theorem is_fixpoint: f fixpoint ≡ fixpoint.
  Proof. exact: (BourbakiWitt.is_fixpoint (dualf f) f_ctr). Qed. 
 End b. 
+Opaque fixpoint.
 Section b.
  Context {X: CPO'.type}.
  Variable f: X -mon-> X. 
@@ -292,6 +294,7 @@ Section b.
  Proposition gfp_is_inf_C': is_inf (C' f) gfp.
  Proof. rewrite C'C. exact: (BourbakiWitt.lfp_is_sup_C (dualf f)). Qed.
 End b. 
+Opaque gfp.
 End BourbakiWitt.
 
 

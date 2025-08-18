@@ -25,7 +25,7 @@ setoids
  duality
  chains, directed sets, suprema&infima
 
-adjunctions & isomoprhisms
+adjunctions, closures & isomoprhisms
  
 sups (colimits in categories)
  is_sup
@@ -46,7 +46,7 @@ fixpoints
  Bourbaki-Witt, Pataria
 
 instances:
- 0, 1, 2, nat, Prop, dprod, *, +, option, sig, extfun, monfun, fset
+ 0, 1, 2, nat, Prop, dprod, *, +, option, sig, extfun, monfun, set, fset
  lex_prod, sequential_sum, list, lex_list, option
 TODO: 
  finite dprod
@@ -67,6 +67,7 @@ TODO:
 - theories/gfp.v             		 greatest fixpoints 
 - theories/lattice.v         		 complete lattices and mixed infs/sups structures
 - theories/instances.v       		 instances
+- theories/closure.v       		     (least) closures, (greateast) coclosures, and adjunctions between them
 - theories/sets.v       		     complete lattice of sets over a setoid
 - theories/fsets.v       		     join semilattice of finite sets over a setoid
 
