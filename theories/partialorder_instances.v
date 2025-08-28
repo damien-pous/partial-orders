@@ -4,15 +4,34 @@ Local Obligation Tactic := idtac. (* mitigate painful behaviour or [Program] *)
 
 
 (** * instance constructors for partial orders *)
-  
+
+(** aliases for
+ - lexicographic product (as opposed to direct product, by default)
+ - lexicographically ordered lists (as opposed to ordered pointwise, by default)
+ - sequential sum (as opposed to parallel sum, by default) *)
+(** NOTE: we need to eta expand these aliases otherwise we run into universe problems later on... *)
+Definition lex_prod X Y := prod X Y. 
+HB.instance Definition _ (X Y: Setoid.type) := Setoid.on (lex_prod X Y).
+HB.instance Definition _ (X Y: StrictSetoid.type) := StrictSetoid.on (lex_prod X Y).
+HB.instance Definition _ (X Y: ClassicSetoid.type) := ClassicSetoid.on (lex_prod X Y).
+HB.instance Definition _ (X Y: DecidableSetoid.type) := DecidableSetoid.on (lex_prod X Y).
+
+Definition lex_list X := list X. 
+HB.instance Definition _ (X: Setoid.type) := Setoid.on (lex_list X).
+HB.instance Definition _ (X: StrictSetoid.type) := StrictSetoid.on (lex_list X).
+HB.instance Definition _ (X: ClassicSetoid.type) := ClassicSetoid.on (lex_list X).
+HB.instance Definition _ (X: DecidableSetoid.type) := DecidableSetoid.on (lex_list X).
+
+Definition sequential_sum X Y := sum X Y. 
+HB.instance Definition _ (X Y: Setoid.type) := Setoid.on (sequential_sum X Y).
+HB.instance Definition _ (X Y: StrictSetoid.type) := StrictSetoid.on (sequential_sum X Y).
+HB.instance Definition _ (X Y: ClassicSetoid.type) := ClassicSetoid.on (sequential_sum X Y).
+HB.instance Definition _ (X Y: DecidableSetoid.type) := DecidableSetoid.on (sequential_sum X Y).
+
 Section s.
  Variables X Y: PO.type.
 
  (** lexicographic ordering on pairs *)
- (** we use an alias for product to guide structure inferrence *)
- (** TOREPORT? we need to eta expand this alias otherwise we run into universe problems later on... *)
- Definition lex_prod X Y := prod X Y. 
- HB.instance Definition _ := Setoid.on (lex_prod X Y).
  Definition leq_lex_prod: relation (lex_prod X Y) :=
    fun p q => p.1 <= q.1 /\ (q.1 <= p.1 -> p.2 <= q.2).
  Lemma po_lex_prod: po_axm leq_lex_prod.
@@ -50,8 +69,6 @@ Section s.
    isMonotone.Build Y (sum X Y) inr (fun p q pq => pq).
 
  (** sequential sum *)
- Definition sequential_sum := sum. 
- HB.instance Definition _ := Setoid.on (sequential_sum X Y).
  Definition leq_sequential_sum: relation (sequential_sum X Y) :=
    fun p q => match p,q with
            | inl x,inl y | inr x,inr y => x<=y
@@ -83,8 +100,6 @@ Section s.
  HB.instance Definition _ := isPO.Build (list X) po_list.
 
  (** lexicographic ordering on lists *)
- Definition lex_list X := list X. 
- HB.instance Definition _ := Setoid.on (lex_list X).
  Fixpoint leq_lex_list (h k: lex_list X) :=
    match h,k with nil,_ => True | cons x h,cons y k => x<=y /\ (y<=x -> leq_lex_list h k) | _,_ => False end.
  Lemma po_lex_list: po_axm leq_lex_list.
@@ -288,8 +303,11 @@ Arguments leqb_list [_] _ _/.
 Arguments leqb_lex_list [_] _ _/.
 Arguments leqb_option [_] _ _/.
 HB.saturate prod. 
+HB.saturate lex_prod. 
 HB.saturate sum. 
+HB.saturate sequential_sum. 
 HB.saturate list. 
+HB.saturate lex_list. 
 HB.saturate option. 
 
 

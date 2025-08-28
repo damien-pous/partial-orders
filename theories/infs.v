@@ -280,6 +280,8 @@ Lemma capC x y: cap x y ≡ cap y x.
 Proof. exact: (@cupC (dual X)). Qed.
 Lemma capI x: cap x x ≡ x.
 Proof. exact: (@cupI (dual X)). Qed.
+Lemma leq_of_cap x y: x <= y <-> cap x y ≡ x.
+Proof. rewrite capC. exact: (@leq_of_cup (dual X)). Qed.
 Lemma codirected_inf_closure (P: X -> Prop): codirected (inf_closure P).
 Proof. exact: (@directed_sup_closure (dual X)). Qed.
 End cap.
@@ -548,6 +550,24 @@ HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := CPO'.copy (X -inf-> Y) (
 HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := dCPO'.copy (X -inf-> Y) (dinf_gen (X -inf-> dinf_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -inf-> Y) (iinf_gen (X -inf-> iinf_gen Y)).
 
+(** ** deriving [leq_classic] from [cap] and [eqv_classic] *)
+
+HB.factory Record ClassicMeetSemiLattice X of ClassicSetoid X & meetSemiLattice X := {}.
+HB.builders Context X of ClassicMeetSemiLattice X. 
+Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
+Proof. rewrite leq_of_cap. exact/eqv_classic. Qed.
+HB.instance Definition _ := PO_isClassic.Build X leq_classic.
+HB.end.
+
+(** ** deriving [leqb] from [cap] and [eqvb] *)
+
+HB.factory Record DecidableMeetSemiLattice X of DecidableSetoid X & meetSemiLattice X := {}.
+HB.builders Context X of DecidableMeetSemiLattice X.
+Definition leqb (x y: X) := cap x y ≡? x. 
+Lemma leq_dec (x y: X): reflect (x <= y) (leqb x y).
+Proof. apply/equivP. exact/eqv_dec. symmetry; exact/leq_of_cap. Qed.
+HB.instance Definition _ := PO_isDecidable.Build X leqb leq_dec.
+HB.end.
 
 (** ** additional lemmas using suprema on subsets *)
 

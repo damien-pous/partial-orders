@@ -43,7 +43,7 @@ Hint Extern 0 (_ ≡ _) =>
 Definition dual (X: Type) := X.
 HB.instance Definition _ (X: Setoid.type) := Setoid.on (dual X).
 
-(* for expanding a structure, to help with duality *)
+(** for expanding a structure, to help with duality *)
 Definition eta (X: Type) := X.
 HB.instance Definition _ (X: Setoid.type) := Setoid.on (eta X).
 
@@ -149,19 +149,37 @@ HB.end.
 Definition strictext {X: StrictSetoid.type} {Y: Setoid.type} (f: X -> Y) := f.   
 HB.instance Definition _ X Y f := StrictThusExtensional.Build X Y (strictext f).
 
-HB.instance Definition _ (X: StrictSetoid.type) := Setoid_isStrict.Build (dual X) eqv_eq.
-HB.instance Definition _ (X: StrictSetoid.type) := Setoid_isStrict.Build (eta X) eqv_eq.
+HB.instance Definition _ (X: StrictSetoid.type) := StrictSetoid.on (dual X).
+HB.instance Definition _ (X: StrictSetoid.type) := StrictSetoid.on (eta X).
 
+
+(** ** classic setoids, with EM on [eqv] *)
+
+HB.mixin Record Setoid_isClassic X of Setoid X := {
+    #[canonical=no] eqv_classic: forall x y: X, x ≡ y \/ ~ x ≡ y;
+}.
+HB.structure Definition ClassicSetoid := { X of Setoid_isClassic X & }.
+
+HB.instance Definition _ (X: ClassicSetoid.type) := ClassicSetoid.on (dual X).
+HB.instance Definition _ (X: ClassicSetoid.type) := ClassicSetoid.on (eta X).
 
 (** ** decidable setoids, where [eqv] is decidable *)
 
 #[primitive]
 HB.mixin Record Setoid_isDecidable X of Setoid X := {
   #[canonical=no] eqvb: X -> X -> bool;
-  #[canonical=no] eqv_dec: forall x y, reflect (x ≡ y) (eqvb x y);
+  #[canonical=no] _eqv_dec: forall x y: X, reflect (x ≡ y) (eqvb x y);
 }.
+(** decidable setoids are classic *)
+HB.builders Context X of Setoid_isDecidable X.
+  Lemma eqv_classic (x y: X): x ≡ y \/ ~ x ≡ y.
+  Proof. case: (_eqv_dec x y). by left. by right. Qed.
+  HB.instance Definition _ := Setoid_isClassic.Build X eqv_classic.
+HB.end.
 HB.structure Definition DecidableSetoid := { X of Setoid_isDecidable X & }.
-Infix "≡?" := eqvb (at level 70). 
+Infix "≡?" := eqvb (at level 70).
+Lemma eqv_dec {X: DecidableSetoid.type} (x y: X): reflect (x ≡ y) (x ≡? y).
+Proof. exact/_eqv_dec. Qed.
 
 HB.factory Record isDecidableSetoid X := {
   #[canonical=no] eqvb: X -> X -> bool;
@@ -182,8 +200,8 @@ HB.builders Context X of isDecidableSetoid X.
   HB.instance Definition _ := Setoid_isDecidable.Build X _ (fun _ _ => idP).
 HB.end.
 
-HB.instance Definition _ (X: DecidableSetoid.type) := Setoid_isDecidable.Build (dual X) _ eqv_dec.
-HB.instance Definition _ (X: DecidableSetoid.type) := Setoid_isDecidable.Build (eta X) _ eqv_dec.
+HB.instance Definition _ (X: DecidableSetoid.type) := DecidableSetoid.on (dual X).
+HB.instance Definition _ (X: DecidableSetoid.type) := DecidableSetoid.on (eta X).
 
 
 (** ** strict and decidable setoids, i.e., eqtypes
@@ -206,6 +224,10 @@ HB.builders Context X of eqtype_Decidable X.
   Qed.
 HB.instance Definition _ := dec.
 HB.end.
+
+HB.saturate eta.
+HB.saturate dual.
+
 
 (** ** instances *)
 
@@ -328,7 +350,7 @@ Arguments eqv_sum {_ _}_ _/.
 Arguments eqv_list {_}_ _/. 
 Arguments eqv_option {_}_ _/. 
 
-(** product, sum, and option on strict Setoids *)
+(** product, sum, list, and option on strict Setoids *)
 Section s.
  Variables X Y: StrictSetoid.type.
 
@@ -353,7 +375,44 @@ Section s.
  HB.instance Definition _ := Setoid_isStrict.Build (option X) strictsetoid_option.
 End s.
 
-(** product, sum, and option on decidable Setoids *)
+(** product, sum, list, and option on classic Setoids *)
+Section s.
+ Variables X Y: ClassicSetoid.type.
+
+ (** direct product *)
+ Program Definition csetoid_prod := Setoid_isClassic.Build (prod X Y) _.
+ Next Obligation.
+   case: (eqv_classic x.1 y.1). 2: by right=>[[]].
+   case: (eqv_classic x.2 y.2). by left. by right=>[[]].
+ Qed.
+ HB.instance Definition _ := csetoid_prod. 
+
+ (** direct sum *)
+ Program Definition csetoid_sum := Setoid_isClassic.Build (sum X Y) _.
+ Next Obligation.
+   case: x=>x; case: y=>y; cbn; auto; exact: eqv_classic.
+ Qed.
+ HB.instance Definition _ := csetoid_sum. 
+
+ (** lists *)
+ Program Definition csetoid_list := Setoid_isClassic.Build (list X) _.
+ Next Obligation.
+   move: y.
+   elim: x=>[|a x IH] [|b y]; cbn; auto.
+   case: (eqv_classic a b). 2: by right=>[[]].
+   case: (IH y). by left. by right=>[[]].
+ Qed.
+ HB.instance Definition _ := csetoid_list. 
+
+ (** option type *)
+ Program Definition csetoid_option := Setoid_isClassic.Build (option X) _.
+ Next Obligation.
+   move: y. case: x=>[x|] [y|]; cbn; auto. exact/eqv_classic. 
+ Qed.
+ HB.instance Definition _ := csetoid_option. 
+End s. 
+
+(** product, sum, list, and option on decidable Setoids *)
 Section s.
  Variables X Y: DecidableSetoid.type.
 

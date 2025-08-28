@@ -30,6 +30,7 @@ tests/sanity_infs.v
 tests/sanity_lfp.v
 tests/sanity_gfp.v
 tests/sanity_lattice.v
+tests/sanity_instances.v
 tests/sanity.v
 
 ## previous attempts/variations, to be removed at some point, left here to ensure they compile

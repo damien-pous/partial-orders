@@ -144,13 +144,13 @@ We define various kinds of suprema:
 and dually for infima:
 - bot        : infimum of the empty set, i.e., top element
 - cap x y    : infimum of the pair {x,y}, i.e., meet
-- cinf P C   : infimum of the chain X (C being the proof that P is a chain) 
-- dinf P D   : infimum of the directed set X (D being the proof that P is directed) 
+- cinf P C   : infimum of the chain X (C being the proof that P is a (co)chain) 
+- dinf P D   : infimum of the directed set X (D being the proof that P is codirected) 
 - iinf I P f : infimum of { f i / i \in I, P i }
 - inf P      : infimum of P  (inf P = iinf X P id)
 
 
-In order to factor some aguments, we use a *generic* operators:
+In order to factor some aguments, we use *generic* operators:
 - gsup k     : supremum operation of kind k
 - ginf k     : infimum operation of kind k 
 where k is an "informative predicate on subsets", for instance

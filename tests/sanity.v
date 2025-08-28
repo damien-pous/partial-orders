@@ -6,4 +6,5 @@ From PartialOrdersTests Require
   sanity_lfp
   sanity_gfp
   sanity_lattice
+  sanity_instances
   .

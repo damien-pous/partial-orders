@@ -778,6 +778,25 @@ HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -sup-> Y) (cs
 HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -sup-> Y) (dsup_gen (X -sup-> dsup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -sup-> Y) (isup_gen (X -sup-> isup_gen Y)).
 
+(** ** deriving [leq_classic] from [cup] and [eqv_classic] *)
+
+HB.factory Record ClassicJoinSemiLattice X of ClassicSetoid X & joinSemiLattice X := {}.
+HB.builders Context X of ClassicJoinSemiLattice X. 
+Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
+Proof. rewrite leq_of_cup. exact/eqv_classic. Qed.
+HB.instance Definition _ := PO_isClassic.Build X leq_classic.
+HB.end.
+
+(** ** deriving [leqb] from [cup] and [eqvb] *)
+
+HB.factory Record DecidableJoinSemiLattice X of DecidableSetoid X & joinSemiLattice X := {}.
+HB.builders Context X of DecidableJoinSemiLattice X.
+Definition leqb (x y: X) := cup x y ≡? y. 
+Lemma leq_dec (x y: X): reflect (x <= y) (leqb x y).
+Proof. apply/equivP. exact/eqv_dec. symmetry; exact/leq_of_cup. Qed.
+HB.instance Definition _ := PO_isDecidable.Build X leqb leq_dec.
+HB.end.
+
 (** ** additional lemmas using suprema on subsets *)
 
 Lemma image_bot {X} {Y: Setoid.type} (f: X -> Y): image f bot ≡ bot.

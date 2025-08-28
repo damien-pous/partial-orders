@@ -106,11 +106,15 @@ Proof.
   move=>xy [yz zy]. split. by transitivity y.
   contradict zy. by transitivity x.
 Qed.
+Lemma lelt_le x y z: x <= y -> y < z -> x <= z.
+Proof. eauto using lt_le, lelt_lt. Qed.
 Lemma ltle_lt x y z: x < y -> y <= z -> x < z.
 Proof.
   move=>[xy yx] yz. split. by transitivity y.
   contradict yx. by transitivity z.
 Qed.
+Lemma ltle_le x y z: x < y -> y <= z -> x <= z.
+Proof. eauto using lt_le, ltle_lt. Qed.
 #[export] Instance Transitive_lt: Transitive (@lt X).
 Proof. move=>x y z [xy _]. by apply lelt_lt. Qed.
 
@@ -122,6 +126,18 @@ End s.
 HB.mixin Record PO_isClassic X of PO X := {
     #[canonical=no] leq_classic: forall x y: X, x <= y \/ ~ x <= y;
 }.
+(** classic partial orders are classic setoids *)
+HB.builders Context X of PO_isClassic X.
+  Lemma eqv_classic (x y: X): x ≡ y \/ ~ x ≡ y.
+  Proof.
+    case: (leq_classic x y)=>xy.
+    case: (leq_classic y x)=>yx.
+    by left; apply/antisym.
+    right=>C. elim:yx. exact/eqv_geq.  
+    right=>C. elim:xy. exact/eqv_leq.
+  Qed.
+  HB.instance Definition _ := Setoid_isClassic.Build X eqv_classic.
+HB.end.
 HB.structure Definition ClassicPO := { X of PO_isClassic X & }.
 
 
@@ -176,23 +192,26 @@ End s.
 #[primitive]
 HB.mixin Record PO_isDecidable X of PO X := {
   #[canonical=no] leqb: X -> X -> bool;
-  #[canonical=no] leq_dec: forall x y, reflect (x <= y) (leqb x y);
+  #[canonical=no] _leq_dec: forall x y: X, reflect (x <= y) (leqb x y);
   }.
-(** decidable partial orders are decidable setoids *)
+(** decidable partial orders are classic ones, and decidable setoids *)
 HB.builders Context X of PO_isDecidable X.
-  Lemma classic (x y: X): x <= y \/ ~ x <= y.
-  Proof. case: (leq_dec x y). by left. by right. Qed.
-  HB.instance Definition _ := PO_isClassic.Build X classic.
+  Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
+  Proof. case: (_leq_dec x y). by left. by right. Qed.
+  HB.instance Definition _ := PO_isClassic.Build X leq_classic.
   Definition eqvb (x y: X) := leqb x y && leqb y x.
   Lemma eqv_dec x y: reflect (x ≡ y) (eqvb x y).
   Proof.
     apply: equivP. 2: by rewrite eqv_of_leq.
-    apply: andPP; exact: leq_dec. 
+    apply: andPP; exact: _leq_dec. 
   Qed.
   HB.instance Definition _ := Setoid_isDecidable.Build X _ eqv_dec.
 HB.end.
 HB.structure Definition DecidablePO := { X of PO_isDecidable X & }.
 Infix "<=?" := leqb (at level 70). 
+Lemma leq_dec {X: DecidablePO.type} (x y: X): reflect (x <= y) (x <=? y).
+Proof. exact/_leq_dec. Qed.
+HB.structure Definition DecidableOrder := { X of PO_isDecidable X & Order X }.
 
 (** getting a decidable partial order directly from a setoid *)
 HB.factory Record Setoid_isDecidablePO X of Setoid X := {
@@ -231,6 +250,34 @@ HB.builders Context X of Type_isDecidablePO X.
   HB.instance Definition _ := PO_isDecidable.Build X _ (fun _ _ => idP).
 HB.end.
 
+(* TOMOVE (to standard library) *)
+Variant BoolSpecT (Pt Pf: Prop): bool -> Set :=
+  | BoolSpecTt: Pt -> BoolSpecT Pt Pf true
+  | BoolSpecTf: Pf -> BoolSpecT Pt Pf false.
+
+Section s.
+Context {X: DecidableOrder.type}.
+Implicit Types x y: X.
+Lemma le_lt_dec x y: BoolSpecT (x <= y) (y < x) (x <=? y).
+Proof.
+  case: leq_dec; constructor=>//.
+  by case: (leq_chain x y).
+Qed.
+Definition cmp x y: comparison :=
+  match x <=? y, y <=? x with
+  | true, true => Eq
+  | true, false => Lt
+  | false, _ => Gt               (* only (false,false) is possible *)
+  end.
+Lemma eqv_lt_gt_dec x y: CompareSpecT (x ≡ y) (x < y) (y < x) (cmp x y).
+Proof.
+  rewrite /cmp. 
+  case: le_lt_dec. 2: by constructor.
+  case: le_lt_dec; constructor=>//. exact/antisym. 
+Qed.
+End s.
+
+
 (** ** duality / eta expansion *)
 
 Section dual.
@@ -246,9 +293,21 @@ Section dual.
  HB.instance Definition _ := isPO.Build (dual X) po_dual.
 End dual.
 
+Section dual_chain.
+ Context {X: Chain.type}.   
+ HB.instance Definition _ := Chain.on (eta X). 
+ HB.instance Definition _ := PO_isChain.Build (dual X) (fun x y => leq_chain y x).
+End dual_chain.
+
+Section dual_classic.
+ Context {X: ClassicPO.type}.   
+ HB.instance Definition _ := ClassicPO.on (eta X). 
+ HB.instance Definition _ := PO_isClassic.Build (dual X) (fun x y => leq_classic y x).
+End dual_classic.
+
 Section dual_dec.
  Context {X: DecidablePO.type}.
- HB.instance Definition _ := PO_isDecidable.Build (eta X) leqb leq_dec.
+ HB.instance Definition _ := DecidablePO.on (eta X).
  HB.instance Definition _ := PO_isDecidable.Build (dual X) (fun x y => leqb y x) (fun x y => leq_dec y x).
 End dual_dec.
 
@@ -378,8 +437,13 @@ HB.builders Context X of isStrictPO X.
 HB.end.
 
 
-(** ** discrete partial orders, where [leq=eqv] *)
+HB.saturate eta. 
+HB.saturate dual. 
 
+
+(** ** discrete partial orders, where [leq=eqv] *)
+(** we define this structure mostly to be able to infer automatically
+    that some functions are trivially monotone *)
 #[primitive]
 HB.mixin Record isDiscrete X of PO X := {
     #[canonical=no] leq_eqv: subrelation leq (@eqv X);
@@ -412,6 +476,10 @@ HB.instance Definition _ {X: DiscretePO.type} {Y: PO.type} (f: X -eqv-> Y) :=
   DiscreteThusMonotone.Build X Y (@discretemon X Y f).
 
 
+HB.instance Definition _ (X: DiscretePO.type) := DiscretePO.on (eta X).
+HB.instance Definition _ (X: DiscretePO.type) := isDiscrete.Build (dual X) (fun x y H => eqv_sym _ _ (leq_eqv y x H)).
+
+
 (** ** instances *)
 
 (** trivial partial order on trivial setoids *)
@@ -423,6 +491,12 @@ HB.instance Definition _ := DiscretePO.copy unit (discrete unit).
 HB.instance Definition _ := DecidablePO.copy False (discrete False).
 HB.instance Definition _ := DecidablePO.copy unit (discrete unit).
 HB.instance Definition _ (X: PO.type) := @DiscreteThusMonotone.Build False X empty_fun.
+Program Definition _empty_chain := PO_isChain.Build False _.
+Next Obligation. done. Qed.
+HB.instance Definition _ := _empty_chain.
+Program Definition _unit_chain := PO_isChain.Build unit _.
+Next Obligation. by left. Qed.
+HB.instance Definition _ := _unit_chain.
 
 (** Booleans with [false <= true] *)
 Program Definition po_bool := Setoid_isDecidablePO.Build bool implb _ _.

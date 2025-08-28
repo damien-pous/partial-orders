@@ -11,6 +11,156 @@ HB.saturate po_morphism.type.
 HB.saturate (forall _, _).           (* void... *)
 
 
+(** ** modular lattices *)
+HB.mixin Record isModular X of Lattice X := {
+    #[canonical=no] modular_: forall x a b: X, x <= b -> cap (cup x a) b <= cup x (cap a b)
+  }.
+HB.structure Definition ModularLattice := {X of isModular X & }.
+Lemma modular {X: ModularLattice.type} (x a b: X):
+  x <= b -> cup x (cap a b) ≡ cap (cup x a) b.
+Proof.
+  move=>xb. apply: antisym. 2: exact/modular_.
+  apply: geq_cup. apply: leq_cap=>//. exact/cup_l.
+  by rewrite -cup_r.
+Qed.
+Lemma dual_modular_ {X: ModularLattice.type} (x a b: X):
+  b <= x -> cap x (cup a b) <= cup (cap x a) b.
+Proof.
+  move=>bx. rewrite capC cupC modular_//.
+  (* TOFIX: line below should work *)
+  (* by rewrite cupC capC. *)
+  rewrite cupC. apply: cup_leq=>//. by rewrite capC.
+Qed.
+HB.instance Definition _ (X: ModularLattice.type) := isModular.Build (dual X) dual_modular_.
+
+HB.instance Definition _ I (X: I -> ModularLattice.type) :=
+  isModular.Build (forall i, X i) (fun x a b ab i => @modular_ (X i) (x i) (a i) (b i) (ab i)).
+HB.instance Definition _ X (Y: ModularLattice.type) :=
+  isModular.Build (X -eqv-> Y) (fun x a b ab i => @modular_ Y (x i) (a i) (b i) (ab i)).
+HB.instance Definition _ X (Y: ModularLattice.type) :=
+  isModular.Build (X -mon-> Y) (fun x a b ab i => @modular_ Y (x i) (a i) (b i) (ab i)).
+
+(** ** distributive lattices *)
+HB.mixin Record isDistributive X of Lattice X := {
+    #[canonical=no] distributive_: forall x y z: X, cap x (cup y z) <= cup (cap x y) (cap x z) 
+  }.
+HB.builders Context X of isDistributive X.
+Lemma modular_ (x a b: X) (xb: x <= b): cap (cup x a) b <= cup x (cap a b).
+Proof.
+  rewrite capC distributive_. apply: geq_cup.
+  rewrite cap_r; exact/cup_l.
+  rewrite capC; exact/cup_r.
+Qed.
+HB.instance Definition _ := isModular.Build X modular_.
+HB.end.
+HB.structure Definition DistributiveLattice := {X of isDistributive X & }.
+Lemma distributive {X: DistributiveLattice.type} (x y z: X):
+  cap x (cup y z) ≡ cup (cap x y) (cap x z).
+Proof.
+  apply: antisym. exact/distributive_.
+  apply: geq_cup. by rewrite -cup_l. by rewrite -cup_r. 
+Qed.
+Lemma dual_distributive_ {X: DistributiveLattice.type} (x y z: X):
+  cap (cup x y) (cup x z) <= cup x (cap y z).
+Proof.
+  rewrite distributive_.
+  (* TOFIX: should work *)
+  (* rewrite capC.  *)
+  etransitivity. apply: cup_leq. rewrite capC. reflexivity. reflexivity. 
+  rewrite distributive_.
+  repeat apply: geq_cup.
+  rewrite capI; exact/cup_l. 
+  rewrite cap_l; exact/cup_l. 
+  rewrite capC distributive_.
+  apply: geq_cup.
+  rewrite cap_r; exact/cup_l. 
+  rewrite capC; exact/cup_r.
+Qed.
+HB.instance Definition _ (X: DistributiveLattice.type) :=
+  isDistributive.Build (dual X) dual_distributive_.
+
+Program Definition _Prop_distributive := isDistributive.Build Prop _.
+Next Obligation. cbv. tauto. Qed.
+HB.instance Definition _ := _Prop_distributive.
+
+HB.instance Definition _ I (X: I -> DistributiveLattice.type) :=
+  isDistributive.Build (forall i, X i) (fun x y z i => @distributive_ (X i) (x i) (y i) (z i)).
+HB.instance Definition _ X (Y: DistributiveLattice.type) :=
+  isDistributive.Build (X -eqv-> Y) (fun x y z i => @distributive_ Y (x i) (y i) (z i)).
+HB.instance Definition _ X (Y: DistributiveLattice.type) :=
+  isDistributive.Build (X -mon-> Y) (fun x y z i => @distributive_ Y (x i) (y i) (z i)).
+
+Lemma distributive' {X: DistributiveLattice.type} (x y z: X):
+  cup x (cap y z) ≡ cap (cup x y) (cup x z).
+Proof. exact: (@distributive (dual X)). Qed.
+
+HB.structure Definition ChainLattice := { X of Lattice X & Chain X }.
+Inductive cup_cap_case {X: PO.type} (x y: X): X -> X -> X -> X -> Prop :=
+  | cup_cap_case_leq: x <= y -> cup_cap_case x y y y x x
+  | cup_cap_case_geq: y <= x -> cup_cap_case x y x x y y
+  | cup_cap_case_eqv_: Proper (eqv ==> eqv ==> eqv ==> eqv ==> impl) (cup_cap_case x y).
+Instance cup_cap_case_eqv {X: PO.type} (x y: X):
+  Proper (eqv ==> eqv ==> eqv ==> eqv ==> iff) (cup_cap_case x y).
+Proof. split; exact: cup_cap_case_eqv_. Qed.
+Lemma case_chainlattice {X: ChainLattice.type} (x y: X):
+  cup_cap_case x y (cup x y) (cup y x) (cap x y) (cap y x).
+Proof.
+  case: (leq_chain x y)=>H; 
+  move:(H)=>/leq_of_cup U; 
+  move:(H)=>/leq_of_cap A;
+  rewrite U A cupC capC U A;
+  by constructor.
+Qed.
+
+(** chain lattices are distributive *)
+(* TODO: include distributivity in the definition of ChainLattice (forgetful inheritance),
+   and use appropriate builders to infer it automatically (need HB support for it) *)
+HB.factory Record ChainLattice_isDistributive X of ChainLattice X := {}.
+HB.builders Context X of ChainLattice_isDistributive X.
+Lemma distributive_ (x y z: X): cap x (cup y z) <= cup (cap x y) (cap x z).
+Proof.
+  elim: (case_chainlattice y z).
+  move=>_. exact/cup_r.
+  move=>_. exact/cup_l.
+  by move=>?? + _ _ _ _ _ _ _ _ _ _=> ->.
+  Restart.
+  case: (leq_chain y z)=>/leq_of_cup.
+  move=>->. exact/cup_r.
+  rewrite cupC. move=>->. exact/cup_l.
+Qed.
+HB.instance Definition _ := isDistributive.Build X distributive_.
+HB.end.
+
+(** decidable orders are (chain) lattices *)
+(* TOTHINK: here this is again the "a posteriori inheritance" pattern:
+   we do not want to include the Lattice structure in DecidableOrder;
+   still, it inherits from it *)
+HB.factory Record DecidableOrder_isLattice X of DecidableOrder X := {}.
+HB.builders Context X of DecidableOrder_isLattice X.
+Definition cup (x y: X) := if x <=? y then y else x. 
+Definition cap (x y: X) := if x <=? y then x else y. 
+Lemma cup_spec x y: is_sup (pair x y) (cup x y).
+Proof.
+  apply/is_sup_pair=>/=z. 
+  rewrite /cup. case: le_lt_dec.
+  - split. split=>//. by transitivity y. by case.
+  - split. split=>//. by apply ltle_le with x. by case.
+Qed.
+HB.instance Definition _ := PO_cup.Build X cup cup_spec. 
+Lemma cap_spec x y: is_inf (pair x y) (cap x y).
+Proof.
+  apply/is_inf_pair=>/=z. 
+  rewrite /cap. case: le_lt_dec.
+  - split. split=>//. by transitivity x. by case.
+  - split. split=>//. by apply lelt_le with y. by case.
+Qed.
+HB.instance Definition _ := PO_cap.Build X cap cap_spec.
+HB.instance Definition _ := ChainLattice_isDistributive.Build X. 
+HB.end.
+
+(* TODO: Heyting, Boole *)
+
+
 (** ** alternative ways to construct sups *)
 
 (** constructing indexed sups from non-indexed ones *)
@@ -83,9 +233,6 @@ HB.builders Context X of CL_iinf X.
   HB.instance Definition _ := PO_isup.Build X _ isup_spec.
 HB.end.
 
-
-
-(* TODO: modular, distributive, residuated, etc *)
 
 (** ** theory *)
 
