@@ -25,8 +25,6 @@ Lemma is_inf_unique (P: X -> Prop) x y: is_inf P x -> is_inf P y -> x ≡ y.
 Proof. dual @is_sup_unique. Qed.
 Lemma is_inf_eq x: is_inf (eq x) x.
 Proof. dual @is_sup_eq. Qed.
-#[export] Instance Proper_is_inf: Proper (cobicovered ==> eqv ==> eqv) (@is_inf X).
-Proof. dual @Proper_is_sup. Qed.
 
 Lemma inf_closed_impl (P Q: X -> Prop): Proper (leq ==> leq) P -> inf_closed Q -> inf_closed (fun x => P x -> Q x).
 Proof. dual @sup_closed_impl. Qed.
@@ -163,6 +161,15 @@ Section s.
  HB.instance Definition _ := ginfPO.copy (X-eqv->Y) (dual (X-eqv->dual Y)).
 End s.
 
+(** infs of inf preserving functions *)
+Section s.
+ Context {k} {X: PO.type} {Y: ginfPO.type k}.
+ Lemma ginf_closed_inf_morphism: ginf_closed k (@is_inf_preserving X Y).
+ Proof. exact: (@gsup_closed_sup_morphism k (dual X) (dual Y)). Qed.
+ HB.instance Definition _ :=
+   monadic_ginf.Build k (X-inf->Y) (X:=inf_closed_sig ginf_closed_inf_morphism) inf_morphism_as_sig. 
+End s.
+
 
 
 (** ** standard infimum operations *)
@@ -248,8 +255,6 @@ Lemma geq_top x: top <= x -> x ≡ top.
 Proof. exact: (@leq_bot (dual X)). Qed.
 End top.
 #[export] Hint Immediate leq_top: lattice.
-Lemma adj_top {X Y: topPO.type} (f: X ⊢ Y): f top ≡ top. 
-Proof. exact: (adj_bot (dualf f)). Qed.
 
 Section cap.
 Context {X: meetSemiLattice.type}.
@@ -279,8 +284,6 @@ Lemma codirected_inf_closure (P: X -> Prop): codirected (inf_closure P).
 Proof. exact: (@directed_sup_closure (dual X)). Qed.
 End cap.
 #[export] Hint Resolve geq_cap_l geq_cap_r: lattice.
-Lemma adj_cap {X Y: meetSemiLattice.type} (f: X ⊢ Y) (x y: X): f (cap x y) ≡ cap (f x) (f y). 
-Proof. exact: (adj_cup (dualf f)). Qed.
 
 Section cpo'.
 Context {X: CPO'.type}.
@@ -294,8 +297,6 @@ Proof. exact: (@csup_leq (dual X)). Qed.
 Lemma cinf_eqv (P Q: X -> Prop) CP CQ: cobicovered P Q -> cinf P CP ≡ cinf Q CQ.
 Proof. exact: (@csup_eqv (dual X)). Qed.
 End cpo'.
-Lemma adj_cinf {X Y: CPO'.type} (f: X ⊢ Y) (P: X -> Prop) C: f (cinf P C) ≡ cinf (image f P) (cochain_image f C). 
-Proof. exact: (adj_csup (dualf f)). Qed.
 
 Section dcpo'.
 Context {X: dCPO'.type}.
@@ -309,8 +310,6 @@ Proof. exact: (@dsup_leq (dual X)). Qed.
 Lemma dinf_eqv (P Q: X -> Prop) DP DQ: cobicovered P Q -> dinf P DP ≡ dinf Q DQ.
 Proof. exact: (@dsup_eqv (dual X)). Qed.
 End dcpo'.
-Lemma adj_dinf {X Y: dCPO'.type} (f: X ⊢ Y) (P: X -> Prop) C: f (dinf P C) ≡ dinf (image f P) (codirected_image f C). 
-Proof. exact: (adj_dsup (dualf f)). Qed.
 
 Section iinf.
 Context {X: infCL.type}.
@@ -335,12 +334,6 @@ Proof. move=>P Q pq. exact: iinf_leq. Qed.
 Lemma inf_eqv: Proper (eqv ==> eqv) (@iinf X X^~ id).
 Proof. move=>P Q pq. exact: iinf_eqv. Qed.
 End iinf.
-Lemma adj_iinf {X Y: infCL.type} (f: X ⊢ Y) I (P: I -> Prop) h:
-  f (iinf P h) ≡ iinf P (f ∘ h). 
-Proof. exact: (adj_isup (dualf f)). Qed.
-Lemma adj_inf {X Y: infCL.type} (f: X ⊢ Y) P:
-  f (inf P) ≡ iinf P f. 
-Proof. exact: adj_iinf. Qed.
 
 
 (** ** concrete instances *)
@@ -548,8 +541,85 @@ HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -mon-> Y)
 
 (* Check ((nat->bool)-mon->(nat->Prop)): infCL.type. *)
 
+(** restriction to inf preserving functions follow generically *)
+HB.instance Definition _ (X: PO.type) (Y: topPO.type) := topPO.copy (X -inf-> Y) (top_gen (X -inf-> top_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: meetSemiLattice.type) := meetSemiLattice.copy (X -inf-> Y) (cap_gen (X -inf-> cap_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: CPO'.type) := CPO'.copy (X -inf-> Y) (cinf_gen (X -inf-> cinf_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: dCPO'.type) := dCPO'.copy (X -inf-> Y) (dinf_gen (X -inf-> dinf_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -inf-> Y) (iinf_gen (X -inf-> iinf_gen Y)).
+
+
 (** ** additional lemmas using suprema on subsets *)
 
 Lemma is_inf_cup {X: meetSemiLattice.type} U V (u v: X):
   is_inf U u -> is_inf V v -> is_inf (cup U V) (cap u v).
 Proof. exact: (@is_sup_cup (dual X)). Qed.
+
+(** ** theory of inf preserving functions *)
+
+Lemma preserves_top {X Y: topPO.type} (f: X -inf-> Y): f top ≡ top. 
+Proof. exact: (preserves_bot (dualf f)). Qed.
+
+Lemma preserves_cup {X Y: meetSemiLattice.type} (f: X -inf-> Y) (x y: X): f (cap x y) ≡ cap (f x) (f y). 
+Proof. exact: (preserves_cup (dualf f)). Qed.
+
+Lemma preserves_cinf {X Y: CPO'.type} (f: X -inf-> Y) (P: X -> Prop) C: f (cinf P C) ≡ cinf (image f P) (cochain_image f C). 
+Proof. exact: (preserves_csup (dualf f)). Qed.
+
+Lemma preserves_dinf {X Y: dCPO'.type} (f: X -inf-> Y) (P: X -> Prop) D: f (dinf P D) ≡ dinf (image f P) (codirected_image f D). 
+Proof. exact: (preserves_dsup (dualf f)). Qed.
+
+Lemma preserves_iinf {X Y: infCL.type} (f: X -inf-> Y) I (P: I -> Prop) h: f (iinf P h) ≡ iinf P (f ∘ h). 
+Proof. exact: (preserves_isup (dualf f)). Qed.
+
+Lemma preserves_inf {X Y: infCL.type} (f: X -inf-> Y) (P: X -> Prop): f (inf P) ≡ iinf P f. 
+Proof. exact: preserves_iinf. Qed.
+
+Lemma is_inf_image_inf {X: infCL.type} {Y} (f: X -inf-> Y) P: is_inf (image f P) (f (inf P)).
+Proof. exact: (is_sup_image_sup (dualf f)). Qed.
+
+(** ** inf preserving functions are right adjoint when the domain is a complete lattice *)
+
+Section s.
+Context {X: infCL.type} {Y: PO.type}. 
+
+Definition cl_ladj (f: X -> Y): Y -> X :=
+  fun y => inf (fun x => y <= f x).
+
+Lemma adjunction_cl_ladj (f: X -> Y) (F: is_inf_preserving f): adjunction (cl_ladj f) f.
+Proof. by move: (@adjunction_cl_radj _ _ (dualf f) F)=>/dual_adjunction. Qed.
+
+End s.
+
+HB.factory Record InfPreserving_isRightAdjoint
+  {X: infCL.type} {Y: PO.type} f of isInfPreserving X Y f := {}.
+HB.builders Context X Y f of InfPreserving_isRightAdjoint X Y f.
+HB.instance Definition _ := isRightAdjoint.Build _ _ f (adjunction_cl_ladj preserves_is_inf).
+HB.end.
+
+(** ** alternative builders for inf preserving / left adjoint functions *)
+
+(** when the domain is a complete lattice *)
+HB.factory Record isInfPreserving' {X: infCL.type} {Y: PO.type} f of isExtensional X Y f := {
+    is_inf_image_inf: forall P, is_inf (image f P) (f (inf P))
+  }.
+HB.builders Context X Y f of isInfPreserving' X Y f.
+Lemma preserves_is_inf: is_inf_preserving f.
+Proof.
+  move=>Z z Zz.
+  have ->: z≡inf Z. 2: exact/is_inf_image_inf.
+  apply: is_inf_eqv. exact/Zz. exact/inf_spec. done.
+Qed.
+HB.instance Definition _ := isInfPreserving.Build _ _ f preserves_is_inf.
+HB.instance Definition _ := InfPreserving_isRightAdjoint.Build _ _ f.
+HB.end.
+
+(** when both the domain and codomain are complete lattices *)
+HB.factory Record isInfPreserving'' {X Y: infCL.type} f of isExtensional X Y f := {
+    preserves_inf: forall P, f (inf P) ≡ iinf P f
+  }.
+HB.builders Context X Y f of isInfPreserving'' X Y f.
+Lemma preserves_is_inf': forall P, is_inf (image f P) (f (inf P)).
+Proof. move=>P. rewrite preserves_inf. exact/iinf_inf_spec. Qed.
+HB.instance Definition _ := isInfPreserving'.Build _ _ f preserves_is_inf'.
+HB.end.

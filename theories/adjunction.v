@@ -21,11 +21,17 @@ Proof. move=>x z. by rewrite ks lr. Qed.
 HB.mixin Record isLeftAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] radj: Y -> X; 
     #[canonical=no] adj: adjunction f radj }.
-(** adjoints are automatically monotone *)
+(** left adjoints preserve sups *)
 HB.builders Context (X Y: PO.type) f of isLeftAdjoint X Y f.
-  Lemma monotone: Proper (leq ==> leq) f.
-  Proof. move=>x y xy. apply/adj. rewrite xy. by apply/adj. Qed.
-  HB.instance Definition _ := isMonotone.Build X Y f monotone.
+  Lemma adjoint_sup P (x: X): is_sup P x -> is_sup (image f P) (f x).
+  Proof.
+    move=>H y/=. rewrite adj H.
+    rewrite (upper_boundE _ y).
+    setoid_rewrite image_adj.
+    apply: forall_iff=>z/=. 
+    by rewrite adj. 
+  Qed.
+  HB.instance Definition _ := isSupPreserving.Build _ _ _ adjoint_sup.
 HB.end.
 HB.structure Definition leftAdjunction X Y := {f of isLeftAdjoint X Y f }.
 Arguments radj {_ _}.
@@ -50,11 +56,17 @@ HB.end.
 HB.mixin Record isRightAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] ladj: Y -> X; 
     #[canonical=no] adj': adjunction ladj f }.
-(** adjoints are automatically monotone *)
+(** right adjoints preserve infs *)
 HB.builders Context (X Y: PO.type) f of isRightAdjoint X Y f.
-  Lemma monotone: Proper (leq ==> leq) f.
-  Proof. move=>x y xy. apply/adj'. rewrite -xy. by apply/adj'. Qed.
-  HB.instance Definition _ := isMonotone.Build X Y f monotone.
+  Lemma adjoint_inf P (x: X): is_inf P x -> is_inf (image f P) (f x).
+  Proof.
+    move=>H y/=. rewrite -adj' H.
+    rewrite (lower_boundE _ y).
+    setoid_rewrite image_adj.
+    apply: forall_iff=>z/=. 
+    by rewrite adj'. 
+  Qed.
+  HB.instance Definition _ := isInfPreserving.Build _ _ _ adjoint_inf.
 HB.end.
 HB.structure Definition rightAdjunction X Y := {f of isRightAdjoint X Y f }.
 Arguments ladj {_ _}.
@@ -118,16 +130,6 @@ Section s.
   Lemma ladj_mult: ladj_monad ∘ ladj_monad <= ladj_monad.
   Proof. move=>x/=. apply/adj. by do 2 setoid_rewrite (ladj_lrl _). Qed.
 
-  (** left adjoints preserve sups *)
-  Lemma adjoint_sup P (x: X): is_sup P x -> is_sup (image f P) (f x).
-  Proof.
-    move=>H y/=. rewrite adj H.
-    rewrite (upper_boundE _ y).
-    setoid_rewrite image_adj.
-    apply: forall_iff=>z/=. 
-    by rewrite adj. 
-  Qed.
-
   (** functional version of the adjunction  *)
   Lemma fadj {Z} h (k: Z -mon-> Y): f ∘ h <= k <-> h <= radj f ∘ k.
   Proof. cbn. by setoid_rewrite (adj _). Qed.
@@ -148,10 +150,6 @@ Section s.
 
   Lemma radj_comult: radj_comonad <= radj_comonad ∘ radj_comonad.
   Proof. exact: (ladj_mult (dualf f)). Qed.
-  
-  (** right adjoints preserve infs *)
-  Lemma adjoint_inf P (x: X): is_inf P x -> is_inf (image f P) (f x).
-  Proof. exact: (adjoint_sup (dualf f)). Qed.
 
   Lemma fadj' {Z} h (k: Z -mon-> Y): k <=[Z->Y] f ∘ h <-> ladj f ∘ k <= h.
   Proof. exact: (fadj (dualf f) (Z:=dual Z) h (dualf k)). Qed.
@@ -356,6 +354,32 @@ Section s.
    mk_mon (sval f) (proj2_sig f).
  Program Definition po_morphism_as_sig: (X-mon->Y) ≃ (sig (Proper (@leq X==>@leq Y))) :=
    mk_iso po_morphism_to_sig sig_to_po_morphism _ _.
+ Next Obligation. done. Qed.
+ Next Obligation. done. Qed.
+End s.
+
+(** sup preserving functions as a sig type (idem) *)
+Section s.
+ Context {X Y: PO.type}.
+ Definition sup_morphism_to_sig (f: X-sup->Y): sig is_sup_preserving :=
+   exist is_sup_preserving f preserves_is_sup.
+ Definition sig_to_sup_morphism (f: sig is_sup_preserving): X-sup->Y :=
+   HB.pack_for (sup_morphism.type X Y) (sval f) (isSupPreserving.Build X Y (sval f) (proj2_sig f)).
+ Program Definition sup_morphism_as_sig: (X-sup->Y) ≃ (sig is_sup_preserving) :=
+   mk_iso sup_morphism_to_sig sig_to_sup_morphism _ _.
+ Next Obligation. done. Qed.
+ Next Obligation. done. Qed.
+End s.
+
+(** inf preserving functions as a sig type (idem) *)
+Section s.
+ Context {X Y: PO.type}.
+ Definition inf_morphism_to_sig (f: X-inf->Y): sig is_inf_preserving :=
+   exist is_inf_preserving f preserves_is_inf.
+ Definition sig_to_inf_morphism (f: sig is_inf_preserving): X-inf->Y :=
+   HB.pack_for (inf_morphism.type X Y) (sval f) (isInfPreserving.Build X Y (sval f) (proj2_sig f)).
+ Program Definition inf_morphism_as_sig: (X-inf->Y) ≃ (sig is_inf_preserving) :=
+   mk_iso inf_morphism_to_sig sig_to_inf_morphism _ _.
  Next Obligation. done. Qed.
  Next Obligation. done. Qed.
 End s.

@@ -32,15 +32,6 @@ Proof. intros; eapply is_sup_eqv; eauto. Qed.
 Lemma is_sup_eq x: is_sup (eq x) x.
 Proof. move=>/=. rewrite /upper_bound. by firstorder subst. Qed.
 
-#[export] Instance Proper_is_sup: Proper (bicovered ==> eqv ==> iff) (@is_sup X).
-Proof.
-  rewrite /is_sup=> P Q PQ x y xy.
-  apply Proper_forall=>z. apply Proper_iff. by rewrite xy.
-  have E: forall P Q, covered P Q -> (forall t, Q t -> t <= z) <= (forall t, P t -> t <= z).
-   clear=>P Q PQ H t Pt. by case: (PQ _ Pt)=>s [? ->]; apply H. 
-  split; apply E; apply PQ. 
-Qed.
-
 Lemma sup_closed_impl (P Q: X -> Prop): Proper (leq --> leq) P -> sup_closed Q -> sup_closed (fun x => P x -> Q x).
 Proof.
   intros HP HQ T TPQ x Tx Px.
@@ -299,15 +290,53 @@ Section s.
    comonadic_gsup.Build k (X-eqv->Y) (X:=sup_closed_sig gsup_closed_extensional) setoid_morphism_as_sig. 
 End s.
 
-(** left adjunctions preserve sups *)
-Lemma adj_gsup {k} {X Y: gsupPO.type k} (f: X ⊣ Y) I P kIP h:
-  f (@gsup k X I P kIP h) ≡ gsup I P kIP (f ∘ h). 
+(** sups of sup preserving functions *)
+Section s.
+ Context {k} {X: PO.type} {Y: gsupPO.type k}.
+ Lemma gsup_closed_sup_morphism: gsup_closed k (@is_sup_preserving X Y).
+ Proof.
+   move=>I Q kIQ h hQ Z z Zz y.
+   rewrite gsup_spec 2!upper_bound_image.
+   split=>H.
+   - move=>x Zx. apply/gsup_spec=>?[i [Qi ->]].
+     rewrite -(H i Qi)/=.
+     apply: (is_sup_preserving_monotone (hQ i Qi)).
+     by apply Zz.
+   - move=>i Qi/=.
+     (* TODO: improve/simplify this proof? *)
+     apply (hQ i Qi _ _ Zz)=>{Zz z}.
+     apply/upper_bound_image=>z Zz.
+     rewrite -(H z Zz).
+     move: (gsup_spec _ Q kIQ h)=>S.     
+     eapply (fun f E => dprod_sup' f E S z).
+     2: done. 2: by do 2 apply/in_image. 
+     clear z Zz S i Qi Z y H.
+     move=>x. rewrite -image_comp/=. exact/gsup_spec. 
+ Qed.
+ (* NOTE: we need kernel compositions to behave well in order the following instance to typecheck *)
+ HB.instance Definition _ :=
+   comonadic_gsup.Build k (X-sup->Y) (X:=sup_closed_sig gsup_closed_sup_morphism) sup_morphism_as_sig. 
+End s.
+
+(* TOTHINK: sups of inf preserving functions? needs some form of distributivity? *)
+
+(** monotone functions *partly* preserve gsups *)
+Lemma monotone_gsup {k} {X Y: gsupPO.type k} (f: X -mon-> Y) I P kIP (h: I -mon-> X):
+  gsup I P kIP (f ∘ h) <= f (gsup I P kIP h). 
 Proof.
-  apply: from_above=>y.
-  rewrite adj 2!gsup_spec 2!upper_bound_image.
-  apply: forall_iff=>i.
-  by rewrite -adj.
+  rewrite gsup_spec upper_bound_image=>i Pi.
+  apply f. eapply gsup_spec. reflexivity. exact/in_image.
 Qed.
+
+(** sup preserving functions preserve gsups (as expected) *)
+Lemma preserves_gsup {k} {X Y: gsupPO.type k} (f: X -sup-> Y) I P kIP (h: I -mon-> X):
+  f (gsup I P kIP h) ≡ gsup I P kIP (f ∘ h). 
+Proof.
+  apply: antisym. 2: exact/monotone_gsup.
+  rewrite (preserves_is_sup _ _ (gsup_spec _ _ _ _)).
+  rewrite -image_comp. exact/gsup_spec.
+Qed.
+
 
 (** ** standard supremum operations *)
 
@@ -380,11 +409,6 @@ Lemma leq_bot z: z <= bot -> z ≡ bot. (* iff, reversed? *)
 Proof. move=>H. apply: antisym=>//. apply: geq_bot. Qed.
 End bot.
 #[export] Hint Immediate geq_bot: lattice.
-Lemma adj_bot {X Y: botPO.type} (f: X ⊣ Y): f bot ≡ bot. 
-Proof.
-  apply: from_above=>y.
-  by rewrite adj 2!bot_spec.
-Qed.
 
 Section cup.
 Context {X: joinSemiLattice.type}.
@@ -425,11 +449,6 @@ Proof.
 Qed.
 End cup.
 #[export] Hint Resolve leq_cup_l leq_cup_r: lattice.
-Lemma adj_cup {X Y: joinSemiLattice.type} (f: X ⊣ Y) (x y: X): f (cup x y) ≡ cup (f x) (f y). 
-Proof.
-  apply: from_above=>z.
-  by rewrite adj 2!cup_spec -2!adj.
-Qed.
 
 Section bcup.
 Context {X: botjoinSemiLattice.type}.
@@ -452,13 +471,6 @@ Proof. apply: is_sup_leq; exact: csup_spec. Qed.
 Lemma csup_eqv (P Q: X -> Prop) CP CQ: bicovered P Q -> csup P CP ≡ csup Q CQ.
 Proof. apply: is_sup_eqv; exact: csup_spec. Qed.
 End cpo.
-Lemma adj_csup {X Y: CPO.type} (f: X ⊣ Y) (P: X -> Prop) C: f (csup P C) ≡ csup (image f P) (chain_image f C). 
-Proof.
-  apply: from_above=>y.
-  rewrite adj 2!csup_spec upper_bound_image.
-  apply: forall_iff=>x.
-  by rewrite -adj.
-Qed.
 
 Section dcpo.
 Context {X: dCPO.type}.
@@ -472,13 +484,6 @@ Proof. apply: is_sup_leq; exact: dsup_spec. Qed.
 Lemma dsup_eqv (P Q: X -> Prop) CP CQ: bicovered P Q -> dsup P CP ≡ dsup Q CQ.
 Proof. apply: is_sup_eqv; exact: dsup_spec. Qed.
 End dcpo.
-Lemma adj_dsup {X Y: dCPO.type} (f: X ⊣ Y) (P: X -> Prop) D: f (dsup P D) ≡ dsup (image f P) (directed_image f D). 
-Proof.
-  apply: from_above=>y.
-  rewrite adj 2!dsup_spec upper_bound_image.
-  apply: forall_iff=>x.
-  by rewrite -adj.
-Qed.
 
 Section isup.
 Context {X: supCL.type}.
@@ -506,17 +511,6 @@ Proof. move=>P Q pq. exact: isup_leq. Qed.
 Lemma sup_eqv: Proper (eqv ==> eqv) (@isup X X^~ id).
 Proof. move=>P Q pq. exact: isup_eqv. Qed.
 End isup.
-Lemma adj_isup {X Y: supCL.type} (f: X ⊣ Y) I (P: I -> Prop) h:
-  f (isup P h) ≡ isup P (f ∘ h). 
-Proof.
-  apply: from_above=>y.
-  rewrite adj 2!isup_spec/=. 
-  apply: forall_iff=>i.
-  by rewrite -adj. 
-Qed.
-Lemma adj_sup {X Y: supCL.type} (f: X ⊣ Y) P:
-  f (sup P) ≡ isup P f. 
-Proof. exact: adj_isup. Qed.
 
 (** ** concrete instances *)
 
@@ -777,6 +771,13 @@ HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -mon-> Y) (cs
 HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -mon-> Y) (dsup_gen (X -mon-> dsup_gen Y)).
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -mon-> Y) (isup_gen (X -mon-> isup_gen Y)).
 
+(** restriction to sup-preserving functions follow generically *)
+HB.instance Definition _ (X: PO.type) (Y: botPO.type) := botPO.copy (X -sup-> Y) (bot_gen (X -sup-> bot_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: joinSemiLattice.type) := joinSemiLattice.copy (X -sup-> Y) (cup_gen (X -sup-> cup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: CPO.type) := CPO.copy (X -sup-> Y) (csup_gen (X -sup-> csup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: dCPO.type) := dCPO.copy (X -sup-> Y) (dsup_gen (X -sup-> dsup_gen Y)).
+HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -sup-> Y) (isup_gen (X -sup-> isup_gen Y)).
+
 (** ** additional lemmas using suprema on subsets *)
 
 Lemma image_bot {X} {Y: Setoid.type} (f: X -> Y): image f bot ≡ bot.
@@ -791,3 +792,92 @@ Proof. exact: image_isup. Qed.
 Lemma is_sup_cup {X: joinSemiLattice.type} U V (u v: X):
   is_sup U u -> is_sup V v -> is_sup (cup U V) (cup u v).
 Proof. move=>Uu Vv z. rewrite cup_spec Uu Vv. cbn. firstorder. Qed.
+
+(** ** theory of sup preserving functions *)
+
+Lemma preserves_bot {X Y: botPO.type} (f: X -sup-> Y): f bot ≡ bot. 
+Proof.
+  exact: (@preserves_gsup _ (bot_gen X) (bot_gen Y) f False empty False_empty_kind empty_fun).
+Qed.
+
+Lemma preserves_cup {X Y: joinSemiLattice.type} (f: X -sup-> Y) (x y: X): f (cup x y) ≡ cup (f x) (f y). 
+Proof.
+  exact: (@preserves_gsup _ (cup_gen X) (cup_gen Y) f
+            (discrete bool) full bool_pair_kind (@discretemon (discrete bool) X (bool_fun x y))).
+Qed.
+
+Lemma preserves_csup {X Y: CPO.type} (f: X -sup-> Y) (P: X -> Prop) C: f (csup P C) ≡ csup (image f P) (chain_image f C). 
+Proof.
+  setoid_rewrite <-(@preserves_gsup _ (csup_gen X) (csup_gen Y) f _ P C types_id).
+  apply: extensional. apply: csup_eqv. by rewrite image_id'. 
+Qed.
+
+Lemma preserves_dsup {X Y: dCPO.type} (f: X -sup-> Y) (P: X -> Prop) D: f (dsup P D) ≡ dsup (image f P) (directed_image f D). 
+Proof.
+  setoid_rewrite <-(@preserves_gsup _ (dsup_gen X) (dsup_gen Y) f _ P D types_id).
+  apply: extensional. apply: dsup_eqv. by rewrite image_id'. 
+Qed.
+
+Lemma preserves_isup {X Y: supCL.type} (f: X -sup-> Y) I (P: I -> Prop) h: f (isup P h) ≡ isup P (f ∘ h). 
+Proof.
+  exact: (@preserves_gsup _ (isup_gen X) (isup_gen Y) f
+                     (discrete (strict I)) P Logic.I (@mk_mon (discrete (strict I)) X h _)).
+Qed.
+
+Lemma preserves_sup {X Y: supCL.type} (f: X -sup-> Y) (P: X -> Prop): f (sup P) ≡ isup P f. 
+Proof. exact: preserves_isup. Qed.
+
+Lemma is_sup_image_sup {X: supCL.type} {Y} (f: X -sup-> Y) P: is_sup (image f P) (f (sup P)).
+Proof. apply: preserves_is_sup. exact/sup_spec. Qed.
+
+(** ** sup preserving functions are left adjoint when the domain is a complete lattice *)
+
+Section s.
+Context {X: supCL.type} {Y: PO.type}. 
+
+Definition cl_radj (f: X -> Y): Y -> X :=
+  fun y => sup (fun x => f x <= y).
+
+Lemma adjunction_cl_radj (f: X -> Y):
+  is_sup_preserving f -> adjunction f (cl_radj f).
+Proof.
+  move=>F x y. split=>H. exact/leq_sup.
+  set f' := HB.pack_for (sup_morphism.type X Y) f (isSupPreserving.Build _ _ _ F).
+  change f with (sup_morphism.sort f').  
+  by rewrite H is_sup_image_sup/upper_bound/= => y' [x' [<- ->]]. 
+Qed.
+
+End s.
+
+HB.factory Record SupPreserving_isLeftAdjoint
+  {X: supCL.type} {Y: PO.type} f of isSupPreserving X Y f := {}.
+HB.builders Context X Y f of SupPreserving_isLeftAdjoint X Y f.
+HB.instance Definition _ := isLeftAdjoint.Build _ _ f (adjunction_cl_radj preserves_is_sup).
+HB.end.
+
+(** ** alternative builders for sup preserving / left adjoint functions *)
+
+(** when the domain is a complete lattice *)
+HB.factory Record isSupPreserving' {X: supCL.type} {Y: PO.type} f of isExtensional X Y f := {
+    is_sup_image_sup: forall P, is_sup (image f P) (f (sup P))
+  }.
+HB.builders Context X Y f of isSupPreserving' X Y f.
+Lemma preserves_is_sup: is_sup_preserving f.
+Proof.
+  move=>Z z Zz.
+  have ->: z≡sup Z. 2: exact/is_sup_image_sup.
+  apply: is_sup_eqv. exact/Zz. exact/sup_spec. done.
+Qed.
+HB.instance Definition _ := isSupPreserving.Build _ _ f preserves_is_sup.
+HB.instance Definition _ := SupPreserving_isLeftAdjoint.Build _ _ f.
+HB.end.
+
+(** when both the domain and codomain are complete lattices *)
+HB.factory Record isSupPreserving'' {X Y: supCL.type} f of isExtensional X Y f := {
+    preserves_sup: forall P, f (sup P) ≡ isup P f
+  }.
+HB.builders Context X Y f of isSupPreserving'' X Y f.
+Lemma preserves_is_sup': forall P, is_sup (image f P) (f (sup P)).
+Proof. move=>P. rewrite preserves_sup. exact/isup_sup_spec. Qed.
+HB.instance Definition _ := isSupPreserving'.Build _ _ f preserves_is_sup'.
+HB.end.

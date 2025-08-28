@@ -934,3 +934,97 @@ Lemma image_id' {X: PO.type} (P: X -> Prop): bicovered (image types_id P) P.
 Proof. exact: saturate_bicovered. Qed.
 Lemma image_id'' {X: PO.type} (P: X -> Prop): cobicovered (image types_id P) P.
 Proof. exact: saturate_cobicovered. Qed.
+
+(** * sup preserving functions *)
+Definition is_sup_preserving {X Y: PO.type} (f: X -> Y) :=
+  forall Z z, is_sup Z z -> is_sup (image f Z) (f z).
+Lemma is_sup_preserving_monotone {X Y: PO.type} (f: X -> Y):
+  is_sup_preserving f -> Proper (leq ==> leq) f.
+Proof.
+  move=>H x y xy.
+  set Z := pair x y.
+  have /H/(_ (f y)) Zy: is_sup Z y. {
+    rewrite /is_sup/Z=>z.
+    rewrite upper_bound_pair. intuition. by transitivity y.
+  }
+  apply Zy=>//.
+  apply: in_image. by left. 
+Qed.
+
+HB.mixin Record isSupPreserving (X Y: PO.type) (f: X -> Y) := {
+  #[canonical=no] preserves_is_sup: is_sup_preserving f    
+}.
+HB.builders Context {X Y} f of isSupPreserving X Y f.
+HB.instance Definition _ := isMonotone.Build _ _ f (is_sup_preserving_monotone preserves_is_sup).
+HB.end.
+HB.structure Definition sup_morphism X Y := {f of isSupPreserving X Y f}.
+Notation "X '-sup->' Y" := (sup_morphism.type X Y) (at level 99, Y at level 200).
+
+Instance Proper_is_sup {X}: Proper (bicovered ==> eqv ==> iff) (@is_sup X).
+Proof.
+  rewrite /is_sup=> P Q PQ x y xy.
+  apply Proper_forall=>z. apply Proper_iff. by rewrite xy.
+  have E: forall P Q, covered P Q -> (forall t, Q t -> t <= z) <= (forall t, P t -> t <= z).
+   clear=>P Q PQ H t Pt. by case: (PQ _ Pt)=>s [? ->]; apply H. 
+  split; apply E; apply PQ. 
+Qed.
+
+Lemma is_sup_preserving_id {X}: @is_sup_preserving X X types_id.
+Proof. move=>Z z. by rewrite image_id'. Qed.
+Lemma is_sup_preserving_comp {X Y Z: PO.type} (f: X->Y) (g: Y-eqv->Z):
+  is_sup_preserving f -> is_sup_preserving g -> is_sup_preserving (g∘f).
+Proof. move=>F G S s Ss/=. rewrite image_comp/=. by apply G, F. Qed.
+
+HB.instance Definition _ X := isSupPreserving.Build X X types_id (@is_sup_preserving_id X).
+HB.instance Definition _ X Y Z (f: X-sup->Y) (g: Y-sup->Z) := 
+  isSupPreserving.Build X Z (g∘f) (is_sup_preserving_comp _ preserves_is_sup preserves_is_sup).
+
+(** partial order of sup-preserving functions *)
+HB.instance Definition _ {X Y: PO.type} :=
+  PO.copy (X-sup->Y) (kernel (@sup_morphism.sort X Y)).
+Instance sup_morphism_leq {X Y}: Proper (leq ==> leq ==> leq) (@sup_morphism.sort X Y).
+Proof. move=>f g fg x y xy. rewrite xy. exact: fg. Qed.
+
+(** * dually, inf preserving functions *)
+Definition is_inf_preserving {X Y: PO.type} (f: X -> Y) :=
+  forall Z z, is_inf Z z -> is_inf (image f Z) (f z).
+Lemma is_inf_preserving_monotone {X Y: PO.type} (f: X -> Y):
+  is_inf_preserving f -> Proper (leq ==> leq) f.
+Proof.
+  move=>H. apply/Proper_dual_leq.
+  by dual @is_sup_preserving_monotone.
+Qed.
+  
+HB.mixin Record isInfPreserving (X Y: PO.type) (f: X -> Y) := {
+  #[canonical=no] preserves_is_inf: is_inf_preserving f    
+}.
+HB.builders Context {X Y} f of isInfPreserving X Y f.
+HB.instance Definition _ := isMonotone.Build _ _ f (is_inf_preserving_monotone preserves_is_inf).
+HB.end.
+HB.structure Definition inf_morphism X Y := {f of isInfPreserving X Y f}.
+Notation "X '-inf->' Y" := (inf_morphism.type X Y) (at level 99, Y at level 200).
+
+(** partial order of inf-preserving functions *)
+HB.instance Definition _ {X Y: PO.type} :=
+  PO.copy (X-inf->Y) (kernel (@inf_morphism.sort X Y)).
+Instance inf_morphism_leq {X Y}: Proper (leq ==> leq ==> leq) (@inf_morphism.sort X Y).
+Proof. move=>f g fg x y xy. rewrite xy. exact: fg. Qed.
+
+(** duality *)
+HB.instance Definition _ X Y (f: X-sup->Y) :=
+  isInfPreserving.Build (dual X) (dual Y) (dualf f) (@preserves_is_sup X Y f).
+HB.instance Definition _ X Y (f: X-inf->Y) :=
+  isSupPreserving.Build (dual X) (dual Y) (dualf f) (@preserves_is_inf X Y f).
+
+Instance Proper_is_inf {X}: Proper (cobicovered ==> eqv ==> iff) (@is_inf X).
+Proof. dual @Proper_is_sup. Qed.
+
+Lemma is_inf_preserving_id {X}: @is_inf_preserving X X types_id.
+Proof. dual @is_sup_preserving_id. Qed.
+Lemma is_inf_preserving_comp {X Y Z: PO.type} (f: X->Y) (g: Y-eqv->Z):
+  is_inf_preserving f -> is_inf_preserving g -> is_inf_preserving (g∘f).
+Proof. exact (@is_sup_preserving_comp (dual X) (dual Y) (dual Z) (dualf f) (dualf g)). Qed.
+
+HB.instance Definition _ X := isInfPreserving.Build X X types_id (@is_inf_preserving_id X).
+HB.instance Definition _ X Y Z (f: X-inf->Y) (g: Y-inf->Z) := 
+  isInfPreserving.Build X Z (g∘f) (is_inf_preserving_comp _ preserves_is_inf preserves_is_inf).
