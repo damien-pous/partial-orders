@@ -22,7 +22,6 @@ theories/fsets.v
 theories/all.v
 
 # tests & sanity checks
--R tests/ PartialOrdersTests
 tests/sanity_setoid.v
 tests/sanity_partialorder.v
 tests/sanity_sups.v
@@ -31,7 +30,6 @@ tests/sanity_lfp.v
 tests/sanity_gfp.v
 tests/sanity_lattice.v
 tests/sanity_instances.v
-tests/sanity.v
 
 ## previous attempts/variations, to be removed at some point, left here to ensure they compile
 # attic/alone.v

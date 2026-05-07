@@ -1,5 +1,5 @@
 opam-version: "2.0"
-maintainer: "damien.pous@ens-lyon.fr"
+maintainer: "Damien Pous <Damien.Pous@ens-lyon.fr>"
 version: "dev"
 
 homepage: "https://github.com/damien-pous/partial-orders"
@@ -22,6 +22,7 @@ depends: [
   "rocq-core" {>= "9.0"}
   "rocq-stdlib"
   "rocq-mathcomp-ssreflect"
+  "rocq-hierarchy-builder"
 ]
 
 tags: [
@@ -32,7 +33,8 @@ tags: [
   "keyword:Pataraia"
   "keyword:BourbakiWitt"
   "logpath:PartialOrders"
+  "date:2026-05-07"
 ]
 authors: [
-  "Damien Pous"
+  "Damien Pous <Damien.Pous@ens-lyon.fr>"
 ]
