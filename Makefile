@@ -1,24 +1,20 @@
-KNOWNTARGETS := CoqMakefile sanity justlib
-KNOWNFILES   := Makefile _CoqProject
+KNOWNTARGETS := RocqMakefile
+KNOWNFILES   := Makefile _RocqProject
 
-.DEFAULT_GOAL := invoke-coqmakefile
+.DEFAULT_GOAL := invoke-rocqmakefile
 
-CoqMakefile: Makefile _CoqProject
-	$(COQBIN)rocq makefile -f _CoqProject -docroot . -o CoqMakefile
+RocqMakefile: Makefile _RocqProject
+	$(ROCQBIN)rocq makefile -f _RocqProject -docroot . -o RocqMakefile
 
-invoke-coqmakefile: CoqMakefile
-	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
+invoke-rocqmakefile: RocqMakefile
+	$(MAKE) --no-print-directory -f RocqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
 
-.PHONY: invoke-coqmakefile $(KNOWNFILES)
+.PHONY: invoke-rocqmakefile $(KNOWNFILES)
 
 cleanall:: clean
-	rm -f CoqMakefile* *.d *.log */*.glob */.*.aux */*.vo*
-
-justlib: theories/gfp.vo theories/instances.vo
-
-sanity: tests/sanity.vo
+	rm -f RocqMakefile* *.d *.log */*.glob */.*.aux */*.vo*
 
 # This should be the last rule, to handle any targets not declared above
-%: invoke-coqmakefile
+%: invoke-rocqmakefile
 	@true
 

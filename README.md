@@ -1,9 +1,20 @@
 A Rocq library about partial orders and related structures (CPOs, complete lattices, etc).
 
+# SUMMARY
+
+Library about partial orders with more or less infimas and suprema (semi-lattices, lattices, complete partial orders, complete lattices). 
+
+Duality, fixpoint theorems (BourbakiWitt, Pataraia), instances (notably, various function spaces), adjunctions/Galois connections.
+
+Hierarchy of structures implemented with Hierarchy Builder.
+
+Based on setoids from the beginning, as a convenient way to obtain axiom-free quotients.
+
 # REQUIREMENTS
 
 - rocq-prover 9.0 (see branch 8.20 for backports)
 - rocq-mathcomp-ssreflect 
+- rocq-hierarchy-builder 
 
 # AUTHORS
 
@@ -78,11 +89,13 @@ sanity checks
 
 Mathematically, we have the following picture
 
+```
  ·     ·       ·
 CL -- dCPO -- CPO --------------------\
        ^ \       \(EM)                 \
        |  \-- Chain_lfp_PO -- lfp_PO -- botPO
        \----------(AC)---------/          ·
+```
 
 bot_PO: partial orders with a bottom element
 lfp_PO: every monotone function has a least fixpoint
@@ -99,6 +112,7 @@ similarly for CPO, but only classically, by Bourbaki-Witt's theorem.
 This raises difficulties when using HB structures, which we solve using the following hierarchy
 (more comments in file [theories/sups.v])
 
+```
     ·CL
 	 |
    ·dCPO   ·CPO
@@ -111,7 +125,7 @@ This raises difficulties when using HB structures, which we solve using the foll
      \   lfp_PO 
       \   /
      ·botPO
-
+```
 
 # DUALITY
 
@@ -177,9 +191,10 @@ A partial order is
 
 We have the following implications (top-down):
 
+```
 decidable
    \        total
     \      /     \
     classic     chain
-
+```
 In fact, a partial order is total iff it is both classic and a chain

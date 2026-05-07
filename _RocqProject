@@ -1,6 +1,5 @@
 -native-compiler no
 -arg -w -arg -undo-batch-mode
--arg -w -arg -deprecated-missing-stdlib
 -arg -w -arg -notation-overridden          # temporary, for mathcomp
 -arg -w -arg +HB.no-new-instance
 
@@ -20,6 +19,7 @@ theories/instances.v
 theories/closure.v
 theories/sets.v
 theories/fsets.v
+theories/all.v
 
 # tests & sanity checks
 -R tests/ PartialOrdersTests

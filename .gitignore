@@ -1,4 +1,5 @@
 *.glob
-CoqMakefile*
+RocqMakefile*
 .*.d
 .coq-native
+.rocq-native
