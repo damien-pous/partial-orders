@@ -190,10 +190,10 @@ Section t.
   Proof.
     elim:n=>[|n IH] H/=.
     - exact: lcl_bot. 
-    - rewrite /c'/= lcl_cup. apply: types_comp_eqv=>/=.
-      symmetry; exact/lcl_idm. apply:IH.
+    - rewrite /c'/=lcl_cup. apply: H; lia.
+      apply/types_comp_eqv.
+      symmetry. apply/lcl_idm. apply:IH.
       move=>j ij. apply: H. lia.
-      apply: H. lia. 
   Qed.
 End t.
 End s.
