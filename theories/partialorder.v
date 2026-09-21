@@ -27,7 +27,7 @@ HB.mixin Record isPO X of Setoid X := {
 HB.structure Definition PO := { X of isPO X & }.
 Infix "<=" := leq (at level 70).
 Notation "x <=[ X ] y" := (@leq X x y) (at level 70, only parsing).
-Notation unify_pos X Y := (same PO.type X Y).
+Abbreviation unify_pos X Y := (same PO.type X Y).
   
 (** PO from scratch, with [eqv] derived from [leq] *)
 HB.factory Record Type_isPO X := {
@@ -373,7 +373,7 @@ Notation "'mfun' x .. y => p" := (mk_mon (fun x => .. (mk_mon (fun y => p) _) ..
 (** identity morphism *)
 HB.instance Definition _ {X} :=
   isMonotone.Build X X types_id (fun _ _ H => H).
-Notation po_id := (types_id: _ -mon-> _) (only parsing). 
+Abbreviation po_id := (types_id: _ -mon-> _) (only parsing). 
 
 (** composition of morphisms *)
 HB.instance Definition _ {X Y Z} (f: X-mon->Y) (g: Y-mon->Z) := 
@@ -687,8 +687,8 @@ Proof. rewrite image_adj=>->x/=. exact: in_image. Qed.
 
 
 (** downward/upward closed subsets *)
-Notation downward_closed := (Proper (leq ==> impl)). 
-Notation upward_closed := (Proper (leq --> impl)). 
+Abbreviation downward_closed := (Proper (leq ==> impl)). 
+Abbreviation upward_closed := (Proper (leq --> impl)). 
 
 Section s.
 

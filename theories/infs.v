@@ -240,7 +240,7 @@ HB.instance Definition _ (X: infCL.type) := PO_isup.Build (dual X) _ iinf_inf_sp
 
 (** ** theory *)
 
-Notation inf P := (iinf P types_id).
+Abbreviation inf P := (iinf P types_id).
 Lemma inf_spec (X: infCL.type) (P: X -> Prop): is_inf P (inf P).
 Proof. exact: (@sup_spec (dual X)). Qed. 
 

@@ -268,7 +268,7 @@ Module Pataraia.
 Section s.
  Context (C: dCPO.type).
 
- Notation id := po_id.
+ Abbreviation id := po_id.
 
  (** the largest monotone and extensive function on [C] *)
  Program Definition h: C-mon->C := locked (dsup (fun f => id <= f) _).

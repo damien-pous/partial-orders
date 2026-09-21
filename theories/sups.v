@@ -394,7 +394,9 @@ Arguments isup {_ _}.
 
 (** ** theory *)
 
-Notation sup P := (isup P types_id).
+Create HintDb lattice.
+
+Abbreviation sup P := (isup P types_id).
 Lemma sup_spec (X: supCL.type) (P: X -> Prop): is_sup P (sup P).
 Proof. move: (isup_sup_spec X P types_id). by rewrite image_id'. Qed.
 

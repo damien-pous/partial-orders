@@ -12,8 +12,8 @@ From Stdlib Require Export Setoid Morphisms Basics.
 #[export] Obligation Tactic := intros. (* mitigate painful behaviour or [Program] *)
 
 (** identity and composition *)
-Notation types_id := Datatypes.id.
-Notation types_comp := compose.
+Abbreviation types_id := Datatypes.id.
+Abbreviation types_comp := compose.
 (** we setup a notation "∘" (\circ) for plain composition, consistently with the one in program_scope
     (we may restrict its scope to a libray-specific one later on)
     in subsequent modules, we also setup "°" (degree) for composition of monotone functions *)
@@ -69,10 +69,10 @@ Lemma forall_iff_and X (P Q R: X -> Prop) (H: forall a, P a <-> Q a /\ R a):
 Proof. firstorder. Qed.
 
 (** testing that two structures are definitionally equal *)
-Notation same T X Y := (eq_refl: @eq T X Y).
+Abbreviation same T X Y := (eq_refl: @eq T X Y).
 
 (** testing that two terms unify *)
-Notation unify M N := (same _ M N).
+Abbreviation unify M N := (same _ M N).
 
 (** a definitionally proof irrelevant version of [is_true] (no longer used) *)
 Definition is_true' (b: bool) : SProp := if b then sUnit else sEmpty.
@@ -85,7 +85,7 @@ Definition eq_true_is_true' b (H: true=b) : is_true' b
   := match H in _ = x return is_true' x with eq_refl => stt end.
 Lemma is_true'_leq: forall b c, implb b c -> is_true' b -> is_true' c. 
 Proof. (* by case; case. *) by destruct b; destruct c. Qed.
-Notation sEmpty_rect := sEmpty_rect.
+Abbreviation sEmpty_rect := sEmpty_rect.
   
 (** automatically apply reflexivity *)
 #[export] Hint Extern 0 => reflexivity: core.

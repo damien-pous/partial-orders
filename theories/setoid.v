@@ -15,7 +15,7 @@ HB.structure Definition Setoid :=
   { X of isSetoid X }.
 Infix "≡" := eqv (at level 70).
 Infix "≡[ X ]" := (@eqv X) (at level 70, only parsing).
-Notation unify_setoids X Y := (same Setoid.type X Y).
+Abbreviation unify_setoids X Y := (same Setoid.type X Y).
 
 (** ** properties *)
 
@@ -89,7 +89,7 @@ Notation "'efun' x .. y => p" := (mk_ext (fun x => .. (mk_ext (fun y => p) _) ..
 (** identity morphism *)
 HB.instance Definition _ {X} :=
   isExtensional.Build X X types_id (fun _ _ H => H).
-Notation setoid_id := (types_id: _ -eqv-> _) (only parsing). 
+Abbreviation setoid_id := (types_id: _ -eqv-> _) (only parsing). 
 
 (** composition of morphisms *)
 HB.instance Definition _ {X Y Z} (f: X-eqv->Y) (g: Y-eqv->Z) :=
@@ -135,7 +135,7 @@ HB.builders Context X of isStrictSetoid X.
   HB.instance Definition _ := eq_setoid X.
   HB.instance Definition _ := Setoid_isStrict.Build X _.
 HB.end.
-Notation strict_setoid X := (isStrictSetoid.Build X).
+Abbreviation strict_setoid X := (isStrictSetoid.Build X).
 
 Definition strict (X: Type) := X.
 HB.instance Definition _ X := strict_setoid (strict X).
@@ -213,7 +213,7 @@ HB.builders Context X of eqtype_Setoid X.
   HB.instance Definition _ := strict_setoid X. 
   HB.instance Definition _ := Setoid_isDecidable.Build X _ (@eqP X). 
 HB.end.
-Notation eqtype_setoid X := (eqtype_Setoid.Build X).
+Abbreviation eqtype_setoid X := (eqtype_Setoid.Build X).
   
 HB.factory Record eqtype_Decidable X of StrictSetoid X & Equality X := {}.
 HB.builders Context X of eqtype_Decidable X.
