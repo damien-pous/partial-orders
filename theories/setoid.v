@@ -83,8 +83,9 @@ Section s.
 End s.
 Arguments mk_ext' {_ _} _ _ _/.
 Arguments mk_ext {_ _} _ _.
-Notation "'efun' x .. y => p" := (mk_ext (fun x => .. (mk_ext (fun y => p) _) .. ) _)
-  (at level 200, x binder, right associativity).
+
+Notation "'efun' x .. y => p" := (mk_ext (fun x => .. (mk_ext (fun y => p) _ ) .. ) _ )
+  (at level 10, x binder, y binder, p at level 200).
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=
@@ -125,13 +126,13 @@ Proof. by case. Qed.
 Definition eq_setoid X := isSetoid.Build X eq_equivalence.
 
 #[primitive]
-HB.mixin Record Setoid_isStrict X of Setoid X := {
+HB.mixin Record Setoid_isStrict X & Setoid X := {
   #[canonical=no] eqv_eq: subrelation eqv (@eq X);
 }.
 HB.structure Definition StrictSetoid := { X of Setoid_isStrict X & }.
 
 HB.factory Record isStrictSetoid X := {}.
-HB.builders Context X of isStrictSetoid X.
+HB.builders Context X & isStrictSetoid X.
   HB.instance Definition _ := eq_setoid X.
   HB.instance Definition _ := Setoid_isStrict.Build X _.
 HB.end.
@@ -141,7 +142,7 @@ Definition strict (X: Type) := X.
 HB.instance Definition _ X := strict_setoid (strict X).
 
 HB.factory Record StrictThusExtensional (X: StrictSetoid.type) (Y: Setoid.type) (f: X -> Y) := {}.
-HB.builders Context X Y f of StrictThusExtensional X Y f.
+HB.builders Context X Y f & StrictThusExtensional X Y f.
   Lemma extensional: Proper (eqv ==> eqv) f.
   Proof. by move=>x y /eqv_eq ->. Qed.
   HB.instance Definition _ := isExtensional.Build X Y f extensional. 
@@ -155,7 +156,7 @@ HB.instance Definition _ (X: StrictSetoid.type) := StrictSetoid.on (eta X).
 
 (** ** classic setoids, with EM on [eqv] *)
 
-HB.mixin Record Setoid_isClassic X of Setoid X := {
+HB.mixin Record Setoid_isClassic X & Setoid X := {
     #[canonical=no] eqv_classic: forall x y: X, x ≡ y \/ ~ x ≡ y;
 }.
 HB.structure Definition ClassicSetoid := { X of Setoid_isClassic X & }.
@@ -166,12 +167,12 @@ HB.instance Definition _ (X: ClassicSetoid.type) := ClassicSetoid.on (eta X).
 (** ** decidable setoids, where [eqv] is decidable *)
 
 #[primitive]
-HB.mixin Record Setoid_isDecidable X of Setoid X := {
+HB.mixin Record Setoid_isDecidable X & Setoid X := {
   #[canonical=no] eqvb: X -> X -> bool;
   #[canonical=no] _eqv_dec: forall x y: X, reflect (x ≡ y) (eqvb x y);
 }.
 (** decidable setoids are classic *)
-HB.builders Context X of Setoid_isDecidable X.
+HB.builders Context X & Setoid_isDecidable X.
   Lemma eqv_classic (x y: X): x ≡ y \/ ~ x ≡ y.
   Proof. case: (_eqv_dec x y). by left. by right. Qed.
   HB.instance Definition _ := Setoid_isClassic.Build X eqv_classic.
@@ -187,7 +188,7 @@ HB.factory Record isDecidableSetoid X := {
   #[canonical=no] eqv_sym: forall x y, eqvb x y -> eqvb y x;
   #[canonical=no] eqv_trans: forall x y z, eqvb x y -> eqvb y z -> eqvb x z;
 }.
-HB.builders Context X of isDecidableSetoid X.
+HB.builders Context X & isDecidableSetoid X.
   Definition eqv (x y: X): Prop := eqvb x y.
   Lemma Equivalence_eqv: Equivalence eqv.
   Proof.
@@ -208,15 +209,15 @@ HB.instance Definition _ (X: DecidableSetoid.type) := DecidableSetoid.on (eta X)
     (this structure is equivalent to [Equality] from mathcomp.ssreflect) *)
 HB.structure Definition Equality' := { X of StrictSetoid X & DecidableSetoid X }.
 
-HB.factory Record eqtype_Setoid X of Equality X := {}.
-HB.builders Context X of eqtype_Setoid X.
+HB.factory Record eqtype_Setoid X & Equality X := {}.
+HB.builders Context X & eqtype_Setoid X.
   HB.instance Definition _ := strict_setoid X. 
   HB.instance Definition _ := Setoid_isDecidable.Build X _ (@eqP X). 
 HB.end.
 Abbreviation eqtype_setoid X := (eqtype_Setoid.Build X).
   
-HB.factory Record eqtype_Decidable X of StrictSetoid X & Equality X := {}.
-HB.builders Context X of eqtype_Decidable X.
+HB.factory Record eqtype_Decidable X & StrictSetoid X & Equality X := {}.
+HB.builders Context X & eqtype_Decidable X.
   Program Definition dec := Setoid_isDecidable.Build X eq_op _.
   Next Obligation.
     apply: equivP. exact: eqP.

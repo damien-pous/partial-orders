@@ -13,7 +13,8 @@ Time Goal
   let X' := ((T'-mon->T'): supCL.type) in (* fast *)
   let X'' := ((T''-mon->T''): supCL.type) in (* fast *)
   True.
-intros.
-hnf in *.
+Proof.
+  intros.
+  hnf in *.
 Abort.
 

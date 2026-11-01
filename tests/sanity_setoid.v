@@ -104,14 +104,17 @@ Section rewriting.
     Fail rewrite xy.
     move=>x'/=.
     rewrite xy.
-    Restart.
+  Restart.
+  Proof.
     change (const x ≡[X->X] g).
     rewrite xy.    
   Abort.
   
   Goal (f ∘ g) x ≡ x.
   Proof.
-    rewrite fg. Restart.
+    rewrite fg.
+  Restart.
+  Proof.
     (* fails because fg' is an equality of functions *)    
     Fail rewrite fg'.
     (* fails for lack of a match *)
@@ -122,7 +125,9 @@ Section rewriting.
   
   Goal (g ∘ f) x ≡ x.
   Proof.
-    rewrite fg. Restart.
+    rewrite fg.
+  Restart.
+  Proof.    
     (* fails because fg' is an equality of functions *)    
     Fail rewrite fg'. 
     (* fails for lack of a match *)
@@ -132,11 +137,15 @@ Section rewriting.
 
   Goal f (f x) ≡ x.
   Proof.
-    rewrite fg. Restart. 
+    rewrite fg.
+  Restart. 
+  Proof.
     (* fails because fg' is an equality of functions *)    
     Fail rewrite fg'. 
-    rewrite 2!(fg _). Restart.
-    rewrite 2!(fg' _). Restart.
+    rewrite 2!(fg _).
+  Restart.
+  Proof.
+    rewrite 2!(fg' _). 
   Abort.
   
   Goal f ∘ g ≡ types_id.
@@ -153,8 +162,12 @@ Section rewriting.
   
   Goal setoid_comp f g ≡ types_id.
   Proof.
-    rewrite fg. Restart.
-    setoid_rewrite fg. Restart.
+    rewrite fg.
+  Restart.
+  Proof.  
+    setoid_rewrite fg.
+  Restart.
+  Proof.
     (* no match *)
     Fail rewrite fg'. 
   Abort.

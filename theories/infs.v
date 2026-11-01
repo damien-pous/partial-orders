@@ -97,7 +97,7 @@ Proof. exact: (@pointwise_sup_mon (dual X) (dual Y)). Qed.
 
 (** ** generic infimum operation *)
 
-HB.mixin Record PO_ginf (k: gkind) X of PO X := {
+HB.mixin Record PO_ginf (k: gkind) X & PO X := {
     #[canonical=no] ginf: forall I P, k I P -> (I -mon-> dual X) -> X;
     #[canonical=no] ginf_spec: forall I P kIP (h: I -mon-> dual X), @is_inf X (image h P) (ginf I P kIP h);
   }.
@@ -111,11 +111,11 @@ HB.instance Definition _ k (X: gsupPO.type k) := @PO_ginf.Build k (dual X) (@gsu
 HB.instance Definition _ k A (X: A -> ginfPO.type k) := ginfPO.copy (forall a, X a) (dual (forall a, dual (X a))).
 
 (** infs from monadic adjunctions *)
-HB.factory Record monadic_ginf (k: gkind) Y of PO Y := {
+HB.factory Record monadic_ginf (k: gkind) Y & PO Y := {
     X: ginfPO.type k;
     a: Y ·⊣ X;
   }.
-HB.builders Context k Y of monadic_ginf k Y.
+HB.builders Context k Y & monadic_ginf k Y.
  Definition ginf I P kIP (h: I -mon-> dual Y): Y :=
    radj a (@ginf k X I P kIP (dualf a ∘ h)).
  Lemma ginf_spec I P kIP (h: I -mon-> dual Y):
@@ -175,42 +175,42 @@ End s.
 (** ** standard infimum operations *)
 
 
-HB.mixin Record PO_top X of PO X := {
+HB.mixin Record PO_top X & PO X := {
     #[canonical=no] top: X;
     #[canonical=no] top_inf_spec: is_inf empty top;
   }.
 HB.structure Definition topPO := {X of PO_top X & }.
 
-HB.mixin Record PO_cap X of PO X := {
+HB.mixin Record PO_cap X & PO X := {
     #[canonical=no] cap: X -> X -> X;
     #[canonical=no] cap_inf_spec: forall x y: X, is_inf (pair x y) (cap x y);
   }.
 HB.structure Definition meetSemiLattice := {X of PO_cap X & }.
 HB.structure Definition topmeetSemiLattice := {X of PO_top X & meetSemiLattice X }.
 
-HB.mixin Record PO_cinf X of PO X := {
+HB.mixin Record PO_cinf X & PO X := {
     #[canonical=no] cinf: forall P: X -> Prop, cochain P -> X;
     #[canonical=no] cinf_spec: forall (P: X -> Prop) C, is_inf P (cinf P C);
   }.
-HB.builders Context X of PO_cinf X.
+HB.builders Context X & PO_cinf X.
   HB.instance Definition _ := PO_top.Build X (cinf_spec cochain_empty).
 HB.end.
 HB.structure Definition CPO' := {X of PO_cinf X & }.
 
-HB.mixin Record PO_dinf X of PO X := {
+HB.mixin Record PO_dinf X & PO X := {
     #[canonical=no] dinf: forall P: X -> Prop, codirected P -> X;
     #[canonical=no] dinf_spec: forall (P: X -> Prop) D, is_inf P (dinf P D);
   }.
-HB.builders Context X of PO_dinf X.
+HB.builders Context X & PO_dinf X.
   HB.instance Definition _ := PO_cinf.Build X _ (fun P C => dinf_spec (cochain_codirected C)).
 HB.end.
 HB.structure Definition dCPO' := {X of PO_dinf X & }.
 
-HB.mixin Record PO_iinf X of PO X := {
+HB.mixin Record PO_iinf X & PO X := {
     #[canonical=no] iinf: forall I, (I -> Prop) -> (I -> X) -> X;
     #[canonical=no] iinf_inf_spec: forall I P (h: I -> X), is_inf (image h P) (iinf I P h);
   }.
-HB.builders Context X of PO_iinf X.
+HB.builders Context X & PO_iinf X.
   Definition inf (P: X -> Prop) := iinf P types_id.
   Lemma inf_spec (P: X -> Prop): is_inf P (inf P).
   Proof. move: (iinf_inf_spec P types_id). by rewrite image_id''. Qed.
@@ -398,8 +398,8 @@ End s.
 Lemma top_ginf_closed {X: topPO.type} (P: X -> Prop) (Ptop: P top): @ginf_closed empty_kind (top_gen X) P.
 Proof. done. Qed.
 
-HB.factory Record monadic_top Y of PO Y := { X: topPO.type; f: Y ·⊣ X; }.
-HB.builders Context Y of monadic_top Y.
+HB.factory Record monadic_top Y & PO Y := { X: topPO.type; f: Y ·⊣ X; }.
+HB.builders Context Y & monadic_top Y.
  HB.instance Definition _ := monadic_ginf.Build empty_kind Y (X:=top_gen X) f.
  HB.instance Definition _ := topPO.copy Y (top_gen Y).
 HB.end.
@@ -435,8 +435,8 @@ Lemma cap_ginf_closed {X: meetSemiLattice.type} (P: X -> Prop) (Pcap: forall x y
   @ginf_closed pair_kind (cap_gen X) P.
 Proof. move=>I Q kIQ h H. apply: Pcap; apply: H; apply kIQ. Qed.
 
-HB.factory Record monadic_cap Y of PO Y := { X: meetSemiLattice.type; f: Y ·⊣ X }.
-HB.builders Context Y of monadic_cap Y.
+HB.factory Record monadic_cap Y & PO Y := { X: meetSemiLattice.type; f: Y ·⊣ X }.
+HB.builders Context Y & monadic_cap Y.
  HB.instance Definition _ := monadic_ginf.Build pair_kind Y (X:=cap_gen X) f.
  HB.instance Definition _ := meetSemiLattice.copy Y (cap_gen Y).
 HB.end.
@@ -552,8 +552,8 @@ HB.instance Definition _ (X: PO.type) (Y: infCL.type) := infCL.copy (X -inf-> Y)
 
 (** ** deriving [leq_classic] from [cap] and [eqv_classic] *)
 
-HB.factory Record ClassicMeetSemiLattice X of ClassicSetoid X & meetSemiLattice X := {}.
-HB.builders Context X of ClassicMeetSemiLattice X. 
+HB.factory Record ClassicMeetSemiLattice X & ClassicSetoid X & meetSemiLattice X := {}.
+HB.builders Context X & ClassicMeetSemiLattice X. 
 Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
 Proof. rewrite leq_of_cap. exact/eqv_classic. Qed.
 HB.instance Definition _ := PO_isClassic.Build X leq_classic.
@@ -561,8 +561,8 @@ HB.end.
 
 (** ** deriving [leqb] from [cap] and [eqvb] *)
 
-HB.factory Record DecidableMeetSemiLattice X of DecidableSetoid X & meetSemiLattice X := {}.
-HB.builders Context X of DecidableMeetSemiLattice X.
+HB.factory Record DecidableMeetSemiLattice X & DecidableSetoid X & meetSemiLattice X := {}.
+HB.builders Context X & DecidableMeetSemiLattice X.
 Definition leqb (x y: X) := cap x y ≡? x. 
 Lemma leq_dec (x y: X): reflect (x <= y) (leqb x y).
 Proof. apply/equivP. exact/eqv_dec. symmetry; exact/leq_of_cap. Qed.
@@ -612,18 +612,18 @@ Proof. by move: (@adjunction_cl_radj _ _ (dualf f) F)=>/dual_adjunction. Qed.
 End s.
 
 HB.factory Record InfPreserving_isRightAdjoint
-  {X: infCL.type} {Y: PO.type} f of isInfPreserving X Y f := {}.
-HB.builders Context X Y f of InfPreserving_isRightAdjoint X Y f.
+  {X: infCL.type} {Y: PO.type} f & isInfPreserving X Y f := {}.
+HB.builders Context X Y f & InfPreserving_isRightAdjoint X Y f.
 HB.instance Definition _ := isRightAdjoint.Build _ _ f (adjunction_cl_ladj preserves_is_inf).
 HB.end.
 
 (** ** alternative builders for inf preserving / left adjoint functions *)
 
 (** when the domain is a complete lattice *)
-HB.factory Record isInfPreserving' {X: infCL.type} {Y: PO.type} f of isExtensional X Y f := {
+HB.factory Record isInfPreserving' {X: infCL.type} {Y: PO.type} f & isExtensional X Y f := {
     is_inf_image_inf: forall P, is_inf (image f P) (f (inf P))
   }.
-HB.builders Context X Y f of isInfPreserving' X Y f.
+HB.builders Context X Y f & isInfPreserving' X Y f.
 Lemma preserves_is_inf: is_inf_preserving f.
 Proof.
   move=>Z z Zz.
@@ -635,10 +635,10 @@ HB.instance Definition _ := InfPreserving_isRightAdjoint.Build _ _ f.
 HB.end.
 
 (** when both the domain and codomain are complete lattices *)
-HB.factory Record isInfPreserving'' {X Y: infCL.type} f of isExtensional X Y f := {
+HB.factory Record isInfPreserving'' {X Y: infCL.type} f & isExtensional X Y f := {
     preserves_inf: forall P, f (inf P) ≡ iinf P f
   }.
-HB.builders Context X Y f of isInfPreserving'' X Y f.
+HB.builders Context X Y f & isInfPreserving'' X Y f.
 Lemma preserves_is_inf': forall P, is_inf (image f P) (f (inf P)).
 Proof. move=>P. rewrite preserves_inf. exact/iinf_inf_spec. Qed.
 HB.instance Definition _ := isInfPreserving'.Build _ _ f preserves_is_inf'.

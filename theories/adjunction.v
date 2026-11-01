@@ -22,7 +22,7 @@ HB.mixin Record isLeftAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] radj: Y -> X; 
     #[canonical=no] adj: adjunction f radj }.
 (** left adjoints preserve sups *)
-HB.builders Context (X Y: PO.type) f of isLeftAdjoint X Y f.
+HB.builders Context (X Y: PO.type) f & isLeftAdjoint X Y f.
   Lemma adjoint_sup P (x: X): is_sup P x -> is_sup (image f P) (f x).
   Proof.
     move=>H y/=. rewrite adj H.
@@ -38,11 +38,11 @@ Arguments radj {_ _}.
 Infix "⊣" := leftAdjunction.type (at level 79).
 
 (** alternative presentation, via unit and counit *)
-HB.factory Record isLeftAdjoint' (X Y: PO.type) f of po_morphism X Y f := 
+HB.factory Record isLeftAdjoint' (X Y: PO.type) f & po_morphism X Y f := 
   { #[canonical=no] f': Y -mon-> X; 
     #[canonical=no] adj_unit: @types_id X <= f' ∘ f;
     #[canonical=no] adj_counit: f ∘ f' <= types_id }.
-HB.builders Context (X Y: PO.type) f of isLeftAdjoint' X Y f.
+HB.builders Context (X Y: PO.type) f & isLeftAdjoint' X Y f.
   Lemma adj: adjunction f f'.
   Proof.
     move=>x y. split=>H.
@@ -57,7 +57,7 @@ HB.mixin Record isRightAdjoint (X Y: PO.type) (f: X -> Y) :=
   { #[canonical=no] ladj: Y -> X; 
     #[canonical=no] adj': adjunction ladj f }.
 (** right adjoints preserve infs *)
-HB.builders Context (X Y: PO.type) f of isRightAdjoint X Y f.
+HB.builders Context (X Y: PO.type) f & isRightAdjoint X Y f.
   Lemma adjoint_inf P (x: X): is_inf P x -> is_inf (image f P) (f x).
   Proof.
     move=>H y/=. rewrite -adj' H.
@@ -73,11 +73,11 @@ Arguments ladj {_ _}.
 Infix "⊢" := rightAdjunction.type (at level 79).
 
 (** alternative presentation, via unit and counit *)
-HB.factory Record isRightAdjoint' (X Y: PO.type) f of po_morphism X Y f := 
+HB.factory Record isRightAdjoint' (X Y: PO.type) f & po_morphism X Y f := 
   { #[canonical=no] f': Y -mon-> X; 
     #[canonical=no] adj_unit: @types_id Y <= f ∘ f';
     #[canonical=no] adj_counit: f' ∘ f <= types_id }.
-HB.builders Context (X Y: PO.type) f of isRightAdjoint' X Y f.
+HB.builders Context (X Y: PO.type) f & isRightAdjoint' X Y f.
   Lemma adj: adjunction f' f.
   Proof.
     move=>x y. split=>H.
@@ -195,13 +195,13 @@ End s.
     - we use [Monadic] to indicate that *left* adjoint takes part into a monadic adjunction
     - we use [CoMonadic] to indicate that *right* adjoint takes part into a comonadic adjunction
  *)
-HB.mixin Record isMonadic X Y f of leftAdjunction X Y f := {
+HB.mixin Record isMonadic X Y f & leftAdjunction X Y f := {
     #[canonical=no] monadic: ladj_monad f ≡ types_id
   }.
 HB.structure Definition MonadicAdjunction X Y := {f of isMonadic X Y f &}.
 Infix "·⊣" := MonadicAdjunction.type (at level 79).
 
-HB.mixin Record isCoMonadic X Y f of rightAdjunction X Y f := {
+HB.mixin Record isCoMonadic X Y f & rightAdjunction X Y f := {
     #[canonical=no] comonadic: radj_comonad f ≡ types_id
   }.
 HB.structure Definition CoMonadicAdjunction X Y := {f of isCoMonadic X Y f &}.
@@ -243,9 +243,9 @@ Proof. exact: (monadic_inf (dualf f)). Qed.
     - f is the right adjoint of a comonadic adjunction [ladj f, f]
     and we need to ask that [ladj f] and [radj f] are the same    
  *)
-HB.mixin Record biadj_isIso X Y f of leftAdjunction X Y f & rightAdjunction X Y f := 
+HB.mixin Record biadj_isIso X Y f & leftAdjunction X Y f & rightAdjunction X Y f := 
   { #[canonical=no] radj_ladj: radj f ≡ ladj f }.
-HB.builders Context X Y i of biadj_isIso X Y i.
+HB.builders Context X Y i & biadj_isIso X Y i.
   Lemma monadic: ladj_monad i ≡ types_id.
   Proof.
     apply: antisym=>x. 2: exact: ladj_unit. 
@@ -273,7 +273,7 @@ HB.factory Record isIso (X Y: PO.type) (i: X -> Y) := {
     ij: adjunction i j;
     ji: adjunction j i;
   }.
-HB.builders Context X Y i of isIso X Y i.
+HB.builders Context X Y i & isIso X Y i.
   HB.instance Definition _ := isLeftAdjoint.Build X Y i ij.
   HB.instance Definition _ := isRightAdjoint.Build X Y i ji.
   HB.instance Definition _ := biadj_isIso.Build X Y i eqv_refl.

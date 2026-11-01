@@ -20,7 +20,7 @@ Proof.
   move=>P E. split=>//. apply P. by move=>x y; rewrite and_comm.
 Qed.
 #[primitive]
-HB.mixin Record isPO X of Setoid X := {
+HB.mixin Record isPO X & Setoid X := {
     #[canonical=no] leq: relation X;
     #[canonical=no] PO_axm: po_axm leq;
 }.
@@ -34,7 +34,7 @@ HB.factory Record Type_isPO X := {
     #[canonical=no] leq: relation X;
     #[canonical=no] PreOrder_leq: PreOrder leq;
   }.
-HB.builders Context X of Type_isPO X.
+HB.builders Context X & Type_isPO X.
   Definition eqv (x y: X) := leq x y /\ leq y x.
   Lemma Equivalence_eqv: Equivalence eqv.
   Proof.
@@ -123,11 +123,11 @@ End s.
 
 (** ** classic partial orders with EM on [leq] *)
 
-HB.mixin Record PO_isClassic X of PO X := {
+HB.mixin Record PO_isClassic X & PO X := {
     #[canonical=no] leq_classic: forall x y: X, x <= y \/ ~ x <= y;
 }.
 (** classic partial orders are classic setoids *)
-HB.builders Context X of PO_isClassic X.
+HB.builders Context X & PO_isClassic X.
   Lemma eqv_classic (x y: X): x ≡ y \/ ~ x ≡ y.
   Proof.
     case: (leq_classic x y)=>xy.
@@ -143,7 +143,7 @@ HB.structure Definition ClassicPO := { X of PO_isClassic X & }.
 
 (** ** chains, where all pairs of elements are comparable *)
 
-HB.mixin Record PO_isChain X of PO X := {
+HB.mixin Record PO_isChain X & PO X := {
     #[canonical=no] leq_chain: forall x y: X, x <= y \/ y <= x;
 }.
 HB.structure Definition Chain := { X of PO_isChain X & }.
@@ -153,10 +153,10 @@ HB.structure Definition Chain := { X of PO_isChain X & }.
 
 HB.structure Definition Order := { X of Chain X & ClassicPO X }.
 
-HB.factory Record PO_Total X of PO X := {
+HB.factory Record PO_Total X & PO X := {
     #[canonical=no] total: forall x y: X, x <= y \/ y < x;
 }.
-HB.builders Context X of PO_Total X.
+HB.builders Context X & PO_Total X.
   Implicit Types x y: X.
   Lemma chain x y: x <= y  \/  y <= x.
   Proof. case: (total x y)=>[|[? ?]]; auto. Qed.
@@ -190,12 +190,12 @@ End s.
 (** ** decidable partial orders, where [leq] is decidable *)
 
 #[primitive]
-HB.mixin Record PO_isDecidable X of PO X := {
+HB.mixin Record PO_isDecidable X & PO X := {
   #[canonical=no] leqb: X -> X -> bool;
   #[canonical=no] _leq_dec: forall x y: X, reflect (x <= y) (leqb x y);
   }.
 (** decidable partial orders are classic ones, and decidable setoids *)
-HB.builders Context X of PO_isDecidable X.
+HB.builders Context X & PO_isDecidable X.
   Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
   Proof. case: (_leq_dec x y). by left. by right. Qed.
   HB.instance Definition _ := PO_isClassic.Build X leq_classic.
@@ -214,12 +214,12 @@ Proof. exact/_leq_dec. Qed.
 HB.structure Definition DecidableOrder := { X of PO_isDecidable X & Order X }.
 
 (** getting a decidable partial order directly from a setoid *)
-HB.factory Record Setoid_isDecidablePO X of Setoid X := {
+HB.factory Record Setoid_isDecidablePO X & Setoid X := {
   #[canonical=no] leqb: X -> X -> bool;
   #[canonical=no] eqv_of_leqb: forall x y, x ≡ y <-> leqb x y && leqb y x;
   #[canonical=no] leq_trans: forall x y z, leqb x y -> leqb y z -> leqb x z;
 }.
-HB.builders Context X of Setoid_isDecidablePO X.
+HB.builders Context X & Setoid_isDecidablePO X.
   Definition leq (x y: X): Prop := leqb x y.
   Lemma po_axm: po_axm leq.
   Proof.
@@ -238,7 +238,7 @@ HB.factory Record Type_isDecidablePO X := {
   #[canonical=no] leq_refl: forall x, leqb x x;
   #[canonical=no] leq_trans: forall x y z, leqb x y -> leqb y z -> leqb x z;
 }.
-HB.builders Context X of Type_isDecidablePO X.
+HB.builders Context X & Type_isDecidablePO X.
   Definition leq (x y: X): Prop := leqb x y.
   Lemma PreOrder_leq: PreOrder leq.
   Proof.
@@ -348,7 +348,7 @@ HB.mixin Record isMonotone (X Y: PO.type) (f: X -> Y) := {
     #[canonical=no] monotone: Proper (leq ==> leq) f
   }.
 (** monotone functions are always extensive *)
-HB.builders Context X Y f of isMonotone X Y f.
+HB.builders Context X Y f & isMonotone X Y f.
   HB.instance Definition _ :=
     isExtensional.Build X Y f (@op_leq_eqv_1 _ _ _ monotone).
 HB.end.
@@ -368,7 +368,7 @@ End s.
 Arguments mk_mon' {_ _} _ _ _/. 
 Arguments mk_mon {_ _} _ _/.
 Notation "'mfun' x .. y => p" := (mk_mon (fun x => .. (mk_mon (fun y => p) _) .. ) _)
-  (at level 200, x binder, right associativity).
+  (at level 10, x binder, y binder, p at level 200).
 
 (** identity morphism *)
 HB.instance Definition _ {X} :=
@@ -423,7 +423,7 @@ HB.factory Record isStrictPO X := {
     #[canonical=no] PreOrder_leq: PreOrder leq;
     #[canonical=no] antisym: antisymmetric X leq;
   }.
-HB.builders Context X of isStrictPO X.
+HB.builders Context X & isStrictPO X.
   HB.instance Definition _ := strict_setoid X.
   Lemma PO_axm: po_axm leq.
   Proof.
@@ -445,14 +445,14 @@ HB.saturate dual.
 (** we define this structure mostly to be able to infer automatically
     that some functions are trivially monotone *)
 #[primitive]
-HB.mixin Record isDiscrete X of PO X := {
+HB.mixin Record isDiscrete X & PO X := {
     #[canonical=no] leq_eqv: subrelation leq (@eqv X);
   }.
 HB.structure Definition DiscretePO :=
   { X of isDiscrete X & }.
 
-HB.factory Record Setoid_isDiscretePO X of Setoid X := {}.
-HB.builders Context X of Setoid_isDiscretePO X.
+HB.factory Record Setoid_isDiscretePO X & Setoid X := {}.
+HB.builders Context X & Setoid_isDiscretePO X.
   Lemma po_axm: po_axm (@eqv X). 
   Proof. apply: mk_po_axm. intuition. Qed.
   HB.instance Definition _ := isPO.Build X po_axm.
@@ -463,8 +463,8 @@ HB.instance Definition _ (X: Setoid.type) := Setoid.on (discrete X).
 HB.instance Definition _ (X: Setoid.type) := Setoid_isDiscretePO.Build (discrete X).
 HB.instance Definition _ (X: DecidableSetoid.type) := PO_isDecidable.Build (discrete X) eqvb eqv_dec.
 
-HB.factory Record DiscreteThusMonotone (X: DiscretePO.type) (Y: PO.type) f of setoid_morphism X Y f := {}.
-HB.builders Context X Y f of DiscreteThusMonotone X Y f.
+HB.factory Record DiscreteThusMonotone (X: DiscretePO.type) (Y: PO.type) f & setoid_morphism X Y f := {}.
+HB.builders Context X Y f & DiscreteThusMonotone X Y f.
   Lemma monotone: Proper (leq ==> leq) f.
   Proof. by move=>x y /leq_eqv/=->. Qed.
   HB.instance Definition _ := isMonotone.Build X Y f monotone. 
@@ -1028,7 +1028,7 @@ Qed.
 HB.mixin Record isSupPreserving (X Y: PO.type) (f: X -> Y) := {
   #[canonical=no] preserves_is_sup: is_sup_preserving f    
 }.
-HB.builders Context {X Y} f of isSupPreserving X Y f.
+HB.builders Context {X Y} f & isSupPreserving X Y f.
 HB.instance Definition _ := isMonotone.Build _ _ f (is_sup_preserving_monotone preserves_is_sup).
 HB.end.
 HB.structure Definition sup_morphism X Y := {f of isSupPreserving X Y f}.
@@ -1072,7 +1072,7 @@ Qed.
 HB.mixin Record isInfPreserving (X Y: PO.type) (f: X -> Y) := {
   #[canonical=no] preserves_is_inf: is_inf_preserving f    
 }.
-HB.builders Context {X Y} f of isInfPreserving X Y f.
+HB.builders Context {X Y} f & isInfPreserving X Y f.
 HB.instance Definition _ := isMonotone.Build _ _ f (is_inf_preserving_monotone preserves_is_inf).
 HB.end.
 HB.structure Definition inf_morphism X Y := {f of isInfPreserving X Y f}.

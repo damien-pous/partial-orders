@@ -12,7 +12,7 @@ HB.saturate (forall _, _).           (* void... *)
 
 
 (** ** modular lattices *)
-HB.mixin Record isModular X of Lattice X := {
+HB.mixin Record isModular X & Lattice X := {
     #[canonical=no] modular_: forall x a b: X, x <= b -> cap (cup x a) b <= cup x (cap a b)
   }.
 HB.structure Definition ModularLattice := {X of isModular X & }.
@@ -41,10 +41,10 @@ HB.instance Definition _ X (Y: ModularLattice.type) :=
   isModular.Build (X -mon-> Y) (fun x a b ab i => @modular_ Y (x i) (a i) (b i) (ab i)).
 
 (** ** distributive lattices *)
-HB.mixin Record isDistributive X of Lattice X := {
+HB.mixin Record isDistributive X & Lattice X := {
     #[canonical=no] distributive_: forall x y z: X, cap x (cup y z) <= cup (cap x y) (cap x z) 
   }.
-HB.builders Context X of isDistributive X.
+HB.builders Context X & isDistributive X.
 Lemma modular_ (x a b: X) (xb: x <= b): cap (cup x a) b <= cup x (cap a b).
 Proof.
   rewrite capC distributive_. apply: geq_cup.
@@ -115,15 +115,16 @@ Qed.
 (** chain lattices are distributive *)
 (* TODO: include distributivity in the definition of ChainLattice (forgetful inheritance),
    and use appropriate builders to infer it automatically (need HB support for it) *)
-HB.factory Record ChainLattice_isDistributive X of ChainLattice X := {}.
-HB.builders Context X of ChainLattice_isDistributive X.
+HB.factory Record ChainLattice_isDistributive X & ChainLattice X := {}.
+HB.builders Context X & ChainLattice_isDistributive X.
 Lemma distributive_ (x y z: X): cap x (cup y z) <= cup (cap x y) (cap x z).
 Proof.
   elim: (case_chainlattice y z).
   move=>_. exact/cup_r.
   move=>_. exact/cup_l.
   by move=>?? + _ _ _ _ _ _ _ _ _ _=> ->.
-  Restart.
+Restart.
+Proof.
   case: (leq_chain y z)=>/leq_of_cup.
   move=>->. exact/cup_r.
   rewrite cupC. move=>->. exact/cup_l.
@@ -135,8 +136,8 @@ HB.end.
 (* TOTHINK: here this is again the "a posteriori inheritance" pattern:
    we do not want to include the Lattice structure in DecidableOrder;
    still, it inherits from it *)
-HB.factory Record DecidableOrder_isLattice X of DecidableOrder X := {}.
-HB.builders Context X of DecidableOrder_isLattice X.
+HB.factory Record DecidableOrder_isLattice X & DecidableOrder X := {}.
+HB.builders Context X & DecidableOrder_isLattice X.
 Definition cup (x y: X) := if x <=? y then y else x. 
 Definition cap (x y: X) := if x <=? y then x else y. 
 Lemma cup_spec x y: is_sup (pair x y) (cup x y).
@@ -164,11 +165,11 @@ HB.end.
 (** ** alternative ways to construct sups *)
 
 (** constructing indexed sups from non-indexed ones *)
-HB.factory Record PO_sup X of PO X := {
+HB.factory Record PO_sup X & PO X := {
     #[canonical=no] sup: (X -> Prop) -> X;
     #[canonical=no] sup_spec: forall P: X -> Prop, is_sup P (sup P);
   }.
-HB.builders Context X of PO_sup X.
+HB.builders Context X & PO_sup X.
   Definition isup I P (h: I -> X) := sup (image h P).
   Lemma isup_spec I P h: is_sup (image h P) (@isup I P h).
   Proof. apply: sup_spec. Qed.
@@ -176,8 +177,8 @@ HB.builders Context X of PO_sup X.
 HB.end.
 
 (** arbitrary sups from directed and binary ones *)
-HB.factory Record PO_cup_dsup X of PO X & PO_cup X & PO_dsup X := {}.
-HB.builders Context X of PO_cup_dsup X.
+HB.factory Record PO_cup_dsup X & PO X & PO_cup X & PO_dsup X := {}.
+HB.builders Context X & PO_cup_dsup X.
   Definition sup (P: X -> Prop) := dsup (sup_closure P) (@directed_sup_closure _ P).
   Lemma sup_spec P: is_sup P (sup P).
   Proof. apply is_sup_closure. exact: dsup_spec. Qed.
@@ -185,8 +186,8 @@ HB.builders Context X of PO_cup_dsup X.
 HB.end.
 
 (** constructing complete lattices from their (indexed) sups  *)
-HB.factory Record CL_isup X of supCL X := {}. 
-HB.builders Context X of CL_isup X.
+HB.factory Record CL_isup X & supCL X := {}. 
+HB.builders Context X & CL_isup X.
   Definition iinf I (P: I -> Prop) (h: I -> X): X := sup (fun y => forall i, P i -> y <= h i).
   Lemma iinf_spec I P (h: I -> X): is_inf (image h P) (iinf P h).
   Proof.
@@ -200,11 +201,11 @@ HB.end.
 (** ** alternative ways to construct infs *)
 
 (** constructing indexed infs from non-indexed ones *)
-HB.factory Record PO_inf X of PO X := {
+HB.factory Record PO_inf X & PO X := {
     #[canonical=no] inf: (X -> Prop) -> X;
     #[canonical=no] inf_spec: forall P: X -> Prop, is_inf P (inf P);
   }.
-HB.builders Context X of PO_inf X.
+HB.builders Context X & PO_inf X.
   Definition iinf I P (h: I -> X) := inf (image h P).
   Lemma iinf_spec I P h: is_inf (image h P) (@iinf I P h).
   Proof. apply: inf_spec. Qed.
@@ -212,8 +213,8 @@ HB.builders Context X of PO_inf X.
 HB.end.
 
 (** arbitrary infs from codirected and binary ones *)
-HB.factory Record PO_cap_dinf X of PO X & PO_cap X & PO_dinf X := {}.
-HB.builders Context X of PO_cap_dinf X.
+HB.factory Record PO_cap_dinf X & PO X & PO_cap X & PO_dinf X := {}.
+HB.builders Context X & PO_cap_dinf X.
   Definition inf (P: X -> Prop) := dinf (inf_closure P) (@codirected_inf_closure _ P).
   Lemma inf_spec P: is_inf P (inf P).
   Proof. apply is_inf_closure. exact: dinf_spec. Qed.
@@ -221,8 +222,8 @@ HB.builders Context X of PO_cap_dinf X.
 HB.end.
 
 (** constructing complete lattices from their (indexed) infs  *)
-HB.factory Record CL_iinf X of infCL X := {}. 
-HB.builders Context X of CL_iinf X.
+HB.factory Record CL_iinf X & infCL X := {}. 
+HB.builders Context X & CL_iinf X.
   Definition isup I (P: I -> Prop) (h: I -> X): X := inf (fun y => forall i, P i -> h i <= y).
   Lemma isup_spec I P (h: I -> X): is_sup (image h P) (isup P h).
   Proof.

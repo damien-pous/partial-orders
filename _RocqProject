@@ -1,6 +1,7 @@
 -native-compiler no
 -arg -w -arg -undo-batch-mode
 -arg -w -arg -notation-overridden          # temporary, for mathcomp
+-arg -w -arg -rewrite-rw		   # temporary
 -arg -w -arg +HB.no-new-instance
 
 # end-user library

@@ -46,6 +46,7 @@ Section s.
 
   (* fails if PO.type is defined with #[primitive] *)
   Goal forall x y: X, x ≡ y -> x <= y.
+  Proof.
     intros. rewrite H.
   Abort.
 End s.
@@ -124,17 +125,24 @@ Section rewriting.
     Fail rewrite xyE.
     move=>x'/=.
     rewrite xy -xyE.
-    Restart.
+  Restart.
+  Proof.  
     change (const x <=[X->X] g).
     rewrite xy -xyE. 
   Abort.
   
   Goal (f ∘ g) x <= x.
   Proof.
-    rewrite fg. Restart.
-    Fail rewrite fgE. Restart.
+    rewrite fg.
+  Restart.
+  Proof.
+    Fail rewrite fgE.
+  Restart.
+  Proof.
     (* surprising that it works here, given that it fails in sanity_setoid *)     
-    rewrite fg'. Restart.
+    rewrite fg'.
+  Restart.
+  Proof.
     (* fails for lack of a match *)
     Fail rewrite (fg _).
     Fail rewrite (fgE _).
@@ -144,10 +152,16 @@ Section rewriting.
   
   Goal (g ∘ f) x <= x.
   Proof.
-    rewrite fg. Restart.
-    Fail rewrite fgE. Restart.
+    rewrite fg.
+  Restart.
+  Proof.
+    Fail rewrite fgE.
+  Restart.
+  Proof.
     (* idem *)    
-    rewrite fg'. Restart.
+    rewrite fg'.
+  Restart.
+  Proof.
     (* fails for lack of a match *)
     Fail rewrite (fg _).
     Fail rewrite (fgE _).
@@ -156,12 +170,18 @@ Section rewriting.
 
   Goal f (f x) <= x.
   Proof.
-    rewrite fg. Restart. 
-    Fail rewrite fgE. Restart. 
+    rewrite fg.
+  Restart.
+  Proof.
+    Fail rewrite fgE.
     (* idem *)    
-    rewrite fg'. Restart.
-    rewrite 2!(fg _). Restart.
-    rewrite 2!(fg' _). Restart.
+    rewrite fg'.
+  Restart.
+  Proof.
+    rewrite 2!(fg _).
+  Restart.
+  Proof.
+    rewrite 2!(fg' _).
   Abort.
   
   Goal f ∘ g <= types_id.
@@ -181,10 +201,14 @@ Section rewriting.
   (* note the upper ° (vs ∘) *)
   Goal f ° g <= types_id.
   Proof.
-    rewrite fg. Restart.
-    rewrite fgE. Restart.
+    rewrite fg.
+  Restart.
+  Proof.
+    rewrite fgE.
+  Restart.
+  Proof.
     (* idem *)
-    rewrite fg'. Restart.
+    rewrite fg'.
   Abort.
 
   Goal f ° g <=[X->X] types_id.
@@ -197,9 +221,11 @@ Section rewriting.
 End rewriting.
 
 Goal forall (X: PO.type) (x: nat -> X), x ≡ x.
+Proof.
   intros * n.  
 Abort.
 Goal forall A (X: A -> PO.type) (x: forall a, X a), x ≡ x. 
+Proof.
   intros * a.
 Abort.
 Check fun X: PO.type => @types_id X: X-mon->X. 

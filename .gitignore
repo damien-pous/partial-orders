@@ -3,3 +3,6 @@ RocqMakefile*
 .*.d
 .coq-native
 .rocq-native
+META.rocq-partial-orders
+_build/
+time-of-build.log

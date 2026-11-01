@@ -191,7 +191,7 @@ Qed.
 
 Definition gkind := forall X: PO.type, (X -> Prop) -> Type.
 
-HB.mixin Record PO_gsup (k: gkind) X of PO X := {
+HB.mixin Record PO_gsup (k: gkind) X & PO X := {
     #[canonical=no] gsup: forall I P, k I P -> (I -mon-> X) -> X;
     #[canonical=no] gsup_spec: forall I P kIP (h: I -mon-> X), is_sup (image h P) (gsup I P kIP h);
   }.
@@ -207,11 +207,11 @@ Qed.
 HB.instance Definition _ k A X := @dprod_gsup k A X.
 
 (** sups from comonadic adjunctions *)
-HB.factory Record comonadic_gsup (k: gkind) Y of PO Y := {
+HB.factory Record comonadic_gsup (k: gkind) Y & PO Y := {
     X: gsupPO.type k;
     f: Y ⊢· X;
   }.
-HB.builders Context k Y of comonadic_gsup k Y.
+HB.builders Context k Y & comonadic_gsup k Y.
  Definition gsup I P kIP (h: I -mon-> Y): Y :=
    ladj f (@gsup k X I P kIP (f ∘ h)).
  Lemma gsup_spec I P kIP (h: I -mon-> Y):
@@ -264,7 +264,8 @@ Section s.
      have E: Proper (leq ==> leq) (h i) by apply: hQ. 
      eexists; split. exists (mk_mon _ E); split=>//. exists i; split=>//. reflexivity.
    (* direct proof *)
-   Restart.
+ Restart.
+ Proof.
    move=>I Q kIQ h hQ x y xy.
    rewrite gsup_spec=>z [i [Qi ->]].
    transitivity (h i y).
@@ -341,14 +342,14 @@ Qed.
 (** ** standard supremum operations *)
 
 (** *** bottom element *)
-HB.mixin Record PO_bot X of PO X := {
+HB.mixin Record PO_bot X & PO X := {
     #[canonical=no] bot: X;
     #[canonical=no] bot_sup_spec: is_sup empty bot;
   }.
 HB.structure Definition botPO := {X of PO_bot X & }.
 
 (** *** binary joins *)
-HB.mixin Record PO_cup X of PO X := {
+HB.mixin Record PO_cup X & PO X := {
     #[canonical=no] cup: X -> X -> X;
     #[canonical=no] cup_sup_spec: forall x y: X, is_sup (pair x y) (cup x y);
   }.
@@ -356,32 +357,32 @@ HB.structure Definition joinSemiLattice := {X of PO_cup X & }.
 HB.structure Definition botjoinSemiLattice := {X of PO_bot X & joinSemiLattice X }.
 
 (** *** chain suprema (CPOs) *)
-HB.mixin Record PO_csup X of PO X := {
+HB.mixin Record PO_csup X & PO X := {
     #[canonical=no] csup: forall P: X -> Prop, chain P -> X;
     #[canonical=no] csup_spec: forall (P: X -> Prop) C, is_sup P (csup P C);
   }.
-HB.builders Context X of PO_csup X.
+HB.builders Context X & PO_csup X.
   HB.instance Definition _ := PO_bot.Build X (csup_spec chain_empty).
 HB.end.
 HB.structure Definition CPO := {X of PO_csup X & }.
 
 (** *** directed suprema (dCPOs) *)
-HB.mixin Record PO_dsup X of PO X := {
+HB.mixin Record PO_dsup X & PO X := {
     #[canonical=no] dsup: forall P: X -> Prop, directed P -> X;
     #[canonical=no] dsup_spec: forall (P: X -> Prop) D, is_sup P (dsup P D);
   }.
-HB.builders Context X of PO_dsup X.
+HB.builders Context X & PO_dsup X.
   HB.instance Definition _ := PO_csup.Build X _ (fun P C => dsup_spec (chain_directed C)).
 HB.end.
 HB.structure Definition dCPO := {X of PO_dsup X & }.
 
 (** *** all suprema (complete lattices -- derivable infima arrive later, in po_inf.v and then po_lattice.v) *)
 (** using `indexed' sups, which is convenient in practice *)
-HB.mixin Record PO_isup X of PO X := {
+HB.mixin Record PO_isup X & PO X := {
     #[canonical=no] isup: forall I, (I -> Prop) -> (I -> X) -> X;
     #[canonical=no] isup_sup_spec: forall I P (h: I -> X), is_sup (image h P) (isup I P h);
   }.
-HB.builders Context X of PO_isup X.
+HB.builders Context X & PO_isup X.
   Definition sup (P: X -> Prop) := isup P types_id.
   Lemma sup_spec (P: X -> Prop): is_sup P (sup P).
   Proof. move: (isup_sup_spec P types_id)=>/=. by rewrite image_id'. Qed.
@@ -603,8 +604,8 @@ Notation "[gbot_for X ]" := (HB.pack_for (gsupPO.type empty_kind) X (@__bot_gen 
 Lemma bot_gsup_closed {X: botPO.type} (P: X -> Prop) (Pbot: P bot): @gsup_closed empty_kind (bot_gen X) P.
 Proof. done. Qed.
 
-HB.factory Record comonadic_bot Y of PO Y := { X: botPO.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_bot Y.
+HB.factory Record comonadic_bot Y & PO Y := { X: botPO.type; f: Y ⊢· X }.
+HB.builders Context Y & comonadic_bot Y.
  HB.instance Definition _ := comonadic_gsup.Build empty_kind Y (X:=bot_gen X) f.
  HB.instance Definition _ := botPO.copy Y (bot_gen Y).
 HB.end.
@@ -654,8 +655,8 @@ Lemma cup_gsup_closed {X: joinSemiLattice.type} (P: X -> Prop) (Pcup: forall x y
   @gsup_closed pair_kind (cup_gen X) P.
 Proof. move=>I Q kIQ h H. apply: Pcup; apply: H; apply kIQ. Qed.
 
-HB.factory Record comonadic_cup Y of PO Y := { X: joinSemiLattice.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_cup Y.
+HB.factory Record comonadic_cup Y & PO Y := { X: joinSemiLattice.type; f: Y ⊢· X }.
+HB.builders Context Y & comonadic_cup Y.
  HB.instance Definition _ := comonadic_gsup.Build pair_kind Y (X:=cup_gen X) f.
  HB.instance Definition _ := joinSemiLattice.copy Y (cup_gen Y).
 HB.end.
@@ -782,8 +783,8 @@ HB.instance Definition _ (X: PO.type) (Y: supCL.type) := supCL.copy (X -sup-> Y)
 
 (** ** deriving [leq_classic] from [cup] and [eqv_classic] *)
 
-HB.factory Record ClassicJoinSemiLattice X of ClassicSetoid X & joinSemiLattice X := {}.
-HB.builders Context X of ClassicJoinSemiLattice X. 
+HB.factory Record ClassicJoinSemiLattice X & ClassicSetoid X & joinSemiLattice X := {}.
+HB.builders Context X & ClassicJoinSemiLattice X. 
 Lemma leq_classic (x y: X): x <= y \/ ~ x <= y.
 Proof. rewrite leq_of_cup. exact/eqv_classic. Qed.
 HB.instance Definition _ := PO_isClassic.Build X leq_classic.
@@ -791,8 +792,8 @@ HB.end.
 
 (** ** deriving [leqb] from [cup] and [eqvb] *)
 
-HB.factory Record DecidableJoinSemiLattice X of DecidableSetoid X & joinSemiLattice X := {}.
-HB.builders Context X of DecidableJoinSemiLattice X.
+HB.factory Record DecidableJoinSemiLattice X & DecidableSetoid X & joinSemiLattice X := {}.
+HB.builders Context X & DecidableJoinSemiLattice X.
 Definition leqb (x y: X) := cup x y ≡? y. 
 Lemma leq_dec (x y: X): reflect (x <= y) (leqb x y).
 Proof. apply/equivP. exact/eqv_dec. symmetry; exact/leq_of_cup. Qed.
@@ -871,18 +872,18 @@ Qed.
 End s.
 
 HB.factory Record SupPreserving_isLeftAdjoint
-  {X: supCL.type} {Y: PO.type} f of isSupPreserving X Y f := {}.
-HB.builders Context X Y f of SupPreserving_isLeftAdjoint X Y f.
+  {X: supCL.type} {Y: PO.type} f & isSupPreserving X Y f := {}.
+HB.builders Context X Y f & SupPreserving_isLeftAdjoint X Y f.
 HB.instance Definition _ := isLeftAdjoint.Build _ _ f (adjunction_cl_radj preserves_is_sup).
 HB.end.
 
 (** ** alternative builders for sup preserving / left adjoint functions *)
 
 (** when the domain is a complete lattice *)
-HB.factory Record isSupPreserving' {X: supCL.type} {Y: PO.type} f of isExtensional X Y f := {
+HB.factory Record isSupPreserving' {X: supCL.type} {Y: PO.type} f & isExtensional X Y f := {
     is_sup_image_sup: forall P, is_sup (image f P) (f (sup P))
   }.
-HB.builders Context X Y f of isSupPreserving' X Y f.
+HB.builders Context X Y f & isSupPreserving' X Y f.
 Lemma preserves_is_sup: is_sup_preserving f.
 Proof.
   move=>Z z Zz.
@@ -894,10 +895,10 @@ HB.instance Definition _ := SupPreserving_isLeftAdjoint.Build _ _ f.
 HB.end.
 
 (** when both the domain and codomain are complete lattices *)
-HB.factory Record isSupPreserving'' {X Y: supCL.type} f of isExtensional X Y f := {
+HB.factory Record isSupPreserving'' {X Y: supCL.type} f & isExtensional X Y f := {
     preserves_sup: forall P, f (sup P) ≡ isup P f
   }.
-HB.builders Context X Y f of isSupPreserving'' X Y f.
+HB.builders Context X Y f & isSupPreserving'' X Y f.
 Lemma preserves_is_sup': forall P, is_sup (image f P) (f (sup P)).
 Proof. move=>P. rewrite preserves_sup. exact/isup_sup_spec. Qed.
 HB.instance Definition _ := isSupPreserving'.Build _ _ f preserves_is_sup'.

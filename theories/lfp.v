@@ -52,11 +52,11 @@ End s.
     later we equip all dCPOs with such a structure
     (as well as all CPOs, using classical logic, cf. [Bourbakiwitt.v]
  *)
-HB.mixin Record PO_lfp X of PO X := {
+HB.mixin Record PO_lfp X & PO X := {
     #[canonical=no] lfp: (X-mon->X) -> X;
     #[canonical=no] lfpE: forall f: X-mon->X, is_lfp f (lfp f);
   }.
-HB.builders Context X of PO_lfp X.
+HB.builders Context X & PO_lfp X.
 Definition bot: X := lfp types_id.
 Lemma bot_spec: is_sup empty bot.
 Proof. rewrite is_sup_empty/==>t. by apply (lfpE types_id). Qed.
@@ -251,12 +251,12 @@ HB.instance Definition _ {X: supCL.type} (f: X -> X) :=
 
 
 (** partial orders where the chain of every monotone function is topped *)
-HB.mixin Record Chain_lfp X of PO X := {
+HB.mixin Record Chain_lfp X & PO X := {
     #[canonical=no] chain_lfp: (X-mon->X) -> X;
     #[canonical=no] chain_lfpE: forall f: X-mon->X, is_sup (C f) (chain_lfp f);
   }.
 (** hence where every monotone function has a least fixpoint *)
-HB.builders Context X of Chain_lfp X.
+HB.builders Context X & Chain_lfp X.
   HB.instance Definition _ := PO_lfp.Build X chain_lfp (fun f => lfp_of_chain_supremum f (chain_lfpE f)).
 HB.end.
 HB.structure Definition chain_lfpPO := { X of Chain_lfp X & }.
@@ -457,7 +457,8 @@ Section b.
    move=>??. by apply M, N.
    Fail idtac "done". 
    (** this second proof is inspired from Jules Jacobs' one, it requires only [choose id] *)
-   Restart.
+ Restart.
+ Proof.
    apply: tower.
    - move=>T IH t Ht c.
        case: (choose T types_id c (next c)).
@@ -550,7 +551,8 @@ Section b.
      right=>x'y. 
  
    (* excluded middle of course works *)
-   Restart.
+ Restart.
+ Proof.
    intros. apply: Classical_Prop.classic.
  Qed.
  
@@ -663,7 +665,8 @@ Section b.
  Proof.
    (** actually an instance of [Bourbaki.linear_chain] *)
    exact (linear_chain next tower id_next).
-   Restart. 
+ Restart. 
+ Proof.
    (** but the following proof is simpler and requires only [choose _ id x x]
        (note that we need [next] to be monotone for this proof, not just extensive) *)
    apply: tower.
@@ -763,43 +766,43 @@ HB.structure Definition CPO := {X of lfpCPO X & EMTag X }.
 
 
 (** empty factory to upgrade [sups.dCPO] to [dCPO], via Pataraia *)
-HB.factory Record dCPO_lfp X of sups.dCPO X := {}.
-HB.builders Context X of dCPO_lfp X.
+HB.factory Record dCPO_lfp X & sups.dCPO X := {}.
+HB.builders Context X & dCPO_lfp X.
 HB.instance Definition _ := Chain_lfp.Build X Pataraia.lfp Pataraia.lfp_is_sup_C.
 HB.end.
 (** overriden factory *)
-HB.factory Record PO_dsup X of PO X := {
+HB.factory Record PO_dsup X & PO X := {
     #[canonical=no] dsup: forall P: X -> Prop, directed P -> X;
     #[canonical=no] dsup_spec: forall (P: X -> Prop) D, is_sup P (dsup P D);
   }.
-HB.builders Context X of PO_dsup X.
+HB.builders Context X & PO_dsup X.
   HB.instance Definition _ := sups.PO_dsup.Build X dsup dsup_spec.
   HB.instance Definition _ := dCPO_lfp.Build X.
 HB.end.
 
 
 (** empty factory to upgrade [sups.CPO] to [CPO], via BourbakiWitt *)
-HB.factory Record CPO_lfp X of sups.CPO X := {}.
-HB.builders Context X of CPO_lfp X.
+HB.factory Record CPO_lfp X & sups.CPO X := {}.
+HB.builders Context X & CPO_lfp X.
 HB.instance Definition _ := Chain_lfp.Build X BourbakiWitt.lfp BourbakiWitt.lfp_is_sup_C.
 HB.instance Definition _ := EMTag.Build X.
 HB.end.
 (** overriden factory *)
-HB.factory Record PO_csup X of PO X := {
+HB.factory Record PO_csup X & PO X := {
     #[canonical=no] csup: forall P: X -> Prop, chain P -> X;
     #[canonical=no] csup_spec: forall (P: X -> Prop) C, is_sup P (csup P C);
   }.
-HB.builders Context X of PO_csup X.
+HB.builders Context X & PO_csup X.
   HB.instance Definition _ := sups.PO_csup.Build X csup csup_spec.
   HB.instance Definition _ := CPO_lfp.Build X.
 HB.end.
 
 (** overriden factory for supCL *)
-HB.factory Record PO_isup X of PO X := {
+HB.factory Record PO_isup X & PO X := {
     #[canonical=no] isup: forall I, (I -> Prop) -> (I -> X) -> X;
     #[canonical=no] isup_sup_spec: forall I P (h: I -> X), is_sup (image h P) (isup I P h);
   }.
-HB.builders Context X of PO_isup X.
+HB.builders Context X & PO_isup X.
   HB.instance Definition _ := sups.PO_isup.Build X isup isup_sup_spec.
   HB.instance Definition _ := dCPO_lfp.Build X.
 HB.end.
@@ -811,8 +814,8 @@ HB.instance Definition _ (X: Setoid.type) (Y: sups.dCPO.type) := dCPO_lfp.Build 
 HB.instance Definition _ (X: PO.type) (Y: sups.dCPO.type) := dCPO_lfp.Build (X -mon-> Y).
 HB.instance Definition _ (X: sups.dCPO.type) (f: X -> X) := dCPO_lfp.Build (Chain f).
 (* this one is directly defined here, in order to avoid useless overriding *)
-HB.factory Record comonadic_dsup Y of PO Y := { X: dCPO.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_dsup Y.
+HB.factory Record comonadic_dsup Y & PO Y := { X: dCPO.type; f: Y ⊢· X }.
+HB.builders Context Y & comonadic_dsup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@directed) Y (X:=dsup_gen X) f.
  HB.instance Definition _ := sups.dCPO.copy Y (dsup_gen Y).
  HB.instance Definition _ := dCPO_lfp.Build Y.
@@ -825,8 +828,8 @@ HB.instance Definition _ (X: Setoid.type) (Y: sups.CPO.type) := CPO_lfp.Build (X
 HB.instance Definition _ (X: PO.type) (Y: sups.CPO.type) := CPO_lfp.Build (X -mon-> Y).
 HB.instance Definition _ (X: sups.CPO.type) (f: X -> X) := CPO_lfp.Build (Chain f).
 (* this one is directly defined here, in order to avoid useless overriding *)
-HB.factory Record comonadic_csup Y of PO Y := { X: CPO.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_csup Y.
+HB.factory Record comonadic_csup Y & PO Y := { X: CPO.type; f: Y ⊢· X }.
+HB.builders Context Y & comonadic_csup Y.
  HB.instance Definition _ := comonadic_gsup.Build (@chain) Y (X:=csup_gen X) f.
  HB.instance Definition _ := sups.CPO.copy Y (csup_gen Y).
  HB.instance Definition _ := CPO_lfp.Build Y.
@@ -838,8 +841,8 @@ HB.instance Definition _ (X: Setoid.type) (Y: supCL.type) := dCPO_lfp.Build (X -
 HB.instance Definition _ (X: PO.type) (Y: supCL.type) := dCPO_lfp.Build (X -mon-> Y).
 HB.instance Definition _ (X: supCL.type) (f: X -> X) := dCPO_lfp.Build (Chain f). 
 (* this one is directly defined here, in order to avoid useless overriding *)
-HB.factory Record comonadic_isup Y of PO Y := { X: supCL.type; f: Y ⊢· X }.
-HB.builders Context Y of comonadic_isup Y.
+HB.factory Record comonadic_isup Y & PO Y := { X: supCL.type; f: Y ⊢· X }.
+HB.builders Context Y & comonadic_isup Y.
  HB.instance Definition _ := comonadic_gsup.Build any_kind Y (X:=isup_gen X) f.
  HB.instance Definition _ := sups.supCL.copy Y (isup_gen Y).
  HB.instance Definition _ := dCPO_lfp.Build Y.
