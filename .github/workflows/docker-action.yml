@@ -1,0 +1,31 @@
+name: Docker CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rocq_version:
+          - 'dev'
+          - '9.2'
+          - '9.3'
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rocq-community/docker-coq-action@v1
+        with:
+          opam_file: 'rocq-partial-orders.opam'
+          coq_version: ${{ matrix.rocq_version }}
+
+# See also:
+# https://github.com/rocq-community/docker-coq-action#readme
+# https://github.com/erikmd/docker-coq-github-action-demo
