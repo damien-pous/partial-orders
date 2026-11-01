@@ -12,8 +12,8 @@ Based on setoids from the beginning, as a convenient way to obtain axiom-free qu
 
 # REQUIREMENTS
 
-- rocq-prover 9.0 (see branch 8.20 for backports)
-- rocq-mathcomp-ssreflect 
+- rocq-prover >= 9.0 (see branch 8.20 for backports)
+- rocq-mathcomp-boot 
 - rocq-hierarchy-builder 
 
 # AUTHORS
